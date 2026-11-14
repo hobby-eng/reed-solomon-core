@@ -1,0 +1,6 @@
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+# The browser build, and a target without an operating system for the no_std check.
+targets = ["wasm32-unknown-unknown"]
+components = ["rustfmt", "clippy"]

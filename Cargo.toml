@@ -1,0 +1,49 @@
+[package]
+name = "reed-solomon-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "Reed-Solomon coding for sets of shards: any k of n rebuild the data; repair, extend, check and correct a set"
+license = "MIT OR Apache-2.0"
+# Not published while the shard file format is a draft.
+publish = false
+
+[features]
+default = ["alloc"]
+# Owned results: whole-shard helpers, error correction and the writing of shard files. Without it
+# the crate allocates nothing and works on the caller's buffers.
+alloc = []
+
+[dependencies]
+# SHA-256 of the data: computed when a set is written and compared when it is rebuilt. RustCrypto,
+# without its default features: no allocation, no OID tables.
+sha2 = { version = "=0.11.1", default-features = false }
+
+[dev-dependencies]
+# An independent Reed–Solomon implementation: the expected bytes of the oracle tests, in both fields.
+reed-solomon-erasure = "=6.0.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+unreachable_pub = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+too_many_lines = "deny" # at 150 lines, CORE-15
+mod_module_files = "deny" # RUST-03
+undocumented_unsafe_blocks = "deny" # RUST-07
+allow_attributes_without_reason = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+# No index or slice that could panic: `get`, iterators and fixed-size chunks instead. The few table
+# lookups say at their place why they stay in range.
+indexing_slicing = "deny"
+
+# The exhaustive tests run every choice of shards; unoptimized they take minutes.
+[profile.test]
+opt-level = 2

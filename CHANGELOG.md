@@ -1,0 +1,19 @@
+# Changelog
+
+## Unreleased
+
+First draft; the interface is not frozen and the shard file format is a draft.
+
+- The code: shard `i` is the value at point `i` of the polynomial that the `k` data shards fix. Writing a set, rebuilding from any `k` shards, making a lost shard again and giving a set more shards are one interpolation.
+- Three fields: GF(2^8) with 0x11D and GF(2^16) as an extension of it, with the same bytes as `reed-solomon-erasure` 6.0.0, and GF(2^11) with 0x805, whose symbol is one word of a list of 2,048 words.
+- Work on the caller's buffers, stripe by stripe, without an allocator; whole-shard helpers with the `alloc` feature.
+- A check that shards belong to one set, and the correction of wrong symbols at unknown places (Berlekamp–Massey), with a stated bound on its working memory.
+- A scaling kernel that works on eight bytes at a time by shifts and masks and never branches on, or indexes a table by, the bytes of a shard.
+- The shard file, version 1: a header with the set's identifier, `k`, the shard's number, the data length and an optional SHA-256 of the data; the shard in blocks with a CRC-32C each, tied to the file and the block's number; the header a second time and a trailer at the end. `Header::file` writes one; `ShardFile::read` reads one that is damaged, cut short or followed by other bytes, by whichever copy of the header holds, and never chooses between two that differ.
+- Sets of shard files: `SetFacts::files` writes the files of a set from its data; `Pile::new` sorts any files into sets by the facts they state, whatever their order; `FileSet::rebuild` puts the data together block by block from whichever files hold each block, compares every spare shard and refuses shards that are not one set; `FileSet::repair` makes a lost file again or a new one. Files of one shard fill each other in, and where they differ the shard is left out of that block. `FileSet::stretches` tells which parts of a set still rebuild. A limit in steps, counted by a stated rule, is checked before any work, and every list is asked for fallibly.
+- `FileSet::vote` names the files that differ from what the shards of a set share, block by block, wherever spare shards are at hand to tell, and of the files of one shard that differ the ones the other shards do not confirm; `FileSet::without` is the set without the files a program leaves out.
+- A shard that is among the sources is copied by `Sources::build`, not summed over all of them.
+- The SHA-256 of the data, by the `sha2` crate: `SetFacts::for_data` computes it, `SetFacts::files` writes no file for data of another digest, and `FileSet::rebuild` compares it with exactly the data's bytes before it gives the data back. `Rebuilt::digest` says whether it matched or was not stated (`DigestCheck`); data of another digest is `SetError::Digest`.
+- Gaps at known places: `Code::plan` takes symbols marked unreadable inside a shard, puts a column right when `2e + s ≤ m − k`, and lists every change (place, what was read, what it becomes, filled or replaced) without changing anything; `Code::apply` makes the changes after checking each one.
+- `FileSet::repairs` makes several lost files of a set in one pass over its blocks, counted by `FileSet::repairs_work`.
+- A self-test against answers from outside the crate.
