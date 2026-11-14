@@ -17,6 +17,7 @@ mod oracle;
 mod plans;
 mod refusals;
 mod repairs;
+mod secrets;
 mod self_test;
 mod sets;
 mod stripes;

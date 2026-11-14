@@ -14,7 +14,9 @@ use crate::code::{Code, CodeError};
 use alloc::alloc::handle_alloc_error;
 use alloc::vec::Vec;
 use core::alloc::Layout;
+use core::fmt;
 use core::ops::Deref;
+use zeroize::{Zeroize, Zeroizing};
 
 /// A symbol known to be unreadable: whatever its bytes hold, it is a gap at this place.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -35,8 +37,9 @@ pub enum ChangeKind {
     Replaced,
 }
 
-/// One symbol that a [`Plan`] changes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// One symbol that a [`Plan`] changes. What it was and becomes can be a secret, such as a word of
+/// a recovery phrase: they are left out of its `Debug` text, and [`Zeroize`] wipes them.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Change {
     /// The place of its shard among the shards given.
     pub shard: usize,
@@ -50,6 +53,25 @@ pub struct Change {
     pub kind: ChangeKind,
 }
 
+impl fmt::Debug for Change {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Change")
+            .field("shard", &self.shard)
+            .field("symbol", &self.symbol)
+            .field("kind", &self.kind)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Zeroize for Change {
+    fn zeroize(&mut self) {
+        self.shard.zeroize();
+        self.symbol.zeroize();
+        self.was.zeroize();
+        self.becomes.zeroize();
+    }
+}
+
 /// What [`Code::plan`] found. Nothing was changed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Plan {
@@ -60,8 +82,9 @@ pub enum Plan {
     Agrees,
     /// Every column can be put right by these changes, in the order of the symbols and, within
     /// one, of the shards. Every marked symbol is among them. Whether the result is the original
-    /// data is for a digest or an authentication to say.
-    Changes(Vec<Change>),
+    /// data is for a digest or an authentication to say. The list wipes itself when it is
+    /// dropped.
+    Changes(Zeroizing<Vec<Change>>),
     /// In `columns` symbol columns the spare shards cannot put the column right: more wrong and
     /// marked symbols than `2e + s ≤ m − k` allows, or more marks than spare shards.
     Unresolved {
@@ -129,7 +152,7 @@ impl Code {
         let Ok(mut decoder) = Decoder::with_room(self.field(), points, spare, length, spare) else {
             handle_alloc_error(Layout::new::<Decoder>())
         };
-        let mut changes = Vec::new();
+        let mut changes = Zeroizing::new(Vec::new());
         let unresolved = decoder.plan_pass(shards, length, &sorted, &mut changes);
         if unresolved > 0 {
             return Ok(Plan::Unresolved {
@@ -188,6 +211,26 @@ fn place<'s>(shards: &'s [(u16, &mut [u8])], change: &Change, symbol: usize) -> 
     let start = change.symbol.checked_mul(symbol)?;
     let (_, bytes) = shards.get(change.shard)?;
     bytes.get(start..start.checked_add(symbol)?)
+}
+
+/// Room for `more` further changes. A list that has to grow moves into a new one and the old one
+/// is wiped, so that no copy of a change is left behind in memory given back; a refusal of the
+/// memory stops the call, as in [`Code::correct`].
+fn room(changes: &mut Zeroizing<Vec<Change>>, more: usize) {
+    let needed = changes.len().saturating_add(more);
+    if needed <= changes.capacity() {
+        return;
+    }
+    let mut bigger = Vec::new();
+    if bigger
+        .try_reserve_exact(needed.max(changes.capacity().saturating_mul(2)))
+        .is_err()
+    {
+        handle_alloc_error(Layout::new::<Change>());
+    }
+    bigger.extend_from_slice(changes);
+    // The old list is wiped as it is dropped.
+    *changes = Zeroizing::new(bigger);
 }
 
 /// The value of a symbol's bytes, high byte first.
@@ -263,7 +306,7 @@ impl Decoder {
         shards: &[(u16, B)],
         length: usize,
         marks: &[Mark],
-        changes: &mut Vec<Change>,
+        changes: &mut Zeroizing<Vec<Change>>,
     ) -> usize {
         let symbol = self.field.symbol_bytes();
         let stripe = Self::stripe(self.field, self.spare);
@@ -308,9 +351,7 @@ impl Decoder {
                     unresolved += 1;
                     continue;
                 };
-                if changes.try_reserve(self.errors.len()).is_err() {
-                    handle_alloc_error(Layout::new::<Change>());
-                }
+                room(changes, self.errors.len());
                 for (count, &(position, error)) in self.errors.iter().enumerate() {
                     let begin = start + offset;
                     let bytes = shards

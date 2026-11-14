@@ -1,26 +1,29 @@
 //! GF(2^11) with the polynomial x^11 + x^2 + 1 (0x805): an element is a number below 2,048, bit
 //! `i` the coefficient of x^i. One symbol holds one word of a list of 2,048 words.
 //!
-//! There are no tables here: a product is eleven steps of add, shift and reduce, and an inverse
-//! a chain of squarings and multiplications. The sets this field serves are a few dozen symbols.
+//! There are no tables here: a product is eleven steps of add, shift and reduce, each chosen by
+//! a mask made from one bit, and an inverse a fixed chain of squarings and multiplications. No
+//! branch depends on an element, which can be a word of a recovery phrase; only the inverse of
+//! zero is told apart, as `None`.
 
 /// The reduction polynomial, its x^11 term included.
 const POLYNOMIAL: u16 = 0x805;
 /// The number of elements, and the bit a doubled element overflows into.
 pub(super) const ORDER: u16 = 0x800;
 
+/// All ones when `bit` is 1, all zeros when it is 0.
+const fn mask(bit: u16) -> u16 {
+    0_u16.wrapping_sub(bit & 1)
+}
+
 /// The product of `a` and `b`, both below 2,048.
 pub(super) const fn multiply(a: u16, b: u16) -> u16 {
     let (mut a, mut product) = (a, 0);
     let mut bit = 0;
     while bit < 11 {
-        if b >> bit & 1 == 1 {
-            product ^= a;
-        }
+        product ^= a & mask(b >> bit);
         a <<= 1;
-        if a & ORDER != 0 {
-            a ^= POLYNOMIAL;
-        }
+        a ^= POLYNOMIAL & mask(a >> 11);
         bit += 1;
     }
     product
@@ -29,11 +32,9 @@ pub(super) const fn multiply(a: u16, b: u16) -> u16 {
 /// The inverse of a nonzero `a`; `None` for zero.
 ///
 /// The nonzero elements form a group of 2,047, so the inverse is the 2,046th power, and 2,046 is
-/// 2 + 4 + … + 1,024: the product of the first ten repeated squares.
+/// 2 + 4 + … + 1,024: the product of the first ten repeated squares, the same chain for every
+/// `a`.
 pub(super) const fn inverse(a: u16) -> Option<u16> {
-    if a == 0 {
-        return None;
-    }
     let mut square = multiply(a, a);
     let mut product = square;
     let mut step = 2;
@@ -42,7 +43,7 @@ pub(super) const fn inverse(a: u16) -> Option<u16> {
         product = multiply(product, square);
         step += 1;
     }
-    Some(product)
+    if a == 0 { None } else { Some(product) }
 }
 
 #[cfg(test)]

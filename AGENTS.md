@@ -24,4 +24,6 @@ of shards, of shard files written apart and damaged, and of sets put together fr
 The crate holds no secret; its one cryptographic function is SHA-256 of the data, from the `sha2`
 crate, never written here. It never indexes a table by a byte of a shard and never branches on
 one in the scaling kernel or in the checksum; keep that when changing `src/field/lanes.rs` and
-`src/file/crc32c.rs`.
+`src/file/crc32c.rs`. Every buffer that holds data or values that follow from it is wiped
+when let go, every result that holds data comes in `Zeroizing`, and no `Debug` text shows data;
+keep that in new code (`docs/TECHNICAL.md`, Secrets in memory).

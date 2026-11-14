@@ -3,8 +3,10 @@
 //! card adds and the shards of the byte example were computed apart from this crate, by Lagrange
 //! interpolation in Python.
 
-use crate::support::{FIELDS, bytes, data_in, set};
-use reed_solomon_core::{Change, ChangeKind, Code, CodeError, Field, Mark, Plan, Redundancy};
+use crate::support::{FIELDS, bytes, data_in, plain, set};
+use reed_solomon_core::{
+    Change, ChangeKind, Code, CodeError, Field, Mark, Plan, Redundancy, Zeroizing,
+};
 
 /// The twelve words of a card as numbers of the BIP39 English list, and the four words the code
 /// adds at the points 12 to 15 (chronic identify give swift).
@@ -23,13 +25,16 @@ fn mark(shard: usize, symbol: usize) -> Mark {
 
 /// The shards as `(index, bytes)`, numbered from 0.
 fn given(shards: &[Vec<u8>]) -> Vec<(u16, &[u8])> {
-    (0..).zip(shards.iter().map(Vec::as_slice)).collect()
+    (0..)
+        .zip(shards.iter().map(|bytes| bytes.as_slice()))
+        .collect()
 }
 
 fn applied(code: &Code, shards: &[Vec<u8>], changes: &[Change]) -> Vec<Vec<u8>> {
     let mut out = shards.to_vec();
-    let mut buffers: Vec<(u16, &mut [u8])> =
-        (0..).zip(out.iter_mut().map(Vec::as_mut_slice)).collect();
+    let mut buffers: Vec<(u16, &mut [u8])> = (0..)
+        .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
+        .collect();
     code.apply(&mut buffers, changes).unwrap();
     out
 }
@@ -38,10 +43,10 @@ fn applied(code: &Code, shards: &[Vec<u8>], changes: &[Change]) -> Vec<Vec<u8>> 
 fn the_words_a_card_adds_are_those_computed_apart() {
     let code = Code::new(Field::Gf2048, 12).unwrap();
     let data: Vec<Vec<u8>> = CARD.iter().map(|&w| word(w)).collect();
-    let refs: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
+    let refs: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
     let added = code.encode(&refs, &[12, 13, 14, 15]).unwrap();
     let expected: Vec<Vec<u8>> = CARD_REPAIR.iter().map(|&w| word(w)).collect();
-    assert_eq!(added, expected);
+    assert_eq!(plain(added), expected);
 }
 
 #[test]
@@ -78,7 +83,7 @@ fn a_card_with_two_gaps_and_a_wrong_word_is_put_right() {
             kind: ChangeKind::Replaced,
         },
     ];
-    assert_eq!(plan, Plan::Changes(expected.clone()));
+    assert_eq!(plan, Plan::Changes(Zeroizing::new(expected.clone())));
     assert_eq!(applied(&code, &read, &expected), card);
     // One gap more is beyond the four spare words: 2 · 1 + 3 = 5.
     read[0] = word(0);
@@ -105,8 +110,11 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
     .map(|shard| shard.to_vec())
     .collect();
     let code = Code::new(Field::Gf256, 3).unwrap();
-    let refs: Vec<&[u8]> = set.iter().take(3).map(Vec::as_slice).collect();
-    assert_eq!(code.encode(&refs, &[0, 1, 2, 3, 4, 5, 6]).unwrap(), set);
+    let refs: Vec<&[u8]> = set.iter().take(3).map(|bytes| bytes.as_slice()).collect();
+    assert_eq!(
+        plain(code.encode(&refs, &[0, 1, 2, 3, 4, 5, 6]).unwrap()),
+        set
+    );
     let mut read = set.clone();
     read[1][2] = 0;
     read[4][2] = 0;
@@ -144,7 +152,7 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
             kind: ChangeKind::Replaced,
         },
     ];
-    assert_eq!(plan, Plan::Changes(expected.clone()));
+    assert_eq!(plan, Plan::Changes(Zeroizing::new(expected.clone())));
     assert_eq!(applied(&code, &read, &expected), set);
     // Leaving the two shards out instead costs every other column the same two spare shards,
     // and the correction alone still puts this right; with a second wrong symbol in column 0
@@ -177,13 +185,13 @@ fn a_marked_symbol_that_holds_the_right_value_is_still_listed() {
     let held = set[3][1].into();
     assert_eq!(
         plan,
-        Plan::Changes(vec![Change {
+        Plan::Changes(Zeroizing::new(vec![Change {
             shard: 3,
             symbol: 1,
             was: held,
             becomes: held,
             kind: ChangeKind::Filled,
-        }])
+        }]))
     );
     // Without marks the same shards agree; with exactly k shards nothing is checked.
     assert_eq!(code.plan(&given(&set), &[]), Ok(Plan::Agrees));
@@ -407,8 +415,9 @@ fn apply_checks_every_change_before_it_makes_one() {
         Change { symbol: 2, ..good },
     ] {
         let mut out = set.clone();
-        let mut buffers: Vec<(u16, &mut [u8])> =
-            (0..).zip(out.iter_mut().map(Vec::as_mut_slice)).collect();
+        let mut buffers: Vec<(u16, &mut [u8])> = (0..)
+            .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
+            .collect();
         assert_eq!(
             code.apply(&mut buffers, &[good, bad]),
             Err(CodeError::Changes)

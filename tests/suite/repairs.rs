@@ -2,6 +2,7 @@
 //! for steps counted once per block.
 
 use crate::sets::{one_set, slices, written};
+use crate::support::plain;
 use reed_solomon_core::{Field, Pile, SetError};
 
 #[test]
@@ -13,7 +14,7 @@ fn three_lost_files_come_back_in_one_pass_in_the_order_asked() {
     let found = one_set(&pile);
     let made = found.repairs(&[4, 1, 3], None).unwrap();
     assert_eq!(
-        made,
+        plain(made.clone()),
         [
             set.files[4].clone(),
             set.files[1].clone(),
@@ -40,8 +41,8 @@ fn a_number_asked_twice_gives_the_file_twice_and_no_number_costs_nothing() {
     let pile = Pile::new(&slices(&left)).unwrap();
     let found = one_set(&pile);
     let made = found.repairs(&[0, 0, 7], None).unwrap();
-    assert_eq!(made[0], set.files[0]);
-    assert_eq!(made[1], set.files[0]);
+    assert_eq!(*made[0], set.files[0]);
+    assert_eq!(*made[1], set.files[0]);
     assert_eq!(made[2], found.repair(7, None).unwrap());
     assert_eq!(found.repairs_work(&[0, 7, 0]), found.repairs_work(&[0, 7]));
     assert_eq!(found.repairs(&[], None), Ok(Vec::new()));

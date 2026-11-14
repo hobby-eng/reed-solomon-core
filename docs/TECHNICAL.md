@@ -17,6 +17,7 @@ This document describes how the crate is built and why, in enough detail to chec
 - [What is guaranteed](#what-is-guaranteed)
 - [Memory and work](#memory-and-work)
 - [The data path](#the-data-path)
+- [Secrets in memory](#secrets-in-memory)
 - [The shard file](#the-shard-file)
 - [Self-test and tests](#self-test-and-tests)
 - [References](#references)
@@ -118,9 +119,9 @@ The Reed–Solomon libraries of Backblaze and Klaus Post, and the `reed-solomon-
 
 **The arithmetic.** In all three fields adding is exclusive or, so subtracting is the same as adding.
 
-- `Field::Gf256`: a byte is a polynomial over GF(2), bit `i` the coefficient of `x^i`, and a product is reduced by 0x11D. The element 2 generates the nonzero elements. Tables of logarithms serve the elements that follow from shard numbers and from syndromes; the bytes of shards go through the scaling kernel instead (see [The data path](#the-data-path)).
+- `Field::Gf256`: a byte is a polynomial over GF(2), bit `i` the coefficient of `x^i`, and a product is reduced by 0x11D. The element 2 generates the nonzero elements. A product is eight steps of add, shift and reduce, each chosen by a mask made from one bit of an operand, and an inverse is `a^254` by the same seven squarings and multiplications for every `a`: no table is indexed by an element and no branch depends on one (see [The data path](#the-data-path)).
 - `Field::Gf65536`: the element `[high, low]` is `high·x + low` with `high` and `low` in the field above, and `x^2 = 2x + 128`. So `(a_h·x + a_l)(b_h·x + b_l)` has the high byte `a_h·b_l + a_l·b_h + 2·a_h·b_h` and the low byte `a_l·b_l + 128·a_h·b_h`. For example `[01,00]·[01,00] = x^2 = [02,80]`. The inverse is the conjugate `high·x + (2·high + low)` divided by the norm `low^2 + 2·high·low + 128·high^2`, which lies in GF(2^8).
-- `Field::Gf2048`: bit `i` of the number is the coefficient of `x^i`, and a product is reduced by 0x805. There are no tables: a product is eleven steps of add, shift and reduce, and an inverse a chain of squarings and multiplications. The sets this field serves are a few dozen symbols.
+- `Field::Gf2048`: bit `i` of the number is the coefficient of `x^i`, and a product is reduced by 0x805. There are no tables: a product is eleven steps of add, shift and reduce, each chosen by a mask, and an inverse the same chain of squarings and multiplications for every element. The sets this field serves are a few dozen symbols.
 
 **Points.** The point of shard `i` is the element whose bytes are the number `i`: in `Field::Gf256` the byte `i` for `i` up to 255, in `Field::Gf2048` the number `i` below 2,048, and in `Field::Gf65536` the element `[i / 256, i mod 256]`. A number the field has no element for is refused with `CodeError::Index`.
 
@@ -196,7 +197,20 @@ Its work is `m²` field multiplications for the weights, then `m · (m − k)` s
 
 ## The data path
 
-`out ^= factor · source` is the one operation applied to the bytes of shards. It works on eight bytes at a time with shifts and masks. The factor follows from shard numbers and is public; the bytes of the shards choose no branch and no table entry. That statement covers this scaling and nothing else. The syndromes depend on the errors, not on the data, and the search for the wrong symbols does branch on them.
+`out ^= factor · source` is the one operation applied to the bytes of shards. It works on eight bytes at a time with shifts and masks. The factor follows from shard numbers and is public; the bytes of the shards choose no branch and no table entry. The CRC-32C of a block is computed one bit at a time without a table, and `Sources::agrees` compares every byte of a stretch, whichever differs.
+
+Single elements are multiplied and inverted without tables and without a branch on their value in all three fields, so the values the decoder works with, which follow from the errors and, for a marked gap, are the symbol itself, choose no table entry either. What the decoder does branch on is the shape of the errors: whether a column disagrees, the length of its recurrence and where its roots are, whether a discrepancy is zero. So the time a correction takes can show how many symbols were wrong and where, not what they were. The inverse of zero is told apart, as an answer of `None`.
+
+## Secrets in memory
+
+The data a program gives the crate can be a secret, such as the words of a recovery phrase on a card. The crate keeps no copy of it longer than a call and leaves none behind in memory it gives back:
+
+- Every buffer the crate fills with data or with values that follow from it is wiped when it is let go, by the `zeroize` crate, whose writes the compiler cannot leave out: the copies a writer makes of the end of the data and of each shard it makes, the buffer a set is put together in, the block a vote makes to judge a dispute, the expected bytes `Sources::agrees` compares, and the syndromes, recurrences and errors of the decoder. A list that has to grow, such as the changes of a plan, moves into a new one and the old one is wiped.
+- Every result that holds data comes in a `Zeroizing` buffer, which wipes itself when it is dropped: the shards of `Code::encode` and `Code::rebuild`, the files of `SetFacts::files`, `Header::file`, `FileSet::repair` and `FileSet::repairs`, the data of `FileSet::rebuild`, and the changes of `Code::plan`. The crate passes on `Zeroizing` and `Zeroize`, so a program needs no dependency of its own for them.
+- The state of SHA-256 is wiped when the hash is done (the `zeroize` feature of `sha2`).
+- No `Debug` text shows the bytes of data: a file read, a block and rebuilt data give their lengths, a change gives its place and kind, and a `Zeroizing` buffer shows nothing of what it holds.
+
+What stays with the program. Buffers the program lends the crate, the shards it gives and the outputs of the calls without an allocator, are the program's to wipe and to keep where it wants. Memory that the operating system writes to a swap file or to a crash dump, and other programs that read the memory of the process, are beyond what a library can wipe: the program keeps such data in locked pages and shuts out dumps and debuggers for its whole process, as the hosts of this crate do. The crate holds no `unsafe` code and makes no call to the operating system.
 
 ## The shard file
 

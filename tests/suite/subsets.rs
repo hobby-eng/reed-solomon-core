@@ -1,6 +1,6 @@
 //! Every choice of exactly `k` shards rebuilds the data, and makes every other shard.
 
-use crate::support::{FIELDS, data, data_in, pick, set};
+use crate::support::{FIELDS, data, data_in, pick, plain, set};
 use reed_solomon_core::{Code, Field};
 
 /// The numbers of the set bits of `mask`, highest first, so that the sources are not in order.
@@ -23,7 +23,7 @@ fn each_of_the_130_918_choices_of_k_from_n_up_to_16_rebuilds_the_data() {
                 }
                 let chosen = pick(&all, &members(mask, n));
                 assert_eq!(
-                    code.rebuild(&chosen, &targets).unwrap(),
+                    plain(code.rebuild(&chosen, &targets).unwrap()),
                     data,
                     "{k} {n} {mask:b}"
                 );
@@ -50,7 +50,7 @@ fn each_choice_of_k_from_n_up_to_10_makes_every_shard_in_every_field() {
                     // Data and parity shards alike, those among the sources included.
                     let chosen = pick(&all, &members(mask, n));
                     assert_eq!(
-                        code.rebuild(&chosen, &targets).unwrap(),
+                        plain(code.rebuild(&chosen, &targets).unwrap()),
                         all,
                         "{k} {n} {mask:b}"
                     );
@@ -67,7 +67,7 @@ fn a_set_grows_without_touching_its_shards_and_old_and_new_mix() {
         let data = data_in(field, 3, 34, 7);
         let five = set(&code, &data, 5);
         // Two more shards from three of the old ones, without the data.
-        let later = code.rebuild(&pick(&five, &[4, 1, 3]), &[5, 6]).unwrap();
+        let later = plain(code.rebuild(&pick(&five, &[4, 1, 3]), &[5, 6]).unwrap());
         let seven = set(&code, &data, 7);
         assert_eq!(&seven[..5], &five[..]);
         assert_eq!(&seven[5..], &later[..]);
@@ -75,7 +75,11 @@ fn a_set_grows_without_touching_its_shards_and_old_and_new_mix() {
         for mask in 0_u32..1 << 7 {
             if mask.count_ones() == 3 {
                 let chosen = pick(&seven, &members(mask, 7));
-                assert_eq!(code.rebuild(&chosen, &[0, 1, 2]).unwrap(), data, "{mask:b}");
+                assert_eq!(
+                    plain(code.rebuild(&chosen, &[0, 1, 2]).unwrap()),
+                    data,
+                    "{mask:b}"
+                );
             }
         }
     }

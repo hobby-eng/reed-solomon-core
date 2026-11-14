@@ -4,6 +4,7 @@ use super::FileError;
 use super::facts::{SetFacts, sha256};
 use super::header::Header;
 use alloc::vec::Vec;
+use zeroize::Zeroizing;
 
 /// Room for `more` further items in `list`, or the refusal of the memory.
 fn room<T>(list: &mut Vec<T>, more: usize) -> Result<(), FileError> {
@@ -22,7 +23,8 @@ impl SetFacts {
     /// Besides the files, the call holds the zero bytes that fill up the data and, when a shard
     /// beyond the data shards is asked for, one shard. The code's sources are prepared only
     /// then: the files of the data shards are the data as it is. With no index asked for,
-    /// nothing is prepared and nothing kept.
+    /// nothing is prepared and nothing kept. Those copies are wiped when the call returns, and
+    /// each file comes in a [`Zeroizing`] buffer, which wipes itself when it is dropped.
     ///
     /// When the facts state a SHA-256, the call computes the digest of `data` and writes no file
     /// for data that does not have it, so the files never state a digest of other data.
@@ -34,7 +36,11 @@ impl SetFacts {
     /// field does not have; [`FileError::Memory`] when this machine has no memory for a shard, a
     /// file or a list the call keeps. The data and every index are checked, in this order,
     /// before the first shard is made.
-    pub fn files(&self, data: &[u8], indexes: &[u16]) -> Result<Vec<Vec<u8>>, FileError> {
+    pub fn files(
+        &self,
+        data: &[u8],
+        indexes: &[u16],
+    ) -> Result<Vec<Zeroizing<Vec<u8>>>, FileError> {
         if u64::try_from(data.len()) != Ok(self.data_len()) {
             return Err(FileError::Data);
         }
@@ -65,8 +71,8 @@ impl SetFacts {
         let padded_len = (threshold - whole)
             .checked_mul(shard_len)
             .ok_or(FileError::Memory)?;
-        let (mut padded, mut shards) = (Vec::new(), Vec::new());
-        room(&mut padded, padded_len)?;
+        let (mut padded, mut shards) = (Zeroizing::new(Vec::new()), Vec::new());
+        room(&mut *padded, padded_len)?;
         padded.extend_from_slice(rest);
         padded.resize(padded_len, 0);
         room(&mut shards, threshold)?;
@@ -83,13 +89,13 @@ impl SetFacts {
             .iter()
             .any(|header| usize::from(header.index()) >= threshold);
         let (mut data_indexes, mut weights) = (Vec::new(), Vec::new());
-        let (mut shard, mut files) = (Vec::new(), Vec::new());
+        let (mut shard, mut files) = (Zeroizing::new(Vec::new()), Vec::new());
         if made {
             room(&mut data_indexes, threshold)?;
             data_indexes.extend((0..=u16::MAX).take(threshold));
             room(&mut weights, threshold)?;
             weights.resize(threshold, 0);
-            room(&mut shard, shard_len)?;
+            room(&mut *shard, shard_len)?;
             shard.resize(shard_len, 0);
         }
         // The data shards have one length and every index was checked with its header, so the

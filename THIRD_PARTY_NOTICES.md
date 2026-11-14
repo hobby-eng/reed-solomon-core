@@ -1,6 +1,6 @@
 # Third-party notices
 
-Runtime dependencies, all MIT OR Apache-2.0: sha2 0.11.1, which computes the SHA-256 of the data, and the crates it brings, digest 0.11.3, block-buffer 0.12.1, crypto-common 0.2.2, hybrid-array 0.4.15 and cpufeatures 0.3.1, all by the RustCrypto developers; and typenum 1.20.1 (github.com/paholg/typenum).
+Runtime dependencies, all MIT OR Apache-2.0: sha2 0.11.1, which computes the SHA-256 of the data, and the crates it brings, digest 0.11.3, block-buffer 0.12.1, crypto-common 0.2.2, hybrid-array 0.4.15 and cpufeatures 0.3.1, all by the RustCrypto developers; typenum 1.20.1 (github.com/paholg/typenum); and zeroize 1.9.1 (MIT OR Apache-2.0, by the RustCrypto developers), which wipes buffers that held data.
 
 Development dependency, used by the tests only: reed-solomon-erasure 6.0.0 (MIT), an independent Reed–Solomon implementation whose shards the tests expect byte for byte.
 

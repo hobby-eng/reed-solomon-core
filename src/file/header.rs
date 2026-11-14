@@ -11,6 +11,8 @@ use crate::field::Field;
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use zeroize::Zeroizing;
 
 /// The mark a header starts with.
 const MARK: [u8; 4] = *b"SHRD";
@@ -180,14 +182,15 @@ impl Header {
     }
 
     /// The whole shard file of `shard`, the bytes of this header's shard: the header, the blocks
-    /// with a checksum each, the header again and the trailer.
+    /// with a checksum each, the header again and the trailer. It comes in a [`Zeroizing`]
+    /// buffer, which wipes itself when it is dropped: the blocks are the shard's bytes.
     ///
     /// # Errors
     ///
     /// [`FileError::Shard`] unless `shard` has the set's shard length; [`FileError::Memory`]
     /// when this machine has no memory for the file: nothing is written then.
     #[cfg(feature = "alloc")]
-    pub fn file(&self, shard: &[u8]) -> Result<Vec<u8>, FileError> {
+    pub fn file(&self, shard: &[u8]) -> Result<Zeroizing<Vec<u8>>, FileError> {
         if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {
             return Err(FileError::Shard);
         }
@@ -196,7 +199,7 @@ impl Header {
         let block = usize::try_from(self.set.block_len()).unwrap_or(usize::MAX);
         // The bytes given do not promise memory for a second copy of them: the memory is asked
         // for once, and a refusal is an answer of its own.
-        let mut file = Vec::new();
+        let mut file = Zeroizing::new(Vec::new());
         file.try_reserve_exact(length)
             .map_err(|_| FileError::Memory)?;
         file.extend_from_slice(self.as_bytes());

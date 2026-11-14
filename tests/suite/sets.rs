@@ -1,7 +1,7 @@
 //! Sets of shard files: written from data, sorted out of a pile, rebuilt block by block from
 //! whichever files hold each block, and made whole again.
 
-use crate::support::{bytes, hex};
+use crate::support::{bytes, hex, plain};
 use reed_solomon_core::{
     Block, Coverage, DigestCheck, Dispute, Field, FileError, FileSet, Header, Pile, SetError,
     SetFacts, ShardFile, Stretch,
@@ -26,7 +26,7 @@ pub(crate) fn written(
     let data = bytes(u64::from(id) * 1000 + data_len as u64, data_len);
     let facts = SetFacts::new(field, &[id], threshold, data_len as u64, block_len, None).unwrap();
     let indexes: Vec<u16> = (0..count).collect();
-    let files = facts.files(&data, &indexes).unwrap();
+    let files = plain(facts.files(&data, &indexes).unwrap());
     Written { facts, data, files }
 }
 
@@ -37,8 +37,8 @@ pub(crate) fn one_set<'p, 'a>(pile: &'p Pile<'a>) -> &'p FileSet<'a> {
 }
 
 /// The files as the slices a pile takes.
-pub(crate) fn slices(files: &[Vec<u8>]) -> Vec<&[u8]> {
-    files.iter().map(Vec::as_slice).collect()
+pub(crate) fn slices<T: AsRef<[u8]>>(files: &[T]) -> Vec<&[u8]> {
+    files.iter().map(AsRef::as_ref).collect()
 }
 
 /// Changes one bit in block `block` of `file`, so that its checksum no longer holds.
@@ -74,7 +74,11 @@ pub(crate) fn forged(set: &Written, index: u16, blocks: &[usize]) -> Vec<u8> {
     for &block in blocks {
         shard[block * 4] ^= 0x55;
     }
-    Header::new(set.facts, index).unwrap().file(&shard).unwrap()
+    Header::new(set.facts, index)
+        .unwrap()
+        .file(&shard)
+        .unwrap()
+        .to_vec()
 }
 
 /// The stretches of a set as (first block, block after the last, holders), checked against
@@ -116,7 +120,7 @@ fn summary(pile: &Pile<'_>) -> Vec<Summary> {
         .iter()
         .map(|set| {
             let indexes = set.members().iter().map(|member| member.index).collect();
-            let data = set.rebuild(None).ok().map(|rebuilt| rebuilt.data);
+            let data = set.rebuild(None).ok().map(|rebuilt| rebuilt.data.to_vec());
             (*set.facts(), set.id_shared(), indexes, data)
         })
         .collect()
@@ -141,7 +145,7 @@ fn the_writer_cuts_the_data_in_order_and_fills_up_with_zeros() {
         "{before} 6DF8838D 0C0D0E0F EBBF9719 1000 3D1068C0 {before} 6DF8838D 53485254 00000021 62E47E4A"
     );
     let files = facts.files(&data, &[2, 0, 1]).unwrap();
-    assert_eq!(files[0], hex(&expected));
+    assert_eq!(*files[0], hex(&expected));
     assert_eq!(shard_of(&files[1]), hex("000102030405"));
     assert_eq!(shard_of(&files[2]), hex("060708090A0B"));
 
@@ -185,7 +189,7 @@ fn any_k_files_of_a_set_rebuild_its_data() {
                     let found = one_set(&pile);
                     assert_eq!(found.facts(), &set.facts);
                     let rebuilt = found.rebuild(None).unwrap();
-                    assert_eq!(rebuilt.data, set.data);
+                    assert_eq!(*rebuilt.data, set.data);
                     assert_eq!(rebuilt.digest, DigestCheck::Unchecked);
                     // Exactly k files: every block rebuilt with nothing to compare it with.
                     assert_eq!(rebuilt.bare, set.facts.blocks());
@@ -194,7 +198,7 @@ fn any_k_files_of_a_set_rebuild_its_data() {
                 // Every file at once: each block is confirmed by the spare ones.
                 let pile = Pile::new(&slices(&set.files)).unwrap();
                 let rebuilt = one_set(&pile).rebuild(None).unwrap();
-                assert_eq!((rebuilt.data, rebuilt.bare), (set.data, 0));
+                assert_eq!((rebuilt.data.to_vec(), rebuilt.bare), (set.data, 0));
             }
         }
     }
@@ -225,12 +229,12 @@ fn every_block_is_taken_from_the_files_that_hold_it() {
     };
     assert_eq!(found.coverage(), coverage);
     assert_eq!(stretches(found), [(0, 5, 4)]);
-    assert_eq!(found.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*found.rebuild(None).unwrap().data, set.data);
     // The lost file of every shard is made again, byte for byte.
     let whole = written(Field::Gf256, 1, 3, 5, 60);
     for index in 0..5 {
         assert_eq!(
-            found.repair(index, None).unwrap(),
+            *found.repair(index, None).unwrap(),
             whole.files[usize::from(index)]
         );
     }
@@ -331,7 +335,7 @@ fn the_same_shard_twice_counts_once_and_its_files_fill_each_other_in() {
         [(0, 0, true), (2, 0, true), (1, 1, false), (3, 2, false)]
     );
     assert!(found.disputes().is_empty());
-    assert_eq!(found.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*found.rebuild(None).unwrap().data, set.data);
 
     // Two files of shard 0, each with another block damaged: together they hold the shard.
     let (mut first, mut second) = (set.files[0].clone(), set.files[0].clone());
@@ -342,7 +346,7 @@ fn the_same_shard_twice_counts_once_and_its_files_fill_each_other_in() {
     let found = one_set(&pile);
     assert_eq!((found.coverage().short, found.coverage().bare), (0, 3));
     assert!(found.disputes().is_empty());
-    assert_eq!(found.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*found.rebuild(None).unwrap().data, set.data);
 }
 
 #[test]
@@ -368,7 +372,7 @@ fn files_of_one_shard_that_differ_are_not_used_for_the_block_they_differ_on() {
     let found = one_set(&pile);
     assert_eq!(found.disputes(), core::slice::from_ref(&disputed));
     let rebuilt = found.rebuild(None).unwrap();
-    assert_eq!((rebuilt.data, rebuilt.bare), (set.data.clone(), 1));
+    assert_eq!((rebuilt.data.to_vec(), rebuilt.bare), (set.data.clone(), 1));
     // With two other shards the disputed block has two holders.
     let files: [&[u8]; 5] = [
         &set.files[1],
@@ -405,7 +409,7 @@ fn the_report_of_files_that_differ_does_not_depend_on_their_order() {
     for order in orders {
         // The three files of shard 0 in this order, then the other shards.
         let mut files: Vec<&[u8]> = order.iter().map(|&copy| copies[copy]).collect();
-        files.extend(set.files[1..].iter().map(Vec::as_slice));
+        files.extend(set.files[1..].iter().map(|bytes| bytes.as_slice()));
         let pile = Pile::new(&files).unwrap();
         let found = one_set(&pile);
         assert_eq!(found.disputes().len(), 1);
@@ -420,7 +424,7 @@ fn the_report_of_files_that_differ_does_not_depend_on_their_order() {
         assert_eq!(found.disputed_blocks(77).count(), 0);
         // Block 0 has four holders; blocks 1 and 2 the three other shards.
         assert_eq!(stretches(found), [(0, 1, 4), (1, 3, 3)]);
-        assert_eq!(found.rebuild(None).unwrap().data, set.data);
+        assert_eq!(*found.rebuild(None).unwrap().data, set.data);
     }
 }
 
@@ -494,7 +498,7 @@ fn shards_that_are_not_one_set_are_refused_and_named() {
     // unconfirmed in every block. This is what the digest of the data is for.
     let three: [&[u8]; 3] = [sound[0], &wrong, sound[2]];
     let rebuilt = rebuild(&three).unwrap();
-    assert_ne!(rebuilt.data, set.data);
+    assert_ne!(*rebuilt.data, set.data);
     assert_eq!(rebuilt.bare, 3);
 }
 
@@ -505,7 +509,7 @@ fn bytes_after_the_data_that_are_not_zero_are_refused() {
     let file = |index: u16, shard: &[u8]| Header::new(facts, index).unwrap().file(shard).unwrap();
     let files = [file(0, &[1, 2]), file(1, &[3, 4]), file(2, &[0, 0])];
     let pile = Pile::new(&slices(&files)).unwrap();
-    assert_eq!(one_set(&pile).rebuild(None).unwrap().data, [1, 2, 3, 4]);
+    assert_eq!(*one_set(&pile).rebuild(None).unwrap().data, [1, 2, 3, 4]);
 
     let files = [file(0, &[1, 2]), file(1, &[3, 4]), file(2, &[0, 9])];
     let pile = Pile::new(&slices(&files)).unwrap();
@@ -594,7 +598,7 @@ fn the_steps_are_counted_by_the_rule_and_the_limit_is_checked_first() {
         let pile = Pile::new(&files).unwrap();
         let found = one_set(&pile);
         let rebuilt = found.rebuild(None).unwrap();
-        assert_eq!(rebuilt.data, set.data);
+        assert_eq!(*rebuilt.data, set.data);
         assert_eq!(found.rebuild_work(), Ok(rebuilt.steps));
         rebuilt.steps
     };
@@ -624,7 +628,7 @@ fn the_steps_are_counted_by_the_rule_and_the_limit_is_checked_first() {
     );
     assert_eq!(found.rebuild(Some(0)), Err(SetError::Work { needed }));
     assert_eq!(found.rebuild(Some(needed)).unwrap().steps, needed);
-    assert_eq!(found.repair(3, Some(needed)).unwrap(), set.files[3]);
+    assert_eq!(*found.repair(3, Some(needed)).unwrap(), set.files[3]);
 
     // Two-byte symbols: two sources, and one spare shard compared in two blocks of two symbols.
     let pairs = written(Field::Gf65536, 1, 2, 3, 16);
@@ -642,7 +646,7 @@ fn sources_that_change_and_come_back_are_prepared_each_time() {
     let pile = Pile::new(&slices(&set.files)).unwrap();
     let found = one_set(&pile);
     let rebuilt = found.rebuild(None).unwrap();
-    assert_eq!(rebuilt.data, set.data);
+    assert_eq!(*rebuilt.data, set.data);
     // Three preparations; a spare shard compared in the outer blocks, shard 0 made in the
     // middle one.
     assert_eq!(rebuilt.steps, 3 * 9 + 3 * 3 * (4 + 64));
@@ -663,7 +667,7 @@ fn a_lost_file_is_made_again_and_a_set_is_given_more_files() {
             let again = one_set(&pile)
                 .repair(u16::try_from(lost).unwrap(), None)
                 .unwrap();
-            assert_eq!(again, set.files[lost]);
+            assert_eq!(*again, set.files[lost]);
         }
         // Files the set never had are the ones its writer would have written.
         let pile = Pile::new(&slices(&set.files[3..])).unwrap();

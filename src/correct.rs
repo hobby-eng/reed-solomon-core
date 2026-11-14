@@ -16,8 +16,10 @@
 //! caller, says that the result is the original.
 //!
 //! The syndromes are computed by the scaling kernel, which never branches on shard bytes or
-//! indexes a table by them. They depend on the errors alone, not on the data; the search for the
-//! wrong symbols does branch on them and index tables by them.
+//! indexes a table by them. They depend on the errors alone, not on the data. The search for the
+//! wrong symbols branches on the shape of the errors, how many and where, and the field
+//! arithmetic takes no table and no branch on a value. Every buffer of the search is wiped when
+//! the decoder is dropped.
 
 mod plan;
 
@@ -28,6 +30,7 @@ use alloc::collections::TryReserveError;
 use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::ops::Deref;
+use zeroize::Zeroize;
 
 pub use plan::{Change, ChangeKind, Mark, Plan};
 
@@ -462,6 +465,24 @@ impl Decoder {
     }
 }
 
+impl Drop for Decoder {
+    /// The syndromes, the recurrences and the errors follow from the data, and for a marked
+    /// symbol the error is its value: all of them are wiped. The points, the weights and the
+    /// factors follow from the shard numbers alone.
+    fn drop(&mut self) {
+        self.syndromes.zeroize();
+        self.column.zeroize();
+        self.connection.zeroize();
+        self.previous.zeroize();
+        self.saved.zeroize();
+        self.errors.zeroize();
+        self.sequence.zeroize();
+        self.product.zeroize();
+        self.powers.zeroize();
+        self.changed.zeroize();
+    }
+}
+
 /// What [`Finder::look`] saw in one block.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Look {
@@ -771,12 +792,13 @@ mod tests {
         // showed above the bound when the second pass took buffers of its own.
         let code = Code::new(Field::Gf256, 8).unwrap();
         let data: Vec<Vec<u8>> = (0..8_u8).map(|i| vec![i; 1 << 21]).collect();
-        let data: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
+        let data: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
         let targets: Vec<u16> = (0..10).collect();
         let mut set = code.encode(&data, &targets).unwrap();
         set[3][12345] ^= 0x40;
-        let mut shards: Vec<(u16, &mut [u8])> =
-            (0..).zip(set.iter_mut().map(Vec::as_mut_slice)).collect();
+        let mut shards: Vec<(u16, &mut [u8])> = (0..)
+            .zip(set.iter_mut().map(|bytes| bytes.as_mut_slice()))
+            .collect();
         let mut decoder = Decoder::new(Field::Gf256, targets.clone(), 2, 1 << 21).unwrap();
         let before = held(&decoder);
         assert_eq!(decoder.pass(&mut shards, 1 << 21, false), 0);
@@ -804,12 +826,15 @@ mod tests {
                     .collect()
             })
             .collect();
-        let data: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
+        let data: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
         let targets: Vec<u16> = (0..count as u16).collect();
         Code::new(field, threshold)
             .unwrap()
             .encode(&data, &targets)
             .unwrap()
+            .into_iter()
+            .map(|shard| shard.to_vec())
+            .collect()
     }
 
     /// Every choice of shards of small sets, each wrong in its own columns of a block of five:
@@ -851,8 +876,9 @@ mod tests {
                             held[shard][c * symbol + symbol - 1] ^= 1 + n as u8;
                         }
                     }
-                    let shards: Vec<(u16, &[u8])> =
-                        (0..).zip(held.iter().map(Vec::as_slice)).collect();
+                    let shards: Vec<(u16, &[u8])> = (0..)
+                        .zip(held.iter().map(|bytes| bytes.as_slice()))
+                        .collect();
                     let look = finder.look(&shards);
                     let case = format!("{field:?} {threshold} of {count}, wrong {wrong:?}");
                     if wrong.len() > most {
@@ -890,12 +916,14 @@ mod tests {
         let length = (SYNDROME_BYTES / 2) * 2 + 3;
         let code = Code::new(Field::Gf256, 3).unwrap();
         let data: Vec<Vec<u8>> = (0..3_u8).map(|i| vec![i + 1; length]).collect();
-        let data: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
+        let data: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
         let points: Vec<u16> = (0..5).collect();
         let mut set = code.encode(&data, &points).unwrap();
         let mut finder = Finder::new(Field::Gf256, &points, 2, length).unwrap();
-        let look = |finder: &mut Finder, set: &[Vec<u8>]| {
-            let shards: Vec<(u16, &[u8])> = (0..).zip(set.iter().map(Vec::as_slice)).collect();
+        let look = |finder: &mut Finder, set: &[zeroize::Zeroizing<Vec<u8>>]| {
+            let shards: Vec<(u16, &[u8])> = (0..)
+                .zip(set.iter().map(|bytes| bytes.as_slice()))
+                .collect();
             finder.look(&shards)
         };
         assert_eq!(
@@ -934,7 +962,12 @@ mod tests {
     fn a_code_word_has_no_syndromes() {
         let code = Code::new(Field::Gf256, 3).unwrap();
         let data: [&[u8]; 3] = [&[0x46], &[0x91], &[0x23]];
-        let word = code.encode(&data, &[0, 1, 2, 3, 4, 5, 6]).unwrap().concat();
+        let word: Vec<u8> = code
+            .encode(&data, &[0, 1, 2, 3, 4, 5, 6])
+            .unwrap()
+            .iter()
+            .flat_map(|shard| shard.iter().copied())
+            .collect();
         assert_eq!(syndromes_of(&word, 3), [0; 4]);
     }
 }

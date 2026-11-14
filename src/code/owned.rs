@@ -3,6 +3,7 @@
 use super::{Code, CodeError};
 use alloc::vec;
 use alloc::vec::Vec;
+use zeroize::Zeroizing;
 
 /// What the shards beyond the threshold say about a set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -83,7 +84,8 @@ impl Code {
     }
 
     /// The shards numbered `targets` of the set whose data shards are `data`, shard 0 first:
-    /// how a set is written.
+    /// how a set is written. Each shard comes in a [`Zeroizing`] buffer, which wipes itself when
+    /// it is dropped.
     ///
     /// # Errors
     ///
@@ -91,7 +93,11 @@ impl Code {
     /// they have one length that is a whole number of symbols, [`CodeError::Index`] for a target
     /// the field does not have, [`CodeError::Symbol`] for a symbol of the data that is not an
     /// element of the field.
-    pub fn encode(&self, data: &[&[u8]], targets: &[u16]) -> Result<Vec<Vec<u8>>, CodeError> {
+    pub fn encode(
+        &self,
+        data: &[&[u8]],
+        targets: &[u16],
+    ) -> Result<Vec<Zeroizing<Vec<u8>>>, CodeError> {
         if data.len() != self.threshold {
             return Err(CodeError::Count);
         }
@@ -104,6 +110,7 @@ impl Code {
     /// `(index, bytes)`: how a lost shard is made again, how the data comes back (targets 0 to
     /// `threshold - 1`) and how a set grows. The first `threshold` shards are the sources; the
     /// others are checked for their index, their length and their symbols and are not used.
+    /// Each shard made comes in a [`Zeroizing`] buffer, which wipes itself when it is dropped.
     ///
     /// # Errors
     ///
@@ -116,7 +123,7 @@ impl Code {
         &self,
         shards: &[(u16, &[u8])],
         targets: &[u16],
-    ) -> Result<Vec<Vec<u8>>, CodeError> {
+    ) -> Result<Vec<Zeroizing<Vec<u8>>>, CodeError> {
         let chosen = self.chosen(shards)?;
         // Every target is checked before the first shard is made.
         for &target in targets {
@@ -127,7 +134,7 @@ impl Code {
         let sources = self.sources(&chosen.indexes, &mut weights)?;
         let mut made = Vec::with_capacity(targets.len());
         for &target in targets {
-            let mut shard = vec![0; chosen.length];
+            let mut shard = Zeroizing::new(vec![0; chosen.length]);
             sources.build(target, &chosen.stripes, &mut shard)?;
             made.push(shard);
         }

@@ -177,13 +177,13 @@ pub(crate) fn digest_refusal_known_answer() -> bool {
     use alloc::vec::Vec;
     let field = crate::Field::Gf256;
     let rebuilt = |facts: SetFacts| -> Option<Result<Rebuilt, SetError>> {
-        let files: Vec<Vec<u8>> = (0..3_u8)
+        let files: Vec<crate::Zeroizing<Vec<u8>>> = (0..3_u8)
             .map(|index| {
                 let shard = [b"abc".get(usize::from(index)).copied()?];
                 Header::new(facts, index.into()).ok()?.file(&shard).ok()
             })
             .collect::<Option<_>>()?;
-        let given: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+        let given: Vec<&[u8]> = files.iter().map(|file| file.as_slice()).collect();
         let pile = Pile::new(&given).ok()?;
         Some(pile.sets().first()?.rebuild(None))
     };
@@ -196,7 +196,7 @@ pub(crate) fn digest_refusal_known_answer() -> bool {
     let matched = own.digest().is_some_and(|&expected| {
         rebuilt(own).is_some_and(|result| {
             result.is_ok_and(|done| {
-                done.data == b"abc" && done.digest == DigestCheck::Matched(expected)
+                *done.data == b"abc" && done.digest == DigestCheck::Matched(expected)
             })
         })
     });
@@ -226,7 +226,7 @@ pub(crate) fn vote_known_answer() -> bool {
     if let Some(first) = files.first_mut() {
         *first = other;
     }
-    let given: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+    let given: Vec<&[u8]> = files.iter().map(|file| file.as_slice()).collect();
     let vote = Pile::new(&given)
         .ok()
         .and_then(|pile| pile.sets().first()?.vote(None).ok());

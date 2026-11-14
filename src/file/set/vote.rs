@@ -18,6 +18,7 @@ use super::{ALLOWANCE, FileSet, SetError, wide};
 use crate::code::Code;
 use crate::correct::Finder;
 use alloc::vec::Vec;
+use zeroize::Zeroizing;
 
 /// A file that differs from the word its set establishes, in blocks that it holds with a
 /// checksum that holds.
@@ -286,7 +287,7 @@ struct Poll<'s, 'a> {
     weights: Vec<u16>,
     stripes: Vec<&'a [u8]>,
     /// The block of a shard in dispute, as those holders make it.
-    made: Vec<u8>,
+    made: Zeroizing<Vec<u8>>,
     /// The files of shards in dispute that differ from it in the block at hand: the shard's
     /// place among the shards, and the file's number among its files.
     differing: Vec<(usize, usize)>,
@@ -325,7 +326,7 @@ impl<'s, 'a> Poll<'s, 'a> {
             lowest: Vec::new(),
             weights: Vec::new(),
             stripes: Vec::new(),
-            made: Vec::new(),
+            made: Zeroizing::new(Vec::new()),
             differing: Vec::new(),
             firsts,
             marks,
@@ -447,7 +448,7 @@ impl<'s, 'a> Poll<'s, 'a> {
         }
         let length = self.stripes.first().map_or(0, |stripe| stripe.len());
         let more = length.saturating_sub(self.made.len());
-        room(&mut self.made, more)?;
+        room(&mut *self.made, more)?;
         self.made.resize(length, 0);
         let sources = self.code.sources(&self.lowest, &mut self.weights)?;
         let mut unconfirmed = 0;
@@ -458,7 +459,7 @@ impl<'s, 'a> Poll<'s, 'a> {
                 .binary_search_by_key(&shard.index, |shard| shard.index);
             let mut confirmed = false;
             for (slot, bytes) in shard.holding(number) {
-                if bytes == self.made {
+                if *bytes == **self.made {
                     confirmed = true;
                 } else if let Ok(at) = at {
                     room(&mut self.differing, 1)?;
@@ -555,7 +556,7 @@ mod tests {
             let data = [0x01, 0x04, 0x00, 0x07, 0x09, 0x16];
             let mut files = facts.files(&data, &[0, 1, 2, 3, 4]).unwrap();
             files[0] = Header::new(facts, 0).unwrap().file(&[0x00, 0x06]).unwrap();
-            let given: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+            let given: Vec<&[u8]> = files.iter().map(|bytes| bytes.as_slice()).collect();
             let pile = Pile::new(&given).unwrap();
             let set = &pile.sets()[0];
             let mut poll = Poll::new(set).unwrap();

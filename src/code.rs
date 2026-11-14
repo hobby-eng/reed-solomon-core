@@ -12,6 +12,7 @@ mod owned;
 
 use crate::field::Field;
 use core::fmt;
+use zeroize::Zeroizing;
 
 #[cfg(feature = "alloc")]
 pub use owned::Redundancy;
@@ -259,7 +260,8 @@ impl Sources<'_> {
         if !self.field.canonical(shard) {
             return Err(CodeError::Symbol);
         }
-        let mut expected = [0; STEP];
+        // The expected bytes follow from the data: wiped when the call returns.
+        let mut expected = Zeroizing::new([0_u8; STEP]);
         for (number, given) in shard.chunks(STEP).enumerate() {
             let range = number * STEP..number * STEP + given.len();
             let expected = expected.get_mut(..given.len()).ok_or(CodeError::Length)?;
@@ -270,7 +272,12 @@ impl Sources<'_> {
                 let coefficient = self.coefficient(&recipe, position, index, weight);
                 self.field.add_scaled(expected, stripe, coefficient);
             }
-            if expected != given {
+            // Every byte of the stretch is looked at, whichever differs.
+            let differ = expected
+                .iter()
+                .zip(given)
+                .fold(0, |differ, (made, held)| differ | (made ^ held));
+            if differ != 0 {
                 return Ok(false);
             }
         }

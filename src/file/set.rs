@@ -20,6 +20,7 @@ use crate::code::{CodeError, Sources};
 use alloc::vec::Vec;
 use core::fmt;
 use shards::{Full, Gathered, Shard, Sweep, gather, keep, room};
+use zeroize::Zeroizing;
 
 pub use shards::{Stretch, Stretches};
 pub use vote::{Outvoted, Vote};
@@ -74,11 +75,11 @@ pub struct Coverage {
     pub bare: u64,
 }
 
-/// The data of a set, rebuilt.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// The data of a set, rebuilt. Its `Debug` text gives the length of the data, not its bytes.
+#[derive(Clone, PartialEq, Eq)]
 pub struct Rebuilt {
-    /// The data.
-    pub data: Vec<u8>,
+    /// The data, in a buffer that wipes itself when it is dropped.
+    pub data: Zeroizing<Vec<u8>>,
     /// Whether the SHA-256 of the data was compared with the one the files state.
     pub digest: DigestCheck,
     /// Blocks that were held by exactly `k` shards: rebuilt with nothing to compare them with.
@@ -86,6 +87,17 @@ pub struct Rebuilt {
     pub bare: u64,
     /// The steps the call took, as [`FileSet::rebuild_work`] counts them.
     pub steps: u128,
+}
+
+impl fmt::Debug for Rebuilt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Rebuilt")
+            .field("length", &self.data.len())
+            .field("digest", &self.digest)
+            .field("bare", &self.bare)
+            .field("steps", &self.steps)
+            .finish_non_exhaustive()
+    }
 }
 
 /// What a rebuild found when it compared the digest of the data. Data whose digest differs from
@@ -399,7 +411,7 @@ impl<'a> FileSet<'a> {
     /// [`SetError::Index`] for an index the field does not have, before anything else, and
     /// otherwise as [`FileSet::rebuild`], except [`SetError::Padding`] and
     /// [`SetError::Digest`].
-    pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Vec<u8>, SetError> {
+    pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Zeroizing<Vec<u8>>, SetError> {
         let header = self.target(index)?;
         let (shard, _) = self.make(&[index], limit)?;
         header.file(&shard).map_err(|_| SetError::Memory)
@@ -432,7 +444,11 @@ impl<'a> FileSet<'a> {
     ///
     /// [`SetError::Index`] for an index the field does not have, before anything else, and
     /// otherwise as [`FileSet::repair`].
-    pub fn repairs(&self, indexes: &[u16], limit: Option<u128>) -> Result<Vec<Vec<u8>>, SetError> {
+    pub fn repairs(
+        &self,
+        indexes: &[u16],
+        limit: Option<u128>,
+    ) -> Result<Vec<Zeroizing<Vec<u8>>>, SetError> {
         let targets = self.targets(indexes)?;
         let mut files = Vec::new();
         room(&mut files, indexes.len())?;
@@ -571,7 +587,11 @@ impl<'a> FileSet<'a> {
     /// The shards `targets`, given in rising order, one after another in one buffer, and the
     /// steps taken: every block from the `k` lowest shards that hold it, every further holder
     /// compared with them.
-    fn make(&self, targets: &[u16], limit: Option<u128>) -> Result<(Vec<u8>, u128), SetError> {
+    fn make(
+        &self,
+        targets: &[u16],
+        limit: Option<u128>,
+    ) -> Result<(Zeroizing<Vec<u8>>, u128), SetError> {
         let needed = self.work(targets)?;
         if limit.is_some_and(|limit| needed > limit) {
             return Err(SetError::Work { needed });
@@ -589,7 +609,7 @@ impl<'a> FileSet<'a> {
             .shard
             .checked_mul(targets.len())
             .ok_or(SetError::Memory)?;
-        let (mut out, mut stripes) = (Vec::new(), Vec::new());
+        let (mut out, mut stripes) = (Zeroizing::new(Vec::new()), Vec::new());
         let (mut lowest, mut weights) = (Vec::new(), Vec::new());
         out.try_reserve_exact(length)
             .map_err(|_| SetError::Memory)?;

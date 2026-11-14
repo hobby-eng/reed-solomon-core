@@ -34,7 +34,7 @@ fn sample(index: u16) -> (Header, Vec<u8>, Vec<u8>) {
     let set = SetFacts::new(Field::Gf256, &[1, 2, 3], 3, 25, 4, None).unwrap();
     let header = Header::new(set, index).unwrap();
     let shard = bytes(u64::from(index), SHARD);
-    let file = header.file(&shard).unwrap();
+    let file = header.file(&shard).unwrap().to_vec();
     assert_eq!(file.len(), PIECES[6]);
     assert_eq!(header.as_bytes().len(), HEADER);
     (header, shard, file)

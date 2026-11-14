@@ -12,12 +12,15 @@ publish = false
 default = ["alloc"]
 # Owned results: whole-shard helpers, error correction and the writing of shard files. Without it
 # the crate allocates nothing and works on the caller's buffers.
-alloc = []
+alloc = ["zeroize/alloc"]
 
 [dependencies]
 # SHA-256 of the data: computed when a set is written and compared when it is rebuilt. RustCrypto,
-# without its default features: no allocation, no OID tables.
-sha2 = { version = "=0.11.1", default-features = false }
+# without its default features: no allocation, no OID tables; its state is wiped when dropped.
+sha2 = { version = "=0.11.1", default-features = false, features = ["zeroize"] }
+# Wiping every buffer that held data or values that follow from it, and the wrapper the owned
+# results come in, which wipes itself when dropped.
+zeroize = { version = "=1.9.1", default-features = false }
 
 [dev-dependencies]
 # An independent Reed–Solomon implementation: the expected bytes of the oracle tests, in both fields.

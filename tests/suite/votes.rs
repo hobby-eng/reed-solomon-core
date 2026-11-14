@@ -2,7 +2,7 @@
 //! the rest shares are named, block by block, and the set is taken without them.
 
 use crate::sets::{Written, damage, forged, one_set, shard_of, slices, written};
-use crate::support::{RawHeader, bytes, hex};
+use crate::support::{RawHeader, bytes, hex, plain};
 use reed_solomon_core::{
     Code, Coverage, Field, FileSet, Header, Outvoted, Pile, SetError, SetFacts, Stretch, Survey,
     Vote,
@@ -32,7 +32,11 @@ fn judging(k: u128, d: u128, s: u128) -> u128 {
 /// The file of shard `index` of another set with the same facts: other data.
 fn foreign(set: &Written, index: u16, seed: u64) -> Vec<u8> {
     let other = bytes(seed, set.data.len());
-    set.facts.files(&other, &[index]).unwrap().remove(0)
+    set.facts
+        .files(&other, &[index])
+        .unwrap()
+        .remove(0)
+        .to_vec()
 }
 
 /// The file of shard `index` with the bytes at the offsets `changes` of the shard changed by
@@ -42,7 +46,11 @@ fn altered(set: &Written, index: u16, changes: &[(usize, u8)]) -> Vec<u8> {
     for &(at, mask) in changes {
         shard[at] ^= mask;
     }
-    Header::new(set.facts, index).unwrap().file(&shard).unwrap()
+    Header::new(set.facts, index)
+        .unwrap()
+        .file(&shard)
+        .unwrap()
+        .to_vec()
 }
 
 /// What the one set among `files` says about its files.
@@ -145,7 +153,7 @@ fn a_file_of_other_data_is_named_among_five() {
     let rest = found.without(&[1]).unwrap();
     assert_eq!(rest.coverage().shards, 4);
     let rebuilt = rest.rebuild(None).unwrap();
-    assert_eq!((rebuilt.data, rebuilt.bare), (set.data, 0));
+    assert_eq!((rebuilt.data.to_vec(), rebuilt.bare), (set.data, 0));
     let again = rest.vote(None).unwrap();
     assert!(again.outvoted().is_empty() && again.undecided() == 0);
 }
@@ -217,7 +225,7 @@ fn the_spare_shards_outvote_half_their_number() {
     let pile = Pile::new(&given).unwrap();
     let found = one_set(&pile);
     let rest = found.without(&[3, 1]).unwrap();
-    assert_eq!(rest.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*rest.rebuild(None).unwrap().data, set.data);
     let most = found.vote_work().unwrap();
     assert!(vote.steps() < most);
     files[5] = foreign(&set, 5, 43);
@@ -270,7 +278,7 @@ fn files_of_one_shard_that_differ_are_judged_by_the_other_shards() {
     assert_eq!(rest.members().len(), 3);
     assert!(rest.members().iter().all(|member| !member.copy));
     let rebuilt = rest.rebuild(None).unwrap();
-    assert_eq!((rebuilt.data, rebuilt.bare), (set.data.clone(), 0));
+    assert_eq!((rebuilt.data.to_vec(), rebuilt.bare), (set.data.clone(), 0));
 
     // Without the file that agreed, the other one is the shard: it differs from the rest, and
     // one spare shard cannot say who is wrong.
@@ -339,7 +347,7 @@ fn a_dispute_that_no_file_confirms_takes_a_spare_shard() {
     let pile = Pile::new(&given).unwrap();
     let rest = one_set(&pile).without(&[1, 2]).unwrap();
     assert!(rest.disputes().is_empty());
-    assert_eq!(rest.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*rest.rebuild(None).unwrap().data, set.data);
 }
 
 /// A holder that differs takes two spare shards and a dispute that no file confirms takes one
@@ -450,7 +458,7 @@ fn every_file_of_an_outvoted_shard_is_named() {
     let rest = one_set(&pile).without(&[1]).unwrap();
     assert_eq!(rest.vote(None).unwrap().outvoted(), [row(5, 4, 2, 0)]);
     let rest = one_set(&pile).without(&[5, 1]).unwrap();
-    assert_eq!(rest.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*rest.rebuild(None).unwrap().data, set.data);
 }
 
 /// The rows of the answer shown in another order: a program sorts its own copy of them, and
@@ -461,7 +469,7 @@ fn the_blocks_of_a_file_are_found_by_its_place_however_the_rows_are_shown() {
     let block_len = 2;
     let data = bytes(23, 420);
     let facts = SetFacts::new(Field::Gf256, &[23], 3, 420, block_len, None).unwrap();
-    let files = facts.files(&data, &[0, 1, 2, 3, 4, 5, 6]).unwrap();
+    let files = plain(facts.files(&data, &[0, 1, 2, 3, 4, 5, 6]).unwrap());
     let set = Written { facts, data, files };
     assert_eq!(set.facts.blocks(), 70);
     let mut files = set.files.clone();
@@ -537,7 +545,7 @@ fn a_set_of_two_byte_symbols_votes_as_well() {
     let given = slices(&files);
     let pile = Pile::new(&given).unwrap();
     let rest = one_set(&pile).without(&[3]).unwrap();
-    assert_eq!(rest.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*rest.rebuild(None).unwrap().data, set.data);
 }
 
 /// The set without some of its files: nothing changes for places it does not have, the files
@@ -575,7 +583,7 @@ fn a_set_without_some_files_is_the_set_of_the_others() {
         assert_eq!(same.coverage(), found.coverage());
         assert_eq!(same.disputes(), found.disputes());
         assert_eq!(same.facts(), found.facts());
-        assert_eq!(same.rebuild(None).unwrap().data, set.data);
+        assert_eq!(*same.rebuild(None).unwrap().data, set.data);
     }
     // One of two files of shard 0 gone: the other is no copy any more.
     let rest = found.without(&[1]).unwrap();
@@ -584,7 +592,7 @@ fn a_set_without_some_files_is_the_set_of_the_others() {
     // Both gone, in any order and named twice: three shards are left, and then one.
     let rest = found.without(&[1, 0, 1]).unwrap();
     assert_eq!(places(&rest), [(2, 1, false), (3, 2, false), (4, 3, false)]);
-    assert_eq!(rest.rebuild(None).unwrap().data, set.data);
+    assert_eq!(*rest.rebuild(None).unwrap().data, set.data);
     let rest = rest.without(&[2, 4]).unwrap();
     assert_eq!(places(&rest), [(3, 2, false)]);
     assert_eq!(
@@ -663,11 +671,11 @@ fn the_votes_computed_apart_from_this_crate_are_found() {
     let facts = SetFacts::new(Field::Gf256, &[1], 3, 6, 2, None).unwrap();
     let shards = ["0104", "0007", "0916", "0815", "3970", "3873", "3162"].map(hex);
     let written = facts.files(&hex("0104 0007 0916"), &[0, 1, 2, 3, 4, 5, 6]);
-    let written = written.unwrap();
+    let written = plain(written.unwrap());
     assert!(written.iter().map(|file| shard_of(file)).eq(shards.clone()));
     let file = |index: u16, shard: &str| -> Vec<u8> {
         let header = Header::new(facts, index).unwrap();
-        header.file(&hex(shard)).unwrap()
+        header.file(&hex(shard)).unwrap().to_vec()
     };
     // The files given, then the rows expected, the undecided blocks, the steps and the count.
     type Case = (Vec<Vec<u8>>, Vec<Outvoted>, Vec<u64>, u128, u128);
@@ -711,7 +719,7 @@ fn the_votes_computed_apart_from_this_crate_are_found() {
     let pairs = SetFacts::new(Field::Gf256, &[1], 2, 4, 2, None).unwrap();
     let file = |index: u16, shard: &str| -> Vec<u8> {
         let header = Header::new(pairs, index).unwrap();
-        header.file(&hex(shard)).unwrap()
+        header.file(&hex(shard)).unwrap().to_vec()
     };
     let files = [
         file(0, "1122"),
@@ -719,12 +727,12 @@ fn the_votes_computed_apart_from_this_crate_are_found() {
         file(2, "55EE"),
         file(2, "54EE"),
     ];
-    assert_eq!(pairs.files(&hex("1122 3344"), &[2]).unwrap()[0], files[2]);
+    assert_eq!(*pairs.files(&hex("1122 3344"), &[2]).unwrap()[0], files[2]);
     let given = slices(&files);
     let pile = Pile::new(&given).unwrap();
     let found = one_set(&pile);
     let rebuilt = found.rebuild(None).unwrap();
-    assert_eq!((rebuilt.data, rebuilt.bare), (hex("1122 3344"), 1));
+    assert_eq!((rebuilt.data.to_vec(), rebuilt.bare), (hex("1122 3344"), 1));
     let vote = found.vote(None).unwrap();
     assert_eq!(vote.outvoted(), [row(3, 2, 1, 0)]);
     assert_eq!((vote.undecided(), vote.steps()), (0, 136));
@@ -767,7 +775,7 @@ fn shape(set: &FileSet<'_>, origin: &dyn Fn(usize) -> usize) -> Shape {
         coverage: set.coverage(),
         stretches: set.stretches().unwrap().collect(),
         id_shared: set.id_shared(),
-        rebuilt: set.rebuild(None).map(|rebuilt| rebuilt.data),
+        rebuilt: set.rebuild(None).map(|rebuilt| rebuilt.data.to_vec()),
         outvoted: outvoted
             .map(|row| Outvoted {
                 position: origin(row.position),
@@ -1036,7 +1044,13 @@ fn the_vote_is_what_a_search_over_every_choice_of_holders_gives() {
         }
         let files: Vec<Vec<u8>> = held
             .iter()
-            .map(|(index, bytes)| Header::new(facts, *index).unwrap().file(bytes).unwrap())
+            .map(|(index, bytes)| {
+                Header::new(facts, *index)
+                    .unwrap()
+                    .file(bytes)
+                    .unwrap()
+                    .to_vec()
+            })
             .collect();
         if files.is_empty() {
             continue;

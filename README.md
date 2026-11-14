@@ -42,6 +42,7 @@ Most Reed–Solomon crates for Rust do one of two things. The erasure coders (`r
 | A limit on the work of a call, checked before it starts; a stated bound on working memory; no partial result                  | yes  | not found                                   |
 | No allocator needed, work on the caller's buffers; where shards are scaled, no byte of them chooses a branch or a table entry | yes  | some are `no_std`; the rest not stated      |
 | A self-test against answers from outside the crate, for a program to run at start                                             | yes  | not found                                   |
+| Every buffer that held data wiped, results in self-wiping buffers, no data in `Debug` texts                                   | yes  | not found                                   |
 
 The comparison was made from the documentation of each crate at its latest version on crates.io in November 2026; "not found" means we did not find it there.
 
@@ -117,10 +118,10 @@ let mut files = facts.files(data, &[0, 1, 2, 3, 4])?;
 // One file is lost and another damaged; the rest is given in any order.
 let lost = files.remove(1);
 files[2][50] ^= 0x01;
-let given: Vec<&[u8]> = files.iter().rev().map(Vec::as_slice).collect();
+let given: Vec<&[u8]> = files.iter().rev().map(|file| file.as_slice()).collect();
 let pile = Pile::new(&given)?;
 let set = &pile.sets()[0];
-assert_eq!(set.rebuild(None)?.data, data);
+assert_eq!(*set.rebuild(None)?.data, data);
 
 // The lost file is made again from the others, byte for byte.
 assert_eq!(set.repair(1, None)?, lost);
@@ -136,7 +137,7 @@ let data = b"twenty-six bytes of a text";
 let facts = SetFacts::new(Field::Gf256, b"backup-1", 3, 26, 8, None)?;
 let mut files = facts.files(data, &[0, 1, 2, 3, 4])?;
 files[3] = facts.files(b"another text, of 26 bytes!", &[3])?.remove(0);
-let given: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+let given: Vec<&[u8]> = files.iter().map(|file| file.as_slice()).collect();
 let pile = Pile::new(&given)?;
 let set = &pile.sets()[0];
 assert!(matches!(set.rebuild(None), Err(SetError::Inconsistent { .. })));
@@ -145,7 +146,7 @@ assert!(matches!(set.rebuild(None), Err(SetError::Inconsistent { .. })));
 let vote = set.vote(None)?;
 assert_eq!(vote.outvoted().len(), 1);
 assert_eq!(vote.outvoted()[0].position, 3);
-assert_eq!(set.without(&[3])?.rebuild(None)?.data, data);
+assert_eq!(*set.without(&[3])?.rebuild(None)?.data, data);
 ```
 
 These calls take a limit on their work, counted in steps by a stated rule and checked before anything is computed; `None` sets no limit.
@@ -155,6 +156,8 @@ These calls take a limit on their work, counted in steps by a stated rule and ch
 ## What it does not do
 
 reed-solomon-core holds no secret, and its one cryptographic function, SHA-256 from the `sha2` crate, checks data, not people. Its checks say whether shards belong together and whether the data has the digest its files state, never who made them: someone who can change every shard can make a consistent set of other data and state its digest. Beyond the correction limit the answer is either "unresolved" or a different valid set. A program that needs to know it got the original data back compares a digest or an authentication tag it trusts from elsewhere. The checksums of a shard file find accidental damage and are no signature.
+
+Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, hands every result that holds data back in a `Zeroizing` buffer that wipes itself, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Keeping memory out of swap files and crash dumps, and other programs out of the process, is for the program that uses the crate: [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
 
 ## Limits
 
@@ -177,15 +180,16 @@ let mut set = code.encode(&data, &[0, 1, 2, 3, 4])?;
 
 // Shards 0 and 2 are lost: three others give them back, and a sixth shard as well.
 let left = [(4, &set[4][..]), (1, &set[1][..]), (3, &set[3][..])];
-assert_eq!(code.rebuild(&left, &[0, 2])?, [b"abcd", b"ijkl"]);
+let lost = code.rebuild(&left, &[0, 2])?;
+assert_eq!((&lost[0][..], &lost[1][..]), (&b"abcd"[..], &b"ijkl"[..]));
 let sixth = code.rebuild(&left, &[5])?;
 assert_eq!(code.redundancy(&[left[0], left[1], left[2], (5, &sixth[0][..])])?, Redundancy::Agrees);
 
 // One byte goes wrong somewhere: the two spare shards find it and put it right.
 set[2][1] ^= 0x40;
-let mut given: Vec<(u16, &mut [u8])> = (0..).zip(set.iter_mut().map(Vec::as_mut_slice)).collect();
+let mut given: Vec<(u16, &mut [u8])> = (0..).zip(set.iter_mut().map(|shard| shard.as_mut_slice())).collect();
 assert_eq!(code.correct(&mut given)?, Correction::Corrected(vec![0, 0, 1, 0, 0]));
-assert_eq!(set[2], b"ijkl");
+assert_eq!(*set[2], b"ijkl");
 ```
 
 Without the `alloc` feature the crate allocates nothing: `Code::sources`, `Sources::build` and `Sources::agrees` work on buffers the caller provides.

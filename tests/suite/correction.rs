@@ -1,7 +1,7 @@
 //! Wrong symbols at unknown places: found and corrected within the bound, never called clean
 //! beyond it.
 
-use crate::support::{FIELDS, bytes, data, data_in, set, symbols};
+use crate::support::{FIELDS, bytes, data, data_in, plain, set, symbols};
 use reed_solomon_core::{Code, CodeError, Correction, Field, Redundancy};
 
 /// Shard indexes with gaps and out of order; zero only among the first eight.
@@ -12,8 +12,8 @@ const WITHOUT_ZERO: [u16; 9] = [200, 3, 255, 9, 4, 17, 1, 250, 100];
 /// The shards numbered `indexes` of a set of `k` data shards.
 fn shards_at(code: &Code, k: usize, length: usize, seed: u64, indexes: &[u16]) -> Vec<Vec<u8>> {
     let data = data_in(code.field(), k, length, seed);
-    let data: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
-    code.encode(&data, indexes).unwrap()
+    let data: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
+    plain(code.encode(&data, indexes).unwrap())
 }
 
 /// Runs the correction on `shards` as the shards numbered `indexes`.
@@ -21,7 +21,7 @@ fn correct(code: &Code, indexes: &[u16], shards: &mut [Vec<u8>]) -> Correction {
     let mut given: Vec<(u16, &mut [u8])> = indexes
         .iter()
         .copied()
-        .zip(shards.iter_mut().map(Vec::as_mut_slice))
+        .zip(shards.iter_mut().map(|bytes| bytes.as_mut_slice()))
         .collect();
     code.correct(&mut given).unwrap()
 }
@@ -134,7 +134,7 @@ fn one_wrong_symbol_too_many_is_never_called_clean() {
                             let given: Vec<(u16, &[u8])> = indexes
                                 .iter()
                                 .copied()
-                                .zip(shards.iter().map(Vec::as_slice))
+                                .zip(shards.iter().map(|bytes| bytes.as_slice()))
                                 .collect();
                             assert_eq!(code.redundancy(&given), Ok(Redundancy::Agrees));
                             assert_ne!(shards, whole);
@@ -164,7 +164,7 @@ fn nearest(
             .filter(|i| mask >> i & 1 == 1)
             .map(|i| (indexes[i], received[i].as_slice()))
             .collect();
-        let word = code.rebuild(&chosen, indexes).unwrap();
+        let word = plain(code.rebuild(&chosen, indexes).unwrap());
         let distance = word.iter().zip(received).filter(|(a, b)| a != b).count();
         if distance <= limit {
             return Some(word);
@@ -286,9 +286,9 @@ fn a_line_with_unreadable_and_misread_symbols_comes_back() {
         let given: Vec<(u16, &[u8])> = readable
             .iter()
             .copied()
-            .zip(read.iter().map(Vec::as_slice))
+            .zip(read.iter().map(|bytes| bytes.as_slice()))
             .collect();
-        assert_eq!(code.rebuild(&given, &all).unwrap(), line);
+        assert_eq!(plain(code.rebuild(&given, &all).unwrap()), line);
     }
 }
 
@@ -432,9 +432,9 @@ fn a_phrase_of_words_with_repair_words_survives_lost_and_wrong_words() {
     let given: Vec<(u16, &[u8])> = readable
         .iter()
         .copied()
-        .zip(read.iter().map(Vec::as_slice))
+        .zip(read.iter().map(|bytes| bytes.as_slice()))
         .collect();
-    assert_eq!(code.rebuild(&given, &all).unwrap(), phrase);
+    assert_eq!(plain(code.rebuild(&given, &all).unwrap()), phrase);
 }
 
 #[test]
@@ -444,7 +444,7 @@ fn beyond_the_bound_another_valid_set_may_be_the_answer() {
     let code = Code::new(Field::Gf256, 3).unwrap();
     let indexes: Vec<u16> = (0..7).collect();
     let data: [&[u8]; 3] = [&[0], &[0], &[6]];
-    let word = code.encode(&data, &indexes).unwrap();
+    let word = plain(code.encode(&data, &indexes).unwrap());
     assert_eq!(word.iter().filter(|shard| shard[0] != 0).count(), 5);
     // Given as it is, it agrees: nothing tells it from an all-zero set that suffered five errors.
     let mut shards = word.clone();

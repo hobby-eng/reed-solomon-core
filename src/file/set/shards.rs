@@ -583,7 +583,7 @@ mod tests {
             assert_eq!((held, looks), (3999, 4000));
         }
         // The pile itself agrees: one shard, every file a copy.
-        let whole: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+        let whole: Vec<&[u8]> = files.iter().map(|bytes| bytes.as_slice()).collect();
         let pile = Pile::new(&whole).unwrap();
         assert!(pile.sets()[0].members().iter().all(|member| member.copy));
     }

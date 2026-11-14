@@ -95,7 +95,7 @@ fn a_rebuild_compares_the_digest_of_exactly_the_bytes_of_the_data() {
         let given: Vec<&[u8]> = chosen.iter().map(|&at| files[at].as_slice()).collect();
         let pile = Pile::new(&given).unwrap();
         let rebuilt = one_set(&pile).rebuild(None).unwrap();
-        assert_eq!(rebuilt.data, TEXT);
+        assert_eq!(*rebuilt.data, TEXT);
         assert_eq!(rebuilt.digest, DigestCheck::Matched(digest(TEXT_DIGEST)));
     }
 }
@@ -116,7 +116,7 @@ fn files_without_a_digest_rebuild_and_say_that_nothing_was_compared() {
     let files = facts.files(TEXT, &[0, 1, 2]).unwrap();
     let pile = Pile::new(&slices(&files)).unwrap();
     let rebuilt = one_set(&pile).rebuild(None).unwrap();
-    assert_eq!(rebuilt.data, TEXT);
+    assert_eq!(*rebuilt.data, TEXT);
     assert_eq!(rebuilt.digest, DigestCheck::Unchecked);
 }
 
@@ -142,7 +142,13 @@ fn agreeing_on_other_data() -> Vec<Vec<u8>> {
         .unwrap();
     (0..5_u16)
         .zip(&shards)
-        .map(|(index, shard)| Header::new(facts, index).unwrap().file(shard).unwrap())
+        .map(|(index, shard)| {
+            Header::new(facts, index)
+                .unwrap()
+                .file(shard)
+                .unwrap()
+                .to_vec()
+        })
         .collect()
 }
 
@@ -170,5 +176,5 @@ fn files_that_agree_on_data_of_another_digest_are_refused() {
     // Making one lost file again does not put the data together: it compares no digest, and the
     // file it makes states the set's digest, which a rebuild then compares.
     let made = set.repair(1, None).unwrap();
-    assert_eq!(made, files[1]);
+    assert_eq!(*made, files[1]);
 }

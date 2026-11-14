@@ -34,7 +34,7 @@ fn a_file_of_bytes_is_written_as_computed_apart() {
     let file = header.file(&hex("F4000000")).unwrap();
     let expected =
         format!("{before} CD62C865 F4000000 B3561B91 {before} CD62C865 53485254 00000021 62E47E4A");
-    assert_eq!(file, hex(&expected));
+    assert_eq!(*file, hex(&expected));
     assert_eq!(file.len(), 86);
 }
 
@@ -62,7 +62,7 @@ fn a_file_of_no_data_with_a_digest_is_written_as_computed_apart() {
 
     let file = header.file(&[]).unwrap();
     let expected = format!("{before} 57E0B8AE {before} 57E0B8AE 53485254 00000041 0322ED28");
-    assert_eq!(file, hex(&expected));
+    assert_eq!(*file, hex(&expected));
     assert_eq!(file.len(), 142);
 
     let read = ShardFile::read(&file).unwrap();
@@ -88,7 +88,7 @@ fn a_file_of_two_blocks_is_written_as_computed_apart() {
     let expected = format!(
         "{before} 6DF8838D 0C0D0E0F EBBF9719 1000 3D1068C0 {before} 6DF8838D 53485254 00000021 62E47E4A"
     );
-    assert_eq!(file, hex(&expected));
+    assert_eq!(*file, hex(&expected));
     assert_eq!(file.len(), 92);
 
     let read = ShardFile::read(&file).unwrap();
@@ -138,7 +138,7 @@ fn a_file_of_any_shape_is_what_a_writer_written_apart_writes_and_reads_back_whol
                                 digest,
                             };
                             let file = header.file(&shard).unwrap();
-                            assert_eq!(file, raw.file(&shard));
+                            assert_eq!(*file, raw.file(&shard));
                             assert_eq!(u64::try_from(file.len()).unwrap(), set.file_len());
                             reads_back_whole(&file, &header, &shard);
                         }
@@ -171,7 +171,7 @@ fn reads_back_whole(file: &[u8], header: &Header, shard: &[u8]) {
     }
     assert_eq!(joined, shard);
     assert_eq!(read.block(blocks), None);
-    assert_eq!(read.header().file(&joined).unwrap(), file);
+    assert_eq!(*read.header().file(&joined).unwrap(), file);
 }
 
 #[test]

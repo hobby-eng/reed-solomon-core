@@ -48,15 +48,16 @@
 //!
 //! // Shards 0 and 2 are lost: three others give them back, and a sixth shard as well.
 //! let left = [(4, &set[4][..]), (1, &set[1][..]), (3, &set[3][..])];
-//! assert_eq!(code.rebuild(&left, &[0, 2])?, [b"abcd", b"ijkl"]);
+//! let lost = code.rebuild(&left, &[0, 2])?;
+//! assert_eq!((&lost[0][..], &lost[1][..]), (&b"abcd"[..], &b"ijkl"[..]));
 //! let sixth = code.rebuild(&left, &[5])?;
 //! assert_eq!(code.redundancy(&[left[0], left[1], left[2], (5, &sixth[0][..])])?, Redundancy::Agrees);
 //!
 //! // One byte goes wrong somewhere: the two spare shards find it and put it right.
 //! set[2][1] ^= 0x40;
-//! let mut given: Vec<(u16, &mut [u8])> = (0..).zip(set.iter_mut().map(Vec::as_mut_slice)).collect();
+//! let mut given: Vec<(u16, &mut [u8])> = (0..).zip(set.iter_mut().map(|bytes| bytes.as_mut_slice())).collect();
 //! assert_eq!(code.correct(&mut given)?, Correction::Corrected(vec![0, 0, 1, 0, 0]));
-//! assert_eq!(set[2], b"ijkl");
+//! assert_eq!(*set[2], b"ijkl");
 //! # Ok(())
 //! # }
 //! ```
@@ -96,11 +97,11 @@
 //! // One file is lost and another damaged; the rest is given in any order.
 //! let lost = files.remove(1);
 //! files[2][82] ^= 0x01;
-//! let given: Vec<&[u8]> = files.iter().rev().map(Vec::as_slice).collect();
+//! let given: Vec<&[u8]> = files.iter().rev().map(|bytes| bytes.as_slice()).collect();
 //! let pile = Pile::new(&given)?;
 //! let set = &pile.sets()[0];
 //! let rebuilt = set.rebuild(None)?;
-//! assert_eq!(rebuilt.data, data);
+//! assert_eq!(*rebuilt.data, data);
 //! assert!(matches!(rebuilt.digest, DigestCheck::Matched(_)));
 //!
 //! // The lost file is made again from the others, byte for byte.
@@ -120,7 +121,7 @@
 //! let facts = SetFacts::new(Field::Gf256, b"backup-1", 3, 26, 8, None)?;
 //! let mut files = facts.files(data, &[0, 1, 2, 3, 4])?;
 //! files[3] = facts.files(b"another text, of 26 bytes!", &[3])?.remove(0);
-//! let given: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
+//! let given: Vec<&[u8]> = files.iter().map(|bytes| bytes.as_slice()).collect();
 //! let pile = Pile::new(&given)?;
 //! let set = &pile.sets()[0];
 //! assert!(matches!(set.rebuild(None), Err(SetError::Inconsistent { .. })));
@@ -129,7 +130,7 @@
 //! let vote = set.vote(None)?;
 //! assert_eq!(vote.outvoted().len(), 1);
 //! assert_eq!(vote.outvoted()[0].position, 3);
-//! assert_eq!(set.without(&[3])?.rebuild(None)?.data, data);
+//! assert_eq!(*set.without(&[3])?.rebuild(None)?.data, data);
 //! # Ok(())
 //! # }
 //! ```
@@ -153,6 +154,7 @@ pub use file::{
     Block, Condition, DataDigest, FileError, Frame, Header, Length, SetFacts, ShardFile, Survey,
 };
 pub use self_test::{Check, SelfTest, self_test};
+pub use zeroize::{Zeroize, Zeroizing};
 
 #[cfg(feature = "alloc")]
 pub use code::Redundancy;

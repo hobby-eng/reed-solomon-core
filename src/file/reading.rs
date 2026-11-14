@@ -4,6 +4,7 @@
 use super::FileError;
 use super::header::{CHECKSUM, Found, Header, MOST, TRAILER};
 use core::convert::Infallible;
+use core::fmt;
 
 /// How a piece of a shard file was found.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -40,8 +41,9 @@ pub struct Frame {
     pub length: Length,
 }
 
-/// One block of a shard, as it was found.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// One block of a shard, as it was found. Its `Debug` text gives the length of an intact block,
+/// not its bytes.
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Block<'a> {
     /// The bytes of the block, whose checksum holds.
     Intact(&'a [u8]),
@@ -49,6 +51,16 @@ pub enum Block<'a> {
     Damaged,
     /// The file ends before the end of the block.
     Missing,
+}
+
+impl fmt::Debug for Block<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Intact(bytes) => write!(f, "Intact({} bytes)", bytes.len()),
+            Self::Damaged => f.write_str("Damaged"),
+            Self::Missing => f.write_str("Missing"),
+        }
+    }
 }
 
 /// A count of a shard file's pieces by their condition.
@@ -87,12 +99,22 @@ impl Survey {
 /// Reading decides which copy of the header holds and looks at no block; [`ShardFile::block`]
 /// checks one block when it is asked for, and [`ShardFile::survey`] checks them all. Nothing is
 /// allocated, and the work is bounded by the length of the bytes given, whatever the header
-/// says.
-#[derive(Clone, Copy, Debug)]
+/// says. Its `Debug` text gives the header, the frame and the length of the bytes, not the bytes.
+#[derive(Clone, Copy)]
 pub struct ShardFile<'a> {
     header: Header,
     bytes: &'a [u8],
     frame: Frame,
+}
+
+impl fmt::Debug for ShardFile<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ShardFile")
+            .field("header", &self.header)
+            .field("frame", &self.frame)
+            .field("length", &self.bytes.len())
+            .finish()
+    }
 }
 
 impl<'a> ShardFile<'a> {

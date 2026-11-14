@@ -1,6 +1,6 @@
 //! Deterministic test bytes and whole sets.
 
-use reed_solomon_core::{Code, Field};
+use reed_solomon_core::{Code, Field, Zeroizing};
 
 /// Every field.
 pub(crate) const FIELDS: [Field; 3] = [Field::Gf256, Field::Gf65536, Field::Gf2048];
@@ -46,9 +46,14 @@ pub(crate) fn data(k: usize, length: usize, seed: u64) -> Vec<Vec<u8>> {
 
 /// The first `n` shards of the set with these data shards.
 pub(crate) fn set(code: &Code, data: &[Vec<u8>], n: usize) -> Vec<Vec<u8>> {
-    let data: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
+    let data: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
     let targets: Vec<u16> = (0..n).map(|i| u16::try_from(i).unwrap()).collect();
-    code.encode(&data, &targets).unwrap()
+    plain(code.encode(&data, &targets).unwrap())
+}
+
+/// Owned results as plain vectors, to compare with bytes written out in a test.
+pub(crate) fn plain(shards: Vec<Zeroizing<Vec<u8>>>) -> Vec<Vec<u8>> {
+    shards.into_iter().map(|shard| shard.to_vec()).collect()
 }
 
 /// The shards numbered `picked`, as `(index, bytes)`.
