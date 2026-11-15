@@ -27,7 +27,17 @@ impl Store {
         &mut self.0
     }
 
+    /// Nothing keeps the allocator's memory out of swap, of dumps or of a child process: each
+    /// answer holds only for no bytes at all.
     pub(super) fn is_locked(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub(super) fn is_out_of_dumps(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub(super) fn is_out_of_children(&self) -> bool {
         self.0.is_empty()
     }
 }

@@ -12,8 +12,6 @@ use heap::Store;
 #[cfg(feature = "protect")]
 use pages::Store;
 
-use alloc::alloc::handle_alloc_error;
-use core::alloc::Layout;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 
@@ -29,14 +27,6 @@ impl Buffer {
     /// `length` zero bytes, or `None` when the system gives no memory for them.
     pub(crate) fn zeros(length: usize) -> Option<Self> {
         Store::zeros(length).map(Self)
-    }
-
-    /// `length` zero bytes; as a `Vec` does, it stops the program when there is no memory.
-    pub(crate) fn zeros_or_stop(length: usize) -> Self {
-        let Some(buffer) = Self::zeros(length) else {
-            handle_alloc_error(Layout::array::<u8>(length).unwrap_or(Layout::new::<u8>()))
-        };
-        buffer
     }
 
     /// Shortens the buffer to `length` bytes; a longer `length` changes nothing.
@@ -55,11 +45,26 @@ impl Buffer {
         self.0.as_mut_slice()
     }
 
-    /// Whether no byte of the buffer can reach swap: the system keeps its pages in memory. Without
-    /// the `protect` feature that holds for an empty buffer only.
+    /// Whether the system keeps the buffer's pages in memory, out of swap; an image written when
+    /// the machine hibernates still holds them. Without the `protect` feature this, like the two
+    /// answers below, holds for an empty buffer only.
     #[must_use]
     pub fn is_locked(&self) -> bool {
         self.0.is_locked()
+    }
+
+    /// Whether the system leaves the buffer's pages out of the dumps it writes of the process.
+    #[must_use]
+    pub fn is_out_of_dumps(&self) -> bool {
+        self.0.is_out_of_dumps()
+    }
+
+    /// Whether a child process gets none of the bytes: no mapping of the pages, or zeros in
+    /// their place. After `fork` a child reads zeros from a buffer on Linux and Android; on macOS
+    /// and iOS it has no such pages, and reading one ends it.
+    #[must_use]
+    pub fn is_out_of_children(&self) -> bool {
+        self.0.is_out_of_children()
     }
 }
 
@@ -129,6 +134,7 @@ mod tests {
     fn an_empty_buffer_takes_no_memory_and_equals_another() {
         let (empty, other) = (Buffer::default(), Buffer::zeros(0).unwrap());
         assert!(empty.is_empty() && empty.is_locked());
+        assert!(empty.is_out_of_dumps() && empty.is_out_of_children());
         assert_eq!(empty, other);
         assert_ne!(empty, Buffer::zeros(1).unwrap());
     }

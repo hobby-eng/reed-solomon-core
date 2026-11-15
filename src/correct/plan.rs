@@ -4,11 +4,9 @@
 //! is fixed whenever `2e + s ≤ m − k`.
 
 use super::changes::Changes;
-use super::{Decoder, roomy};
+use super::{Decoder, NoMemory, roomy};
 use crate::code::{Code, CodeError};
-use alloc::alloc::handle_alloc_error;
 use alloc::vec::Vec;
-use core::alloc::Layout;
 use core::fmt;
 use core::ops::Deref;
 use zeroize::Zeroize;
@@ -106,9 +104,7 @@ impl Code {
             return Err(CodeError::Mark);
         }
         self.check_symbols(shards.iter().map(|(_, bytes)| *bytes))?;
-        let Ok(mut sorted) = roomy(marks.len()) else {
-            handle_alloc_error(Layout::array::<Mark>(marks.len()).unwrap_or(Layout::new::<Mark>()))
-        };
+        let mut sorted = roomy(marks.len()).map_err(|_| CodeError::Memory)?;
         sorted.extend_from_slice(marks);
         sorted.sort_unstable_by_key(|mark| (mark.symbol, mark.shard));
         sorted.dedup();
@@ -129,11 +125,12 @@ impl Code {
             return Ok(Plan::Agrees);
         }
         let points: Vec<u16> = shards.iter().map(|&(index, _)| index).collect();
-        let Ok(mut decoder) = Decoder::with_room(self.field(), points, spare, length, spare) else {
-            handle_alloc_error(Layout::new::<Decoder>())
-        };
+        let mut decoder = Decoder::with_room(self.field(), points, spare, length, spare)
+            .map_err(|_| CodeError::Memory)?;
         let mut changes = Changes::default();
-        let unresolved = decoder.plan_pass(shards, length, &sorted, &mut changes);
+        let unresolved = decoder
+            .plan_pass(shards, length, &sorted, &mut changes)
+            .map_err(|_| CodeError::Memory)?;
         if unresolved > 0 {
             return Ok(Plan::Unresolved {
                 columns: unresolved,
@@ -145,19 +142,18 @@ impl Code {
         Ok(Plan::Changes(changes))
     }
 
-    /// Makes `changes`, as [`Code::plan`] found them for these shards: a [`Changes`] by reference, or
-    /// changes a program lists itself. Every change is checked first (its place, the value still
-    /// there, the new value), and if one doesn't fit, nothing is changed and it fails with
+    /// Makes `changes`: the list [`Code::plan`] found for these shards, or one a program collects
+    /// from changes of its own. Every change is checked first (its place, the value still there,
+    /// the new value), and if one doesn't fit, nothing is changed and it fails with
     /// [`CodeError::Changes`].
-    pub fn apply<I>(&self, shards: &mut [(u16, &mut [u8])], changes: I) -> Result<(), CodeError>
-    where
-        I: IntoIterator<Item = Change>,
-        I::IntoIter: Clone,
-    {
-        let changes = changes.into_iter();
+    pub fn apply(
+        &self,
+        shards: &mut [(u16, &mut [u8])],
+        changes: &Changes,
+    ) -> Result<(), CodeError> {
         let symbol = self.field().symbol_bytes();
         let order = self.field().order();
-        let fits = changes.clone().all(|change| {
+        let fits = changes.iter().all(|change| {
             let held = place(shards, &change, symbol).map(value);
             held == Some(change.was) && usize::from(change.becomes) < order
         });
@@ -263,7 +259,7 @@ impl Decoder {
         length: usize,
         marks: &[Mark],
         changes: &mut Changes,
-    ) -> usize {
+    ) -> Result<usize, NoMemory> {
         let symbol = self.field.symbol_bytes();
         let stripe = Self::stripe(self.field, self.spare);
         let mut syndromes = core::mem::take(&mut self.syndromes);
@@ -337,13 +333,13 @@ impl Decoder {
                         was,
                         becomes: was ^ error,
                         kind,
-                    });
+                    })?;
                 }
             }
             start += size;
         }
         self.syndromes = syndromes;
         self.factors = factors;
-        unresolved
+        Ok(unresolved)
     }
 }

@@ -1,7 +1,7 @@
 //! The bytes of every shard equal those of `reed-solomon-erasure` 6.0.0, an implementation that
 //! shares no code with this crate: it builds a Vandermonde matrix and inverts its top rows.
 
-use crate::support::{data, set};
+use crate::support::{data, plain, set};
 use reed_solomon_core::{Code, Field};
 use reed_solomon_erasure::{galois_8, galois_16};
 
@@ -66,9 +66,17 @@ fn sets_of_pairs_beyond_256_shards_equal_reed_solomon_erasure() {
 
 #[test]
 fn every_one_of_the_65536_shards_equals_reed_solomon_erasure() {
-    // The whole index range, 255, 256 and 65,535 included, for a threshold of three.
+    // The whole index range, 255, 256 and 65,535 included, for a threshold of three. The shards
+    // are made 4,096 at a time: with `protect` each lies in a mapping of its own, and a system
+    // can allow fewer than 65,536 of them.
     let k = 3;
     let data = data(k, 2, 65_536);
-    let ours = set(&Code::new(Field::Gf65536, k).unwrap(), &data, 65_536);
+    let code = Code::new(Field::Gf65536, k).unwrap();
+    let slices: Vec<&[u8]> = data.iter().map(Vec::as_slice).collect();
+    let mut ours = Vec::with_capacity(65_536);
+    for first in (0..=u16::MAX).step_by(4096) {
+        let targets: Vec<u16> = (first..=first + 4095).collect();
+        ours.extend(plain(code.encode(&slices, &targets).unwrap()));
+    }
     assert_eq!(ours, theirs_pairs(&data, 65_536));
 }

@@ -7,11 +7,11 @@
 [![RustSec audit](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml/badge.svg)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 2^m shards in a field GF(2^m) the program chooses, from 4 to 65,536, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. The crate has one dependency, `sha2`, no `unsafe` code, and works without an allocator.
+reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 2^m shards in a field GF(2^m) the program chooses, from 4 to 65,536, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. It depends on `sha2` and `zeroize`, and by default on `secret-protection-core`, which keeps data in protected memory pages and brings the standard library. The crate holds no `unsafe` code, and without its default features it works without an allocator.
 
 The [documentation index](docs/README.md) lists the guides; [How it works](docs/TECHNICAL.md) has the mathematics and the guarantees.
 
-Line coverage on Linux x86-64, measured on 2026-11-15 with the default features, is **98.19%** for the unit tests and the tests of the public interface (source fingerprint `7702e638`). [Test scope and per-file results](docs/COVERAGE.md).
+Line coverage on Linux x86-64, measured on 2026-11-15 with the default features, is **98.35%** for the unit tests and the tests of the public interface (source fingerprint `5f5a9adb`). [Test scope and per-file results](docs/COVERAGE.md).
 
 ## Contents
 
@@ -129,7 +129,7 @@ files[2][50] ^= 0x01;
 let given: Vec<&[u8]> = files.iter().rev().map(|file| file.as_slice()).collect();
 let pile = Pile::new(&given)?;
 let set = &pile.sets()[0];
-assert_eq!(*set.rebuild(None)?.data, data);
+assert_eq!(*set.rebuild(None)?.data, *data);
 
 // The lost file is made again from the others, byte for byte.
 assert_eq!(set.repair(1, None)?, lost);
@@ -154,7 +154,7 @@ assert!(matches!(set.rebuild(None), Err(SetError::Inconsistent { .. })));
 let vote = set.vote(None)?;
 assert_eq!(vote.outvoted().len(), 1);
 assert_eq!(vote.outvoted()[0].position, 3);
-assert_eq!(*set.without(&[3])?.rebuild(None)?.data, data);
+assert_eq!(*set.without(&[3])?.rebuild(None)?.data, *data);
 ```
 
 These calls take a limit on their work, counted in steps by a stated rule and checked before anything is computed; `None` sets no limit.
@@ -170,7 +170,7 @@ Data can be a secret. The crate wipes every buffer it filled with data when it l
 ## Limits
 
 - Shards of one set have one length, a whole number of symbols.
-- Correction takes at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards.
+- Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards; with `protect` the system maps whole pages for the largest part.
 - Files are read and sets rebuilt in memory: the files and the data have to fit there. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
 - A rebuild compares the SHA-256 only when the files state one; files written without it rebuild with nothing compared, and with exactly `k` files no shard is compared either. Making one lost file again compares no digest.
 - The vote names the files that differ from what most shards share, within a stated bound: a wrong file takes two spare files in every block it is wrong in. It does not say that the files left hold the data once written; a digest the program trusts does.

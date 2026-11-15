@@ -4,7 +4,9 @@
 //! interpolation in Python.
 
 use crate::support::{FIELDS, bytes, data_in, plain, set};
-use reed_solomon_core::{Change, ChangeKind, Code, CodeError, Field, Mark, Plan, Redundancy};
+use reed_solomon_core::{
+    Change, ChangeKind, Code, CodeError, Correction, Field, Mark, Plan, Redundancy,
+};
 
 /// The twelve words of a card as numbers of the BIP39 English list, and the four words the code
 /// adds at the points 12 to 15 (chronic identify give swift).
@@ -28,16 +30,17 @@ fn given(shards: &[Vec<u8>]) -> Vec<(u16, &[u8])> {
         .collect()
 }
 
-fn applied<I>(code: &Code, shards: &[Vec<u8>], changes: I) -> Vec<Vec<u8>>
-where
-    I: IntoIterator<Item = Change>,
-    I::IntoIter: Clone,
-{
+fn applied(
+    code: &Code,
+    shards: &[Vec<u8>],
+    changes: impl IntoIterator<Item = Change>,
+) -> Vec<Vec<u8>> {
     let mut out = shards.to_vec();
     let mut buffers: Vec<(u16, &mut [u8])> = (0..)
         .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
         .collect();
-    code.apply(&mut buffers, changes).unwrap();
+    code.apply(&mut buffers, &changes.into_iter().collect())
+        .unwrap();
     out
 }
 
@@ -94,6 +97,39 @@ fn a_card_with_two_gaps_and_a_wrong_word_is_put_right() {
         code.plan(&given(&read), &more),
         Ok(Plan::Unresolved { columns: 1 })
     );
+}
+
+#[test]
+fn a_wrong_word_below_or_between_the_gaps_keeps_its_place_in_the_list() {
+    let code = Code::new(Field::Gf2048, 12).unwrap();
+    let card: Vec<Vec<u8>> = CARD.iter().chain(&CARD_REPAIR).map(|&w| word(w)).collect();
+    // Words 2 and 5 cannot be read; a word before them, then one between them, was copied wrong.
+    for wrong in [0, 3] {
+        let mut read = card.clone();
+        read[1] = word(0);
+        read[4] = word(0);
+        read[wrong] = word(0x7FF);
+        let change = |shard: usize, kind| Change {
+            shard,
+            symbol: 0,
+            was: match kind {
+                ChangeKind::Filled => 0,
+                ChangeKind::Replaced => 0x7FF,
+            },
+            becomes: CARD[shard],
+            kind,
+        };
+        let mut expected = vec![
+            change(1, ChangeKind::Filled),
+            change(4, ChangeKind::Filled),
+            change(wrong, ChangeKind::Replaced),
+        ];
+        expected.sort_by_key(|change| change.shard);
+        let plan = code.plan(&given(&read), &[mark(4, 0), mark(1, 0)]).unwrap();
+        let listed = Plan::Changes(expected.iter().copied().collect());
+        assert_eq!(plan, listed, "wrong word {wrong}");
+        assert_eq!(applied(&code, &read, expected), card);
+    }
 }
 
 #[test]
@@ -347,6 +383,22 @@ fn beyond_the_bound_the_answer_is_unresolved_or_another_set() {
 }
 
 #[test]
+fn shards_of_no_bytes_agree_and_hold_no_symbol_to_mark() {
+    let code = Code::new(Field::Gf256, 2).unwrap();
+    let empty = vec![Vec::new(); 4];
+    assert_eq!(code.plan(&given(&empty), &[]), Ok(Plan::Agrees));
+    assert_eq!(
+        code.plan(&given(&empty), &[mark(0, 0)]),
+        Err(CodeError::Mark)
+    );
+    let mut out = empty.clone();
+    let mut buffers: Vec<(u16, &mut [u8])> = (0..)
+        .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
+        .collect();
+    assert_eq!(code.correct(&mut buffers), Ok(Correction::Agrees));
+}
+
+#[test]
 fn a_column_with_more_marks_than_spare_shards_is_unresolved() {
     // k = 2 of four shards: two spare. Three marks in column 1, one in column 0.
     let code = Code::new(Field::Gf256, 2).unwrap();
@@ -425,7 +477,7 @@ fn apply_checks_every_change_before_it_makes_one() {
             .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
             .collect();
         assert_eq!(
-            code.apply(&mut buffers, [good, bad]),
+            code.apply(&mut buffers, &[good, bad].into_iter().collect()),
             Err(CodeError::Changes)
         );
         assert_eq!(out, set);

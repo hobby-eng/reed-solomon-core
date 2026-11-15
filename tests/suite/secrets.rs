@@ -57,18 +57,21 @@ fn with_protect_a_result_lies_in_pages_kept_out_of_core_dumps() {
         let flags = flags_at(bytes.as_ptr() as usize).unwrap();
         assert!(flags.contains(" dd") && flags.contains(" wf"), "{flags}");
         assert_eq!(flags.contains(" lo"), bytes.is_locked(), "{flags}");
+        assert!(bytes.is_out_of_dumps() && bytes.is_out_of_children());
     }
 }
 
-/// Without the feature a result lies in the allocator's memory, which nothing locks.
+/// Without the feature a result lies in the allocator's memory, which nothing protects.
 #[cfg(not(feature = "protect"))]
 #[test]
-fn without_protect_a_result_says_it_is_not_locked() {
+fn without_protect_a_result_says_it_is_not_protected() {
     let code = Code::new(Field::Gf256, 2).unwrap();
     let shards = code
         .encode(&[&SECRET[..6], &SECRET[6..]], &[0, 1, 2])
         .unwrap();
-    assert!(shards.iter().all(|shard| !shard.is_locked()));
+    for shard in &shards {
+        assert!(!shard.is_locked() && !shard.is_out_of_dumps() && !shard.is_out_of_children());
+    }
 }
 
 fn shows_no_byte(text: &str) {

@@ -9,9 +9,7 @@ mod plan;
 use crate::buffer::Buffer;
 use crate::code::{Code, CodeError};
 use crate::field::Field;
-use alloc::alloc::handle_alloc_error;
 use alloc::vec::Vec;
-use core::alloc::Layout;
 use core::ops::Deref;
 use zeroize::Zeroize;
 
@@ -49,8 +47,9 @@ pub enum Correction {
 impl Code {
     /// Finds wrong symbols among `shards`, given as `(index, bytes)`, and corrects them in place: up to
     /// `(m − k) / 2` per column, wherever they are. Missing shards are simply not given. Either every
-    /// column is fixed or nothing changes. Uses at most [`Code::correction_memory`] bytes (under 8 MiB).
-    /// Fails on too few shards, bad indexes, unequal lengths or a symbol outside the field.
+    /// column is fixed or nothing changes. Asks for at most [`Code::correction_memory`] bytes (under
+    /// 8 MiB). Fails on too few shards, bad indexes, unequal lengths, a symbol outside the field, or
+    /// with [`CodeError::Memory`] when that memory is refused.
     pub fn correct(&self, shards: &mut [(u16, &mut [u8])]) -> Result<Correction, CodeError> {
         let indexes = shards.iter().map(|&(index, _)| index);
         let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
@@ -63,11 +62,9 @@ impl Code {
             return Ok(Correction::Agrees);
         }
         let points: Vec<u16> = shards.iter().map(|&(index, _)| index).collect();
-        // The memory of the search has a published bound; a machine without it stops here as
-        // it does when any other allocation of this call fails.
-        let Ok(mut decoder) = Decoder::new(self.field(), points, spare, length) else {
-            handle_alloc_error(Layout::new::<Decoder>())
-        };
+        // The memory of the search has a published bound; a refusal of it is an answer.
+        let mut decoder =
+            Decoder::new(self.field(), points, spare, length).map_err(|_| CodeError::Memory)?;
         // First find every wrong symbol without touching the shards, then correct them. Both
         // passes work in the decoder's own buffers, so the second takes no memory of its own.
         let unresolved = decoder.pass(shards, length, false);
@@ -84,10 +81,10 @@ impl Code {
     }
 
     /// An upper bound, in bytes, of the memory [`Code::correct`] asks for with `shards` shards,
-    /// whatever their length: the syndromes of one stripe, which with the `protect` feature take
-    /// whole pages, and a few elements per shard and per spare shard. With exactly `threshold`
-    /// shards only their indexes are held. Zero for a number of shards `correct` refuses at
-    /// once: fewer than the threshold, or more than the field has indexes.
+    /// whatever their length: the syndromes of one stripe and a few elements per shard and per
+    /// spare shard. With the `protect` feature the system rounds the syndromes up to whole pages.
+    /// With exactly `threshold` shards only their indexes are held. Zero for a number of shards
+    /// `correct` refuses at once: fewer than the threshold, or more than the field has indexes.
     #[must_use]
     pub fn correction_memory(&self, shards: usize) -> usize {
         if shards < self.threshold() || shards > self.field().order() {

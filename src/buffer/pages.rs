@@ -44,4 +44,12 @@ impl Store {
     pub(super) fn is_locked(&self) -> bool {
         self.area.as_ref().is_none_or(WorkArea::is_locked)
     }
+
+    pub(super) fn is_out_of_dumps(&self) -> bool {
+        self.area.as_ref().is_none_or(WorkArea::is_out_of_dumps)
+    }
+
+    pub(super) fn is_out_of_children(&self) -> bool {
+        self.area.as_ref().is_none_or(WorkArea::is_out_of_children)
+    }
 }

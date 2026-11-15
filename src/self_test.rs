@@ -285,7 +285,9 @@ mod correction {
         let mut buffers: Vec<(u16, &mut [u8])> = (0..)
             .zip(read.iter_mut().map(<[u8; 2]>::as_mut_slice))
             .collect();
-        let applied = code.apply(&mut buffers, expected).is_ok();
+        let applied = code
+            .apply(&mut buffers, &expected.into_iter().collect())
+            .is_ok();
         drop(buffers);
         planned && applied && read == CARD.map(u16::to_be_bytes)
     }

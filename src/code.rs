@@ -38,7 +38,7 @@ pub enum CodeError {
     /// A change that does not fit the shards: a place outside them, a symbol that no longer holds
     /// what the change says was there, or a new value that is not an element of the field.
     Changes,
-    /// The system gave no memory for a shard to return.
+    /// The system gave no memory for a shard to return, for a search or for a list of changes.
     Memory,
 }
 
@@ -54,7 +54,7 @@ impl fmt::Display for CodeError {
             Self::Symbol => "a symbol of a shard is not an element of the field",
             Self::Mark => "a symbol marked unreadable is not among the shards given",
             Self::Changes => "a change does not fit the shards it is applied to",
-            Self::Memory => "the system gave no memory for a shard",
+            Self::Memory => "the system gave no memory for the call",
         })
     }
 }

@@ -1,19 +1,23 @@
 //! The list of changes of a plan. What a symbol was and becomes can be a secret, so the list lies
 //! in a [`Buffer`] like every other result that holds data, as records of a fixed length.
 
+use super::NoMemory;
 use super::plan::{Change, ChangeKind};
 use crate::buffer::Buffer;
+use alloc::alloc::handle_alloc_error;
+use core::alloc::Layout;
 use core::fmt;
 
-/// Bytes of one record: the symbol's place (8), its shard's place (2), what the symbol holds (2)
-/// and becomes (2), its kind (1) and one spare byte, each number low byte first.
-const RECORD: usize = 16;
+/// Bytes of one record: the symbol's place (8), its shard's place (8), what the symbol holds (2)
+/// and becomes (2), its kind (1) and three spare bytes, each number low byte first.
+const RECORD: usize = 24;
 
 /// The byte of a record that says [`ChangeKind::Replaced`]; [`ChangeKind::Filled`] is zero.
 const REPLACED: u8 = 1;
 
-/// The fewest records a list gets room for when it first grows.
-const FIRST_ROOM: usize = 4;
+/// The records a list gets room for when it first grows: most of a page, which a buffer in
+/// protected pages takes whole in any case.
+const FIRST_ROOM: usize = 128;
 
 /// The changes of a [`crate::Plan`], in the order of the symbols and, within one, of the shards.
 /// They lie in a [`Buffer`]: wiped when dropped and, with the `protect` feature, in pages of their
@@ -45,6 +49,12 @@ impl Changes {
         (at < self.count).then(|| read(record))
     }
 
+    /// Whether the list lies in locked pages, as [`Buffer::is_locked`] says of a buffer.
+    #[must_use]
+    pub fn is_locked(&self) -> bool {
+        self.records.is_locked()
+    }
+
     /// The changes in their order.
     #[must_use]
     pub const fn iter(&self) -> ChangesIter<'_> {
@@ -61,13 +71,12 @@ impl Changes {
     }
 
     /// Adds `change` after the others. A list that has to grow moves into a larger buffer, and
-    /// the old one is wiped as it is dropped; a refusal of the memory stops the program, as in
-    /// [`crate::Code::correct`].
-    pub(super) fn push(&mut self, change: Change) {
+    /// the old one is wiped as it is dropped; a refusal of the memory leaves the list as it was.
+    pub(super) fn push(&mut self, change: Change) -> Result<(), NoMemory> {
         let room = self.records.len() / RECORD;
         if self.count == room {
             let more = room.saturating_mul(2).max(FIRST_ROOM);
-            let mut larger = Buffer::zeros_or_stop(more.saturating_mul(RECORD));
+            let mut larger = Buffer::zeros(more.saturating_mul(RECORD)).ok_or(NoMemory)?;
             if let Some(front) = larger.get_mut(..self.records.len()) {
                 front.copy_from_slice(&self.records);
             }
@@ -76,30 +85,31 @@ impl Changes {
         let record = self
             .records
             .get_mut(self.count * RECORD..)
-            .and_then(<[u8]>::first_chunk_mut::<RECORD>);
-        if let Some(record) = record {
-            write(record, change);
-            self.count += 1;
-        }
+            .and_then(<[u8]>::first_chunk_mut::<RECORD>)
+            .ok_or(NoMemory)?;
+        write(record, change);
+        self.count += 1;
+        Ok(())
     }
+}
+
+/// A place as a record keeps it: a `usize` is at most 64 bits wide.
+fn place(place: usize) -> [u8; 8] {
+    u64::try_from(place).unwrap_or(u64::MAX).to_le_bytes()
 }
 
 /// Writes `change` into `record`.
 fn write(record: &mut [u8; RECORD], change: Change) {
-    // A set has at most 65,536 shards and a shard at most 2^64 symbols, so both places fit.
-    let symbol = u64::try_from(change.symbol).unwrap_or(u64::MAX);
-    let shard = u16::try_from(change.shard).unwrap_or(u16::MAX);
     let kind = match change.kind {
         ChangeKind::Filled => 0,
         ChangeKind::Replaced => REPLACED,
     };
-    let fields = symbol
-        .to_le_bytes()
+    let fields = place(change.symbol)
         .into_iter()
-        .chain(shard.to_le_bytes())
+        .chain(place(change.shard))
         .chain(change.was.to_le_bytes())
         .chain(change.becomes.to_le_bytes())
-        .chain([kind, 0]);
+        .chain([kind]);
     for (slot, byte) in record.iter_mut().zip(fields) {
         *slot = byte;
     }
@@ -107,34 +117,28 @@ fn write(record: &mut [u8; RECORD], change: Change) {
 
 /// The change that `record` holds.
 fn read(record: &[u8; RECORD]) -> Change {
-    let [
-        s0,
-        s1,
-        s2,
-        s3,
-        s4,
-        s5,
-        s6,
-        s7,
-        h0,
-        h1,
-        w0,
-        w1,
-        b0,
-        b1,
-        kind,
-        _,
-    ] = *record;
-    let symbol = u64::from_le_bytes([s0, s1, s2, s3, s4, s5, s6, s7]);
+    let (symbol, rest) = record.split_at(8);
+    let (shard, rest) = rest.split_at(8);
+    let number = |bytes: &[u8]| {
+        let wide = bytes
+            .iter()
+            .rev()
+            .fold(0_u64, |wide, &byte| wide << 8 | u64::from(byte));
+        usize::try_from(wide).unwrap_or(usize::MAX)
+    };
+    let value = |at: usize| {
+        let low = rest.get(at).copied().unwrap_or(0);
+        let high = rest.get(at + 1).copied().unwrap_or(0);
+        u16::from_le_bytes([low, high])
+    };
     Change {
-        shard: usize::from(u16::from_le_bytes([h0, h1])),
-        symbol: usize::try_from(symbol).unwrap_or(usize::MAX),
-        was: u16::from_le_bytes([w0, w1]),
-        becomes: u16::from_le_bytes([b0, b1]),
-        kind: if kind == REPLACED {
-            ChangeKind::Replaced
-        } else {
-            ChangeKind::Filled
+        shard: number(shard),
+        symbol: number(symbol),
+        was: value(0),
+        becomes: value(2),
+        kind: match rest.get(4) {
+            Some(&REPLACED) => ChangeKind::Replaced,
+            _ => ChangeKind::Filled,
         },
     }
 }
@@ -160,11 +164,14 @@ impl fmt::Debug for Changes {
 }
 
 impl FromIterator<Change> for Changes {
-    /// A list a program makes itself, for [`crate::Code::apply`] or to compare a plan with.
+    /// A list a program makes itself, for [`crate::Code::apply`] or to compare a plan with. As
+    /// a `Vec` does, it stops the program when there is no memory for the list.
     fn from_iter<I: IntoIterator<Item = Change>>(changes: I) -> Self {
         let mut list = Self::default();
         for change in changes {
-            list.push(change);
+            if list.push(change).is_err() {
+                handle_alloc_error(Layout::new::<Change>());
+            }
         }
         list
     }
@@ -219,20 +226,35 @@ mod tests {
 
     #[test]
     fn a_list_gives_back_every_change_it_took_in_their_order() {
-        // More than the first room, so the list grows on the way, and the largest places.
-        let made: alloc::vec::Vec<Change> = (0..11)
+        // An empty list holds no memory, which counts as locked.
+        assert!(Changes::default().is_locked());
+        // More than the first room, so the list grows on the way, and the largest places: a
+        // place beyond every set is kept as it is, so that `apply` refuses it.
+        let count = 2 * FIRST_ROOM + 3;
+        let made: alloc::vec::Vec<Change> = (0..count)
             .map(|i| match i % 2 {
                 0 => change(i, i * 1000, ChangeKind::Filled),
-                _ => change(65_535 - i, usize::MAX - i, ChangeKind::Replaced),
+                _ => change(usize::MAX - i, usize::MAX - 2 * i, ChangeKind::Replaced),
             })
             .collect();
         let list: Changes = made.iter().copied().collect();
-        assert_eq!(list.len(), 11);
+        assert_eq!(list.len(), count);
         assert!(list.iter().eq(made.iter().copied()));
-        assert_eq!(list.iter().len(), 11);
-        assert_eq!(list.get(10), made.last().copied());
-        assert_eq!(list.get(11), None);
-        assert_eq!(alloc::format!("{list:?}"), "Changes(11)");
+        assert_eq!(list.iter().len(), count);
+        assert_eq!(list.get(count - 1), made.last().copied());
+        assert_eq!(list.get(count), None);
+        assert_eq!(
+            alloc::format!("{list:?}"),
+            alloc::format!("Changes({count})")
+        );
+        // Two places that differ only above sixteen bits are two changes.
+        let far: Changes = [change(70_000, 0, ChangeKind::Filled)]
+            .into_iter()
+            .collect();
+        let near: Changes = [change(65_535, 0, ChangeKind::Filled)]
+            .into_iter()
+            .collect();
+        assert!(far != near && far.get(0).map(|change| change.shard) == Some(70_000));
     }
 
     #[test]
