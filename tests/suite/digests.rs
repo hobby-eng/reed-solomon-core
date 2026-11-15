@@ -178,3 +178,24 @@ fn files_that_agree_on_data_of_another_digest_are_refused() {
     let made = set.repair(1, None).unwrap();
     assert_eq!(*made, files[1]);
 }
+
+#[test]
+fn a_rebuild_in_place_compares_the_digest_and_leaves_zeros_when_it_differs() {
+    let files = agreeing_on_other_data();
+    let pile = Pile::new(&slices(&files)).unwrap();
+    let mut out = [0xA5; 26];
+    assert_eq!(
+        one_set(&pile).rebuild_into(&mut out, None),
+        Err(SetError::Digest {
+            stated: digest(TEXT_DIGEST),
+            found: digest(OTHER_DIGEST),
+        })
+    );
+    assert_eq!(out, [0; 26]);
+    let facts = described(TEXT, 3, 8, DataDigest::Sha256);
+    let files = facts.files(TEXT, &[1, 3, 4]).unwrap();
+    let pile = Pile::new(&slices(&files)).unwrap();
+    let written = one_set(&pile).rebuild_into(&mut out, None).unwrap();
+    assert_eq!(out, *TEXT);
+    assert_eq!(written.digest, DigestCheck::Matched(digest(TEXT_DIGEST)));
+}

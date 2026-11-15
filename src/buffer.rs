@@ -29,11 +29,6 @@ impl Buffer {
         Store::zeros(length).map(Self)
     }
 
-    /// Shortens the buffer to `length` bytes; a longer `length` changes nothing.
-    pub(crate) fn truncate(&mut self, length: usize) {
-        self.0.truncate(length);
-    }
-
     /// The bytes.
     #[must_use]
     pub fn as_slice(&self) -> &[u8] {
@@ -112,15 +107,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_buffer_holds_zeros_and_shortens() {
+    fn a_buffer_holds_zeros_and_what_is_written() {
         let mut buffer = Buffer::zeros(5).unwrap();
         assert_eq!(*buffer, [0; 5]);
         buffer.copy_from_slice(&[1, 2, 3, 4, 5]);
-        buffer.truncate(9);
-        assert_eq!(buffer.len(), 5);
-        buffer.truncate(2);
-        assert_eq!(*buffer, [1, 2]);
-        assert_eq!(alloc::format!("{buffer:?}"), "Buffer(2 bytes)");
+        assert_eq!(*buffer, [1, 2, 3, 4, 5]);
+        assert_eq!(alloc::format!("{buffer:?}"), "Buffer(5 bytes)");
     }
 
     #[test]

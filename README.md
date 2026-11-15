@@ -52,30 +52,31 @@ Most Reed–Solomon crates for Rust do one of two things. The erasure coders (`r
 
 The comparison was made from the documentation of each crate at its latest version on crates.io in November 2026; "not found" means we did not find it there.
 
-What the others do better. The fast erasure coders work in O(n log n) and with SIMD: for thousands of shards and gigabytes of data they are much faster than this crate, whose work grows with `k` times the number of shards. PAR2 is a format many programs read. Here, files and data are still held in memory as a whole; the [roadmap](docs/ROADMAP.md) lists reading them piece by piece.
+What the others do better. The fast erasure coders work in O(n log n) and with SIMD: for thousands of shards and gigabytes of data they are much faster than this crate, whose work grows with `k` times the number of shards. PAR2 is a format many programs read.
 
 ## What it does
 
 A set is written from `k` data shards of equal length. The first `k` shards of the set are the data itself; every further shard is computed from them, by coefficients that depend only on its number and on `k`, not on how many shards the set has. So the shards already handed out never change when more are made.
 
-| Task                                          | Call                                                         | What it needs                      |
-| --------------------------------------------- | ------------------------------------------------------------ | ---------------------------------- |
-| Write a set                                   | `Code::encode`                                               | the `k` data shards                |
-| Get the data back, or make a lost shard again | `Code::rebuild`                                              | any `k` shards                     |
-| Give a set more shards later                  | `Code::rebuild` with new numbers                             | any `k` shards                     |
-| Check that shards belong to one set           | `Code::redundancy`                                           | more than `k` shards               |
-| Find and correct wrong bytes                  | `Code::correct`                                              | more than `k` shards               |
-| Plan corrections with marked gaps, then apply | `Code::plan`, then `Code::apply`                             | more than `k` shards               |
-| Work on a large file piece by piece           | `Code::sources`, then `Sources::build` and `Sources::agrees` | the caller's own buffers           |
-| Keep a shard in a file that describes itself  | `Header::file`                                               | one shard and its set              |
-| Read such a file, damaged or cut short        | `ShardFile::read`                                            | what is left of the file           |
-| Write all the files of a set                  | `SetFacts::files`                                            | the data                           |
-| Sort files into sets and rebuild the data     | `Pile::new`, then `FileSet::rebuild`                         | any files, in any order            |
-| Make a lost file again                        | `FileSet::repair`                                            | files that hold `k` of every block |
-| Make several lost files in one pass           | `FileSet::repairs`                                           | files that hold `k` of every block |
-| Tell which files differ from the rest         | `FileSet::vote`, then `FileSet::without`                     | spare files beyond `k`             |
-| Add check symbols after data, as QR codes do  | `CyclicCode::encode`                                         | the data                           |
-| Put such words right, with marked gaps        | `CyclicCode::plan`, then `CyclicCode::apply`                 | every shard of the word            |
+| Task                                          | Call                                                            | What it needs                      |
+| --------------------------------------------- | --------------------------------------------------------------- | ---------------------------------- |
+| Write a set                                   | `Code::encode`                                                  | the `k` data shards                |
+| Get the data back, or make a lost shard again | `Code::rebuild`                                                 | any `k` shards                     |
+| Give a set more shards later                  | `Code::rebuild` with new numbers                                | any `k` shards                     |
+| Check that shards belong to one set           | `Code::redundancy`                                              | more than `k` shards               |
+| Find and correct wrong bytes                  | `Code::correct`                                                 | more than `k` shards               |
+| Plan corrections with marked gaps, then apply | `Code::plan`, then `Code::apply`                                | more than `k` shards               |
+| Work on a large file piece by piece           | `Code::sources`, then `Sources::build` and `Sources::agrees`    | the caller's own buffers           |
+| Keep a shard in a file that describes itself  | `Header::file`                                                  | one shard and its set              |
+| Read such a file, damaged or cut short        | `ShardFile::read`                                               | what is left of the file           |
+| Write all the files of a set                  | `SetFacts::files`                                               | the data                           |
+| Sort files into sets and rebuild the data     | `Pile::new`, then `FileSet::rebuild`                            | any files, in any order            |
+| Make a lost file again                        | `FileSet::repair`                                               | files that hold `k` of every block |
+| Make several lost files in one pass           | `FileSet::repairs`                                              | files that hold `k` of every block |
+| Write, rebuild or repair files beyond memory  | `SetFacts::files_into`, `FileSet::rebuild_into`, `repairs_into` | mappings of the files and outputs  |
+| Tell which files differ from the rest         | `FileSet::vote`, then `FileSet::without`                        | spare files beyond `k`             |
+| Add check symbols after data, as QR codes do  | `CyclicCode::encode`                                            | the data                           |
+| Put such words right, with marked gaps        | `CyclicCode::plan`, then `CyclicCode::apply`                    | every shard of the word            |
 
 Correction finds wrong symbols without being told where they are. With `m` shards at hand it puts right up to `(m − k) / 2` wrong symbols at every position of the shards; shards that are missing are simply not given. In short, a set of `n` shards survives `e` wrong and `s` missing shards when `2e + s ≤ n − k`. Either every position is corrected or nothing is changed.
 
@@ -199,22 +200,47 @@ assert_eq!(*set.without(&[3])?.rebuild(None)?.data, *data);
 
 These calls take a limit on their work, counted in steps by a stated rule and checked before anything is computed; `None` sets no limit.
 
+A file larger than memory is given as a mapping of it, which the crate reads a block at a time. `SetFacts::files_into`, `FileSet::rebuild_into` and `FileSet::repairs_into` write the files of a set, its data and lost files into outputs the program gives, such as mappings of new files of `SetFacts::file_len` and `SetFacts::data_len` bytes, holding one block at a time. An output counts only when the call succeeds: a refusal before the work leaves it as it was, one during the work or by the checks after it leaves zeros in it. The files must not change from `Pile::new` until the last call on their set returns: a block's checksum is checked once, when the pile reads it. A large set should state the SHA-256 of its data, which a rebuild compares.
+
+```rust
+use reed_solomon_core::{Field, Pile, SetFacts};
+
+// The files and the outputs can be mappings of files on disk; here they are vectors.
+let data = b"twenty-six bytes of a text";
+let facts = SetFacts::new(Field::Gf256, b"backup-1", 3, 26, 8, None)?;
+let files = facts.files(data, &[0, 1, 2, 3, 4])?;
+let given: Vec<&[u8]> = files[2..].iter().map(|file| file.as_slice()).collect();
+let pile = Pile::new(&given)?;
+let set = &pile.sets()[0];
+
+// The data goes straight into the output, a block at a time.
+let mut out = vec![0; usize::try_from(facts.data_len())?];
+set.rebuild_into(&mut out, None)?;
+assert_eq!(out, data);
+
+// Two lost files in one pass, each into an output of its own.
+let length = usize::try_from(facts.file_len())?;
+let (mut first, mut second) = (vec![0; length], vec![0; length]);
+set.repairs_into(&[0, 1], &mut [first.as_mut_slice(), second.as_mut_slice()], None)?;
+assert_eq!((first.as_slice(), second.as_slice()), (&*files[0], &*files[1]));
+```
+
 [How it works](docs/TECHNICAL.md#the-shard-file) has every byte of the format, every rule of reading and the rules for sets.
 
 ## What it does not do
 
 reed-solomon-core holds no secret, and its one cryptographic function, SHA-256 from the `sha2` crate, checks data, not people. Its checks say whether shards belong together and whether the data has the digest its files state, never who made them: someone who can change every shard can make a consistent set of other data and state its digest. Beyond the correction limit the answer is either "unresolved" or a different valid set. A program that needs to know it got the original data back compares a digest or an authentication tag it trusts from elsewhere. The checksums of a shard file find accidental damage and are no signature.
 
-Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate, which keeps them out of swap, core dumps and child processes as far as each system allows. The crate passes that crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
+Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data; the outputs of `FileSet::rebuild_into` and `FileSet::repairs_into` are the program's own memory, for the program to protect. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate, which keeps them out of swap, core dumps and child processes as far as each system allows. The crate passes that crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
 
 ## Limits
 
 - Shards of one set have one length, a whole number of symbols.
 - Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards, and `CyclicCode::correct` for at most 4 MiB of syndromes and a few elements per shard; with `protect` the system maps whole pages for the largest part. A plan of either code holds every change it lists.
-- Files are read and sets rebuilt in memory: the files and the data have to fit there. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
+- A file is read through the bytes a program gives: one larger than memory is given as a mapping of it, which must not change from `Pile::new` until the last call on its set returns, and the calls that end in `_into` write into mappings as well. Where a system has no mappings, as in a browser, the files and the data have to fit in memory. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
 - A rebuild compares the SHA-256 only when the files state one; files written without it rebuild with nothing compared, and with exactly `k` files no shard is compared either. Making one lost file again compares no digest.
 - The vote names the files that differ from what most shards share, within a stated bound: a wrong file takes two spare files in every block it is wrong in. It does not say that the files left hold the data once written; a digest the program trusts does.
-- The [roadmap](docs/ROADMAP.md) lists reading large files piece by piece and other planned work.
+- The [roadmap](docs/ROADMAP.md) lists the planned work.
 
 ## Use from Rust
 

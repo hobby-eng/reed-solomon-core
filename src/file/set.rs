@@ -3,6 +3,7 @@
 //! is compared with them, so files that don't belong together are noticed.
 
 mod shards;
+mod sink;
 mod vote;
 
 use super::FileError;
@@ -14,6 +15,8 @@ use crate::code::{CodeError, Sources};
 use alloc::vec::Vec;
 use core::fmt;
 use shards::{Full, Gathered, Shard, Sweep, gather, keep, room};
+pub(super) use sink::{BySlot, Files};
+use sink::{Data, Sink};
 
 pub use shards::{Stretch, Stretches};
 pub use vote::{Outvoted, Vote};
@@ -93,6 +96,17 @@ impl fmt::Debug for Rebuilt {
     }
 }
 
+/// What a rebuild into the program's own output found; the data is in that output.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Written {
+    /// Whether the SHA-256 of the data was compared with the one the files state.
+    pub digest: DigestCheck,
+    /// Blocks that were held by exactly `k` shards: rebuilt with nothing to compare them with.
+    pub bare: u64,
+    /// The steps the call took, as [`FileSet::rebuild_work`] counts them.
+    pub steps: u128,
+}
+
 /// What a rebuild found when it compared the digest of the data. Data whose digest differs from
 /// the one the files state is not given back: [`SetError::Digest`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,6 +174,12 @@ pub enum SetError {
     /// The code refused shards that had passed the checks of their files. That is a fault of
     /// this crate, not of the files.
     Code(CodeError),
+    /// The outputs given to be written in place are not one for each result, each as long as
+    /// the result.
+    Output {
+        /// The bytes each output must have.
+        needed: u64,
+    },
 }
 
 impl fmt::Display for SetError {
@@ -186,6 +206,12 @@ impl fmt::Display for SetError {
             Self::Memory => f.write_str("this machine has no memory for the result"),
             Self::Index => f.write_str("the field has no shard with this index"),
             Self::Code(refusal) => write!(f, "the code refused checked shards: {refusal}"),
+            Self::Output { needed } => {
+                write!(
+                    f,
+                    "the outputs are not one of {needed} bytes for each result"
+                )
+            }
         }
     }
 }
@@ -199,12 +225,12 @@ impl From<CodeError> for SetError {
 }
 
 /// The sizes of a set in the type of an index into memory.
-struct Sizes {
-    threshold: usize,
+pub(super) struct Sizes {
+    pub(super) threshold: usize,
     /// Bytes of a symbol.
-    width: usize,
-    shard: usize,
-    block: usize,
+    pub(super) width: usize,
+    pub(super) shard: usize,
+    pub(super) block: usize,
 }
 
 /// A set as it was found among files: the files that state its facts, shard by shard.
@@ -312,32 +338,78 @@ impl<'a> FileSet<'a> {
         self.work(&[index])
     }
 
-    /// The data of the set, from whichever files hold each block. It is returned only when every block
-    /// was made and every spare shard agreed, and, if the files state a SHA-256, only when the data has
-    /// it ([`DigestCheck::Matched`]). Without a digest, whether this is the original is for the program
-    /// to check. Fails when shards or blocks are missing, above `limit`, on disagreement, on non-zero
-    /// padding, on a digest mismatch, or without memory.
+    /// The data of the set, from whichever files hold each block, given only when every block was
+    /// made, every spare shard agreed and, if the files state a SHA-256, the data has it
+    /// ([`DigestCheck::Matched`]); without one, the program checks the data. Fails when shards or
+    /// blocks are missing, above `limit`, on disagreement, non-zero padding, a digest mismatch or
+    /// without memory. [`FileSet::rebuild_into`] writes the data into the program's own output.
     pub fn rebuild(&self, limit: Option<u128>) -> Result<Rebuilt, SetError> {
-        self.ready()?;
-        let (mut data, steps) = self.make(&self.data_shards()?, limit)?;
+        let targets = self.data_targets(limit)?;
         let length = usize::try_from(self.facts.data_len()).map_err(|_| SetError::Memory)?;
-        let padding = data.get(length..).ok_or(SetError::Memory)?;
-        if padding.iter().any(|&byte| byte != 0) {
+        let mut data = Buffer::zeros(length).ok_or(SetError::Memory)?;
+        let Written {
+            digest,
+            bare,
+            steps,
+        } = self.data_into(&mut data, &targets)?;
+        Ok(Rebuilt {
+            data,
+            digest,
+            bare,
+            steps,
+        })
+    }
+
+    /// The data written into `out`, exactly [`SetFacts::data_len`] bytes long, with the work and
+    /// checks of [`FileSet::rebuild`] and one block held at a time: `out` and the files can be
+    /// mappings, and the files must not change from [`crate::Pile::new`] on. `out` counts only when
+    /// the call succeeds: a refusal before the work leaves it as it was, one during the work or
+    /// after it fills it with zeros.
+    pub fn rebuild_into(&self, out: &mut [u8], limit: Option<u128>) -> Result<Written, SetError> {
+        let needed = self.facts.data_len();
+        if u64::try_from(out.len()) != Ok(needed) {
+            return Err(SetError::Output { needed });
+        }
+        let targets = self.data_targets(limit)?;
+        let written = self.data_into(out, &targets);
+        if written.is_err() {
+            out.fill(0);
+        }
+        written
+    }
+
+    /// The data shards, once the set is known to rebuild within `limit`.
+    fn data_targets(&self, limit: Option<u128>) -> Result<Vec<u16>, SetError> {
+        self.ready()?;
+        let targets = self.data_shards()?;
+        self.allowed(&targets, limit)?;
+        Ok(targets)
+    }
+
+    /// The data shards `targets` into `out`, whose length and work were checked: block by block,
+    /// the padding looked at, then the digest.
+    fn data_into(&self, out: &mut [u8], targets: &[u16]) -> Result<Written, SetError> {
+        let shard = usize::try_from(self.facts.shard_len()).map_err(|_| SetError::Memory)?;
+        let mut sink = Data {
+            out,
+            shard,
+            padding: 0,
+        };
+        let steps = self.make(targets, &mut sink)?;
+        if sink.padding != 0 {
             return Err(SetError::Padding);
         }
-        data.truncate(length);
         let digest = match self.facts.digest() {
             None => DigestCheck::Unchecked,
             Some(&stated) => {
-                let found = sha256(&data);
+                let found = sha256(sink.out);
                 if found != stated {
                     return Err(SetError::Digest { stated, found });
                 }
                 DigestCheck::Matched(found)
             }
         };
-        Ok(Rebuilt {
-            data,
+        Ok(Written {
             digest,
             bare: self.coverage.bare,
             steps,
@@ -348,9 +420,8 @@ impl<'a> FileSet<'a> {
     /// Spare shards are still compared, but the data isn't assembled or its digest checked; a later
     /// rebuild checks that. Fails as [`FileSet::rebuild`], or for an index outside the field.
     pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Buffer, SetError> {
-        let header = self.target(index)?;
-        let (shard, _) = self.make(&[index], limit)?;
-        header.file(&shard).map_err(|_| SetError::Memory)
+        let mut files = self.repairs(&[index], limit)?;
+        files.pop().ok_or(SetError::Memory)
     }
 
     /// The steps [`FileSet::repairs`] needs for `indexes`. All of them are made in one pass, so each
@@ -365,29 +436,94 @@ impl<'a> FileSet<'a> {
 
     /// The files of shards `indexes`, in the order asked, made in one pass: each block is read and
     /// compared once for all of them. A repeated index gives the same file twice. Fails as
-    /// [`FileSet::repair`].
+    /// [`FileSet::repair`]. [`FileSet::repairs_into`] writes the files into the program's own
+    /// outputs instead.
     pub fn repairs(&self, indexes: &[u16], limit: Option<u128>) -> Result<Vec<Buffer>, SetError> {
-        let targets = self.targets(indexes)?;
+        let targets = self.repair_targets(indexes, limit)?;
         let mut files = Vec::new();
         room(&mut files, indexes.len())?;
         if targets.is_empty() {
             return Ok(files);
         }
-        let (shards, _) = self.make(&targets, limit)?;
-        let shard_len = usize::try_from(self.facts.shard_len()).map_err(|_| SetError::Memory)?;
-        for &index in indexes {
-            let place = targets.binary_search(&index).map_err(|_| SetError::Index)?;
-            let start = place.checked_mul(shard_len).ok_or(SetError::Memory)?;
-            let shard = shards
-                .get(start..start + shard_len)
-                .ok_or(SetError::Memory)?;
-            let file = self
-                .target(index)?
-                .file(shard)
-                .map_err(|_| SetError::Memory)?;
-            files.push(file);
+        let length = usize::try_from(self.facts.file_len()).map_err(|_| SetError::Memory)?;
+        for _ in indexes {
+            files.push(Buffer::zeros(length).ok_or(SetError::Memory)?);
         }
+        let mut outs = Vec::new();
+        room(&mut outs, files.len())?;
+        outs.extend(files.iter_mut().map(|file| file.as_mut_slice()));
+        self.files_into(indexes, &targets, &mut outs)?;
         Ok(files)
+    }
+
+    /// The files of [`FileSet::repairs`] written into `outs`, one for each index and each exactly
+    /// [`SetFacts::file_len`] bytes long; returns the steps taken. One block is held at a time, so
+    /// the outputs can be mappings, as the files can for [`FileSet::rebuild_into`]. The outputs
+    /// count only when the call succeeds: a refusal before the work leaves them as they were, one
+    /// during it fills them with zeros.
+    pub fn repairs_into(
+        &self,
+        indexes: &[u16],
+        outs: &mut [&mut [u8]],
+        limit: Option<u128>,
+    ) -> Result<u128, SetError> {
+        let needed = self.facts.file_len();
+        let fits = outs.len() == indexes.len()
+            && outs
+                .iter()
+                .all(|out| u64::try_from(out.len()) == Ok(needed));
+        if !fits {
+            return Err(SetError::Output { needed });
+        }
+        let targets = self.repair_targets(indexes, limit)?;
+        if targets.is_empty() {
+            return Ok(0);
+        }
+        let made = self.files_into(indexes, &targets, outs);
+        if made.is_err() {
+            outs.iter_mut().for_each(|out| out.fill(0));
+        }
+        made
+    }
+
+    /// The files of `indexes` into `outs`, whose lengths and work were checked: the frame of each,
+    /// then the blocks. `targets` are the indexes in rising order, each once.
+    fn files_into(
+        &self,
+        indexes: &[u16],
+        targets: &[u16],
+        outs: &mut [&mut [u8]],
+    ) -> Result<u128, SetError> {
+        let mut headers = Vec::new();
+        room(&mut headers, targets.len())?;
+        for &target in targets {
+            headers.push(self.target(target)?);
+        }
+        let mut slots = Vec::new();
+        room(&mut slots, indexes.len())?;
+        for (&index, out) in indexes.iter().zip(outs.iter_mut()) {
+            let slot = targets.binary_search(&index).map_err(|_| SetError::Index)?;
+            let header = headers.get(slot).ok_or(SetError::Memory)?;
+            header.write_frame(out).ok_or(SetError::Memory)?;
+            slots.push(slot);
+        }
+        let by_slot = BySlot::new(&slots, targets.len())?;
+        let mut sink = Files {
+            outs,
+            headers: &headers,
+            by_slot: &by_slot,
+        };
+        self.make(targets, &mut sink)
+    }
+
+    /// The different indexes of `indexes` in rising order, with their work checked against `limit`
+    /// when there are any.
+    fn repair_targets(&self, indexes: &[u16], limit: Option<u128>) -> Result<Vec<u16>, SetError> {
+        let targets = self.targets(indexes)?;
+        if !targets.is_empty() {
+            self.allowed(&targets, limit)?;
+        }
+        Ok(targets)
     }
 
     /// The different indexes of `indexes` in rising order, each checked as [`FileSet::target`]
@@ -465,6 +601,16 @@ impl<'a> FileSet<'a> {
         }
     }
 
+    /// The steps it takes to make `targets`, refused above `limit`: checked before a call asks for
+    /// the memory of its output or writes a byte.
+    fn allowed(&self, targets: &[u16], limit: Option<u128>) -> Result<u128, SetError> {
+        let needed = self.work(targets)?;
+        if limit.is_some_and(|limit| needed > limit) {
+            return Err(SetError::Work { needed });
+        }
+        Ok(needed)
+    }
+
     /// The steps it takes to make the shards `targets`, given in rising order.
     fn work(&self, targets: &[u16]) -> Result<u128, SetError> {
         self.ready()?;
@@ -494,28 +640,24 @@ impl<'a> FileSet<'a> {
         Ok(steps)
     }
 
-    /// The shards `targets`, given in rising order, one after another in one buffer, and the
-    /// steps taken: every block from the `k` lowest shards that hold it, every further holder
-    /// compared with them.
-    fn make(&self, targets: &[u16], limit: Option<u128>) -> Result<(Buffer, u128), SetError> {
-        let needed = self.work(targets)?;
-        if limit.is_some_and(|limit| needed > limit) {
-            return Err(SetError::Work { needed });
-        }
+    /// Makes the shards `targets`, given in rising order and passed by [`FileSet::allowed`], block
+    /// by block into `sink`, and returns the steps taken: every block from the `k` lowest shards
+    /// that hold it, every further holder compared with them.
+    fn make(&self, targets: &[u16], sink: &mut dyn Sink) -> Result<u128, SetError> {
         let code = self.facts.code();
         let threshold = code.threshold();
         let sizes = Sizes {
             threshold,
             width: code.field().symbol_bytes(),
             shard: usize::try_from(self.facts.shard_len()).map_err(|_| SetError::Memory)?,
-            // A block longer than this machine addresses is longer than the shard.
-            block: usize::try_from(self.facts.block_len()).unwrap_or(usize::MAX),
+            block: self.facts.block_bytes(),
         };
-        let length = sizes
-            .shard
-            .checked_mul(targets.len())
-            .ok_or(SetError::Memory)?;
-        let mut out = Buffer::zeros(length).ok_or(SetError::Memory)?;
+        // One block made at a time, in a `Buffer`, before it is handed over.
+        let mut scratch = Buffer::zeros(sizes.block.min(sizes.shard)).ok_or(SetError::Memory)?;
+        let mut out = Output {
+            scratch: &mut scratch,
+            sink,
+        };
         let (mut stripes, mut lowest, mut weights) = (Vec::new(), Vec::new(), Vec::new());
         room(&mut stripes, threshold)?;
         room(&mut lowest, threshold)?;
@@ -556,21 +698,27 @@ impl<'a> FileSet<'a> {
                 }
             }
         }
-        Ok((out, steps))
+        Ok(steps)
     }
+}
+
+/// Where `fill` makes a block that no file holds, and where it hands every block over.
+pub(super) struct Output<'o> {
+    pub(super) scratch: &'o mut [u8],
+    pub(super) sink: &'o mut dyn Sink,
 }
 
 /// Makes block `number` of every target into its place in `out`, from the holders of the block:
 /// the `k` lowest are the sources, and every further one is compared with what they make.
 /// Returns the steps taken. `stripes` has room for the sources.
-fn fill<'a>(
+pub(super) fn fill<'a>(
     number: u64,
     holders: &[(u16, &'a [u8])],
     sources: &Sources<'_>,
     stripes: &mut Vec<&'a [u8]>,
     targets: &[u16],
     sizes: &Sizes,
-    out: &mut [u8],
+    out: &mut Output<'_>,
 ) -> Result<u128, SetError> {
     let (lowest, spare) = holders
         .split_at_checked(sizes.threshold)
@@ -597,26 +745,25 @@ fn fill<'a>(
         });
     }
     let length = stripes.first().map_or(0, |stripe| stripe.len());
-    // The block's place inside a shard; the shards of the targets lie one after another.
+    // The block's number in the file and its place inside a shard.
+    let block = u32::try_from(number).map_err(|_| SetError::Memory)?;
     let within = usize::try_from(number)
         .ok()
-        .and_then(|number| number.checked_mul(sizes.block));
+        .and_then(|number| number.checked_mul(sizes.block))
+        .ok_or(SetError::Memory)?;
     for (slot, &target) in targets.iter().enumerate() {
-        let place = slot
-            .checked_mul(sizes.shard)
-            .zip(within)
-            .and_then(|(shard, block)| shard.checked_add(block))
-            .and_then(|start| out.get_mut(start..start.checked_add(length)?))
-            .ok_or(SetError::Memory)?;
-        // A target that a file holds is copied: it is a source, or it was just compared.
+        // A target that a file holds is handed over as it is: it is a source, or it was just
+        // compared.
         match holders.binary_search_by_key(&target, |&(index, _)| index) {
             Ok(at) => {
                 if let Some(&(_, bytes)) = holders.get(at) {
-                    place.copy_from_slice(bytes);
+                    out.sink.put(slot, block, within, bytes)?;
                 }
             }
             Err(_) => {
+                let place = out.scratch.get_mut(..length).ok_or(SetError::Memory)?;
                 sources.build(target, stripes, place)?;
+                out.sink.put(slot, block, within, place)?;
                 worked += 1;
             }
         }

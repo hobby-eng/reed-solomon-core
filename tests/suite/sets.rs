@@ -502,20 +502,26 @@ fn shards_that_are_not_one_set_are_refused_and_named() {
     assert_eq!(rebuilt.bare, 3);
 }
 
+/// The files 0, 1 and 2 of four bytes of data, 1 to 4, in three shards of two, with `last` as
+/// shard 2, which the data never reaches: its bytes are padding only.
+pub(crate) fn four_bytes_and(last: [u8; 2]) -> Vec<Vec<u8>> {
+    let facts = SetFacts::new(Field::Gf256, &[1], 3, 4, 4, None).unwrap();
+    let file = |index: u16, shard: &[u8]| Header::new(facts, index).unwrap().file(shard).unwrap();
+    plain([file(0, &[1, 2]), file(1, &[3, 4]), file(2, &last)])
+}
+
 /// Four bytes of data in three shards of two: shard 2 is zero bytes only.
 #[test]
 fn bytes_after_the_data_that_are_not_zero_are_refused() {
-    let facts = SetFacts::new(Field::Gf256, &[1], 3, 4, 4, None).unwrap();
-    let file = |index: u16, shard: &[u8]| Header::new(facts, index).unwrap().file(shard).unwrap();
-    let files = [file(0, &[1, 2]), file(1, &[3, 4]), file(2, &[0, 0])];
+    let files = four_bytes_and([0, 0]);
     let pile = Pile::new(&slices(&files)).unwrap();
     assert_eq!(*one_set(&pile).rebuild(None).unwrap().data, [1, 2, 3, 4]);
 
-    let files = [file(0, &[1, 2]), file(1, &[3, 4]), file(2, &[0, 9])];
+    let files = four_bytes_and([0, 9]);
     let pile = Pile::new(&slices(&files)).unwrap();
     assert_eq!(one_set(&pile).rebuild(None), Err(SetError::Padding));
     // Making one shard does not put the data together and does not look at those bytes.
-    assert_eq!(one_set(&pile).repair(0, None).unwrap(), files[0]);
+    assert_eq!(*one_set(&pile).repair(0, None).unwrap(), files[0]);
 }
 
 #[test]

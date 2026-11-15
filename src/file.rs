@@ -24,7 +24,7 @@ pub use pile::Pile;
 #[cfg(feature = "alloc")]
 pub use set::{
     Coverage, DigestCheck, Dispute, FileSet, Member, Outvoted, Rebuilt, SetError, Stretch,
-    Stretches, Vote,
+    Stretches, Vote, Written,
 };
 
 /// Why a shard file was not described, written or read.
@@ -58,6 +58,12 @@ pub enum FileError {
     Unrecognized,
     /// The marks of a shard file are there, and neither copy of the header passes its checks.
     Damaged,
+    /// The outputs given to be written in place are not one for each file, each as long as a
+    /// file of the set.
+    Output {
+        /// The bytes each output must have.
+        needed: u64,
+    },
     /// No header's checksum holds, and one names this other version of the format: the mark and
     /// the byte after it. Nothing else of such a file is checked: a later version may lay its
     /// header out differently, and a file of this version whose version byte went wrong in the
@@ -92,6 +98,9 @@ impl fmt::Display for FileError {
                     f,
                     "the file names version {version} of the shard file format"
                 );
+            }
+            Self::Output { needed } => {
+                return write!(f, "the outputs are not one of {needed} bytes for each file");
             }
             Self::Unsupported => "the shard file uses a field or an option this version lacks",
             Self::Conflict => "the two headers of the shard file both hold and differ",

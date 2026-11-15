@@ -97,6 +97,36 @@ fn a_file_of_other_bytes_is_named_by_the_vote() -> Result<(), Box<dyn std::error
 }
 
 #[test]
+fn a_set_too_large_for_memory_is_rebuilt_into_outputs() -> Result<(), Box<dyn std::error::Error>> {
+    // The files and the outputs can be mappings of files on disk; here they are vectors.
+    let data = b"twenty-six bytes of a text";
+    let facts = SetFacts::new(Field::Gf256, b"backup-1", 3, 26, 8, None)?;
+    let files = facts.files(data, &[0, 1, 2, 3, 4])?;
+    let given: Vec<&[u8]> = files[2..].iter().map(|file| file.as_slice()).collect();
+    let pile = Pile::new(&given)?;
+    let set = &pile.sets()[0];
+
+    // The data goes straight into the output, a block at a time.
+    let mut out = vec![0; usize::try_from(facts.data_len())?];
+    set.rebuild_into(&mut out, None)?;
+    assert_eq!(out, data);
+
+    // Two lost files in one pass, each into an output of its own.
+    let length = usize::try_from(facts.file_len())?;
+    let (mut first, mut second) = (vec![0; length], vec![0; length]);
+    set.repairs_into(
+        &[0, 1],
+        &mut [first.as_mut_slice(), second.as_mut_slice()],
+        None,
+    )?;
+    assert_eq!(
+        (first.as_slice(), second.as_slice()),
+        (&*files[0], &*files[1])
+    );
+    Ok(())
+}
+
+#[test]
 fn a_card_gets_its_repair_words_by_remainder_and_is_put_right()
 -> Result<(), Box<dyn std::error::Error>> {
     use reed_solomon_core::{CyclicCode, Field, Mark, Plan};

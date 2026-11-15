@@ -15,10 +15,6 @@ impl Store {
         Some(Self(bytes))
     }
 
-    pub(super) fn truncate(&mut self, length: usize) {
-        self.0.truncate(length);
-    }
-
     pub(super) fn as_slice(&self) -> &[u8] {
         &self.0
     }

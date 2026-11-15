@@ -143,6 +143,12 @@ impl SetFacts {
         self.block_len
     }
 
+    /// The length of a block as a number of bytes this machine addresses: a block longer than
+    /// that is longer than any shard, so a shard has one block.
+    pub(crate) fn block_bytes(&self) -> usize {
+        usize::try_from(self.block_len).unwrap_or(usize::MAX)
+    }
+
     /// The SHA-256 of the data that the files of the set state, if they state one. It says
     /// whether the data came back unchanged, not who wrote the set: whoever changes the data can
     /// state its new digest. Only a digest the program trusts from elsewhere tells that.

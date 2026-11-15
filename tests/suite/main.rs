@@ -16,6 +16,7 @@ mod digests;
 mod examples;
 mod fields;
 mod files;
+mod in_place;
 mod oracle;
 mod plans;
 mod refusals;

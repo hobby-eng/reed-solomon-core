@@ -39,7 +39,7 @@ pub use cyclic::CyclicCode;
 #[cfg(feature = "alloc")]
 pub use file::{
     Coverage, DigestCheck, Dispute, FileSet, Member, Outvoted, Pile, Rebuilt, SetError, Stretch,
-    Stretches, Vote,
+    Stretches, Vote, Written,
 };
 /// The `secret-protection-core` crate, whose pages hold this crate's buffers: for a program that
 /// also isolates its process (`protect::Isolation`) or keeps buffers of its own in such pages.

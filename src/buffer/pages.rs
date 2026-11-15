@@ -21,12 +21,6 @@ impl Store {
         Some(Self { area, length })
     }
 
-    pub(super) const fn truncate(&mut self, length: usize) {
-        if length < self.length {
-            self.length = length;
-        }
-    }
-
     pub(super) fn as_slice(&self) -> &[u8] {
         let bytes = self.area.as_ref().map(WorkArea::as_slice);
         bytes
