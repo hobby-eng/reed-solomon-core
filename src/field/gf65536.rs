@@ -18,12 +18,8 @@ pub(super) const fn multiply(a: u16, b: u16) -> u16 {
     u16::from_be_bytes([high, low])
 }
 
-/// The inverse of a nonzero `a`; `None` for zero.
-///
-/// The other root of the modulus is `x + MIDDLE`, so the conjugate of `high·x + low` is
-/// `high·x + (MIDDLE·high + low)`, and their product, the norm
-/// `low^2 + MIDDLE·high·low + CONSTANT·high^2`, lies in GF(2^8): the inverse is the conjugate
-/// divided by the norm.
+/// The inverse of a nonzero `a` (`None` for zero): its conjugate divided by its norm, which lies in
+/// GF(2^8).
 pub(super) const fn inverse(a: u16) -> Option<u16> {
     let [high, low] = a.to_be_bytes();
     let norm = gf256::multiply(low, low)

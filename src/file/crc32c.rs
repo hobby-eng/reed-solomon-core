@@ -1,9 +1,6 @@
-//! CRC-32C (Castagnoli): polynomial 0x1EDC6F41, input and output reflected, initial value and
-//! final exclusive-or FFFFFFFF. The checksum of "123456789" is E3069283.
-//!
-//! One bit at a time, with a mask in place of a branch and no table: the bytes of a shard choose
-//! no branch and no table entry here either. It detects accidental damage; someone who changes a
-//! file on purpose can make it fit.
+//! CRC-32C (Castagnoli, polynomial 0x1EDC6F41); the checksum of "123456789" is E3069283. Bit by bit
+//! with masks, no table. It catches accidental damage only: anyone changing a file on purpose can
+//! make it fit.
 
 /// The polynomial, reflected.
 const POLYNOMIAL: u32 = 0x82F6_3B78;

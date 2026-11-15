@@ -12,30 +12,11 @@ fn room<T>(list: &mut Vec<T>, more: usize) -> Result<(), FileError> {
 }
 
 impl SetFacts {
-    /// The shard files numbered `indexes` of the set whose data is `data`, in the order asked.
-    ///
-    /// The data is cut in order into the `k` data shards, each as long as the set's shards,
-    /// and what is left of the last ones is filled up with zero bytes; every other shard
-    /// follows from them. The files 0 to `k - 1` so hold the data itself. Any `k` files of the
-    /// set rebuild it, and a file made later for a further index leaves the earlier ones as
-    /// they are.
-    ///
-    /// Besides the files, the call holds the zero bytes that fill up the data and, when a shard
-    /// beyond the data shards is asked for, one shard. The code's sources are prepared only
-    /// then: the files of the data shards are the data as it is. With no index asked for,
-    /// nothing is prepared and nothing kept. Those copies are wiped when the call returns, and
-    /// each file comes in a [`Zeroizing`] buffer, which wipes itself when it is dropped.
-    ///
-    /// When the facts state a SHA-256, the call computes the digest of `data` and writes no file
-    /// for data that does not have it, so the files never state a digest of other data.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Data`] unless `data` is as long as the facts say; [`FileError::Digest`] when
-    /// the facts state a SHA-256 and `data` has another; [`FileError::Index`] for an index the
-    /// field does not have; [`FileError::Memory`] when this machine has no memory for a shard, a
-    /// file or a list the call keeps. The data and every index are checked, in this order,
-    /// before the first shard is made.
+    /// The shard files numbered `indexes` for the set whose data is `data`, in the order asked. The data
+    /// is cut into the `k` data shards (the last padded with zeros), so files 0 to `k − 1` hold the data
+    /// itself. Copies made along the way are wiped, and each file comes in a [`Zeroizing`] buffer. If
+    /// the facts state a SHA-256, data with another digest gets no files. Fails on wrong data length or
+    /// digest, an index outside the field, or no memory.
     pub fn files(
         &self,
         data: &[u8],

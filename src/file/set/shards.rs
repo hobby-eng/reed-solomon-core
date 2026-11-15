@@ -1,10 +1,6 @@
-//! The shards of a set as its files hold them: one bit per block of every file, the files of one
-//! shard side by side, and the walk over the blocks that finds who holds each.
-//!
-//! Every loop here is bounded by the blocks that are in the files. A file is looked at for a
-//! block only when it reaches the block, so short files beside a long one cost their own blocks
-//! and no more, be they files of other shards or further files of the same shard. Every list is
-//! asked for before it is filled, and a refusal of the memory is an answer, not an abort.
+//! The shards of a set as its files hold them: one bit per block of every file, and the walk that
+//! finds who holds each block. Every loop is bounded by the blocks actually present, and running out
+//! of memory is reported, not an abort.
 
 use super::{Dispute, Member, SetError};
 use crate::file::FileError;

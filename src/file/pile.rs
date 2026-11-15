@@ -5,17 +5,9 @@ use super::reading::ShardFile;
 use super::set::FileSet;
 use alloc::vec::Vec;
 
-/// Any number of files looked at together: each one read, and the ones that read sorted into
-/// the sets whose facts they state.
-///
-/// Files belong to one set when they state the same facts: field, threshold, identifier, data
-/// length, block length and digest. Nothing is taken from the order of the files: the sets come
-/// in an order of their facts, and their files in the order of their shard indexes.
-///
-/// The work of looking at a pile grows with the number of files and with the bytes that are in
-/// them, whatever their headers say: every block that is there is checked once, files of one
-/// shard are compared once, and blocks that no file reaches are counted as one stretch. Every
-/// list is asked for before it is filled, and the files are sorted in place.
+/// Any number of files looked at together, sorted into the sets whose facts they state. The order of
+/// the files doesn't matter. The work grows with the files and their bytes, whatever their headers
+/// claim.
 #[derive(Clone, Debug)]
 pub struct Pile<'a> {
     readings: Vec<Result<ShardFile<'a>, FileError>>,
@@ -23,13 +15,8 @@ pub struct Pile<'a> {
 }
 
 impl<'a> Pile<'a> {
-    /// Reads `files`, each the bytes of one file, and sorts them into sets.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Memory`] when this machine has no memory for a list of the files or for the
-    /// map of their blocks. A file that does not read is no refusal of the pile: it is an entry
-    /// of [`Pile::readings`].
+    /// Reads `files` and sorts them into sets. A file that doesn't read is not an error but an entry
+    /// of [`Pile::readings`]; only running out of memory fails ([`FileError::Memory`]).
     pub fn new(files: &[&'a [u8]]) -> Result<Self, FileError> {
         let (mut readings, mut read, mut sets) = (Vec::new(), Vec::new(), Vec::new());
         readings

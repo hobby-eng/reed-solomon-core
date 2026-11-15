@@ -94,12 +94,9 @@ impl Survey {
     }
 }
 
-/// A shard file that was read: its header and the bytes its blocks are taken from.
-///
-/// Reading decides which copy of the header holds and looks at no block; [`ShardFile::block`]
-/// checks one block when it is asked for, and [`ShardFile::survey`] checks them all. Nothing is
-/// allocated, and the work is bounded by the length of the bytes given, whatever the header
-/// says. Its `Debug` text gives the header, the frame and the length of the bytes, not the bytes.
+/// A shard file that was read: its header and the bytes its blocks come from. Blocks are checked
+/// only when asked for ([`ShardFile::block`], [`ShardFile::survey`]); nothing is allocated, and
+/// `Debug` shows no shard bytes.
 #[derive(Clone, Copy)]
 pub struct ShardFile<'a> {
     header: Header,
@@ -118,23 +115,10 @@ impl fmt::Debug for ShardFile<'_> {
 }
 
 impl<'a> ShardFile<'a> {
-    /// Reads the shard file `bytes`: the whole file, or what is left of it.
-    ///
-    /// The header at the start and the copy at the end are judged apart. A copy holds when its
-    /// checksum and every value pass; the copy at the end counts only where its own sizes put
-    /// it. One copy that holds is enough to read the file, and [`ShardFile::frame`] names what
-    /// the other was. A file cut short is read by the header at its start and keeps the blocks
-    /// that are wholly there; bytes after the end are reported and used for nothing.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Conflict`] when two headers hold, each in a place that is certain, and
-    /// differ: neither is chosen. [`FileError::Unsupported`] when no header holds and one, whose
-    /// checksum holds, names a field or a flag this version does not read.
-    /// [`FileError::Version`] when no header's checksum holds and one names another version of
-    /// the format. [`FileError::Damaged`] when the marks of a shard file are there and no header
-    /// holds. [`FileError::Unrecognized`] when the bytes have no mark of a shard file at their
-    /// start or their end, which is also what a file that lost both gives.
+    /// Reads the shard file `bytes`, whole or what is left of it. The header at the start and the copy
+    /// at the end are judged apart; one good copy is enough, and a file cut short keeps its whole
+    /// blocks. Fails when the two copies are good and differ ([`FileError::Conflict`]), when the file is
+    /// of an unsupported field, flag or version, or when it is damaged or not a shard file at all.
     pub fn read(bytes: &'a [u8]) -> Result<Self, FileError> {
         let lead = Found::at_start(bytes);
         let last = Found::at_end(bytes);
@@ -227,14 +211,8 @@ impl<'a> ShardFile<'a> {
     }
 }
 
-/// The header to read a file by, from what its start and its end hold.
-///
-/// Two headers whose places are certain and that differ are never chosen between. The place of
-/// the start is certain; a sound header at the end is where its own sizes put it. An unsupported
-/// header at the end has sizes nobody can work out, so next to a sound start it decides nothing
-/// here: [`frame`] refuses it in the place of the copy, and after the end of the file it is
-/// bytes like any others. A copy that only names another version is believed last, the one at
-/// the start before the one at the end.
+/// The header to read a file by, from its start and its end. Two good headers that differ are never
+/// chosen between. A header that only names another version is believed last.
 fn believed(lead: &Found, last: &Found) -> Result<Header, FileError> {
     match (lead, last) {
         (Found::Sound(first), Found::Sound(second)) if first != second => Err(FileError::Conflict),

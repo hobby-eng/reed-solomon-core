@@ -83,16 +83,9 @@ impl Code {
         })
     }
 
-    /// The shards numbered `targets` of the set whose data shards are `data`, shard 0 first:
-    /// how a set is written. Each shard comes in a [`Zeroizing`] buffer, which wipes itself when
-    /// it is dropped.
-    ///
-    /// # Errors
-    ///
-    /// [`CodeError::Count`] unless `data` holds `threshold` shards, [`CodeError::Length`] unless
-    /// they have one length that is a whole number of symbols, [`CodeError::Index`] for a target
-    /// the field does not have, [`CodeError::Symbol`] for a symbol of the data that is not an
-    /// element of the field.
+    /// The shards numbered `targets` of the set whose data shards are `data`: how a set is written.
+    /// Each shard comes in a [`Zeroizing`] buffer. Fails when `data` has the wrong count or lengths, a
+    /// target is outside the field, or a symbol isn't an element of the field.
     pub fn encode(
         &self,
         data: &[&[u8]],
@@ -106,19 +99,10 @@ impl Code {
         self.rebuild(&numbered, targets)
     }
 
-    /// The shards numbered `targets` from any `threshold` or more shards of a set, given as
-    /// `(index, bytes)`: how a lost shard is made again, how the data comes back (targets 0 to
-    /// `threshold - 1`) and how a set grows. The first `threshold` shards are the sources; the
-    /// others are checked for their index, their length and their symbols and are not used.
-    /// Each shard made comes in a [`Zeroizing`] buffer, which wipes itself when it is dropped.
-    ///
-    /// # Errors
-    ///
-    /// [`CodeError::Count`] for fewer than `threshold` shards, [`CodeError::Index`] and
-    /// [`CodeError::Repeated`] for their indexes or an index asked for, [`CodeError::Length`]
-    /// unless they have one length that is a whole number of symbols, [`CodeError::Symbol`] for
-    /// a symbol of any shard given, the ones beyond the threshold too, that is not an element
-    /// of the field.
+    /// The shards numbered `targets` from any `threshold` or more shards, given as `(index, bytes)`:
+    /// how a lost shard comes back, how the data is read and how a set grows. The first `threshold`
+    /// shards are the sources; the rest are only checked. Each result comes in a [`Zeroizing`] buffer.
+    /// Fails on too few shards, bad or repeated indexes, unequal lengths, or a symbol outside the field.
     pub fn rebuild(
         &self,
         shards: &[(u16, &[u8])],
@@ -141,12 +125,8 @@ impl Code {
         Ok(made)
     }
 
-    /// Whether the shards beyond the first `threshold` are what those make. It says whether the
-    /// shards belong together, not who made them.
-    ///
-    /// # Errors
-    ///
-    /// As [`Code::rebuild`].
+    /// Whether the shards beyond the first `threshold` match what those make: they belong together,
+    /// which says nothing about who made them. Fails as [`Code::rebuild`] does.
     pub fn redundancy(&self, shards: &[(u16, &[u8])]) -> Result<Redundancy, CodeError> {
         let chosen = self.chosen(shards)?;
         self.check_symbols(shards.iter().map(|&(_, bytes)| bytes))?;

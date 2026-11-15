@@ -1,13 +1,6 @@
-//! A set found among shard files: the shards it has, which blocks they hold, and its data or a
-//! lost file made from them block by block.
-//!
-//! A block of a shard is held when a file of that shard has it with a checksum that holds, and
-//! no two files of the shard differ on it. A block of the set is made from the `k` lowest
-//! shards that hold it; every further shard that holds it is compared with them. So a set
-//! rebuilds when every block has `k` holders, whichever files they are, and shards that do not
-//! belong together are noticed wherever a spare one is at hand. Where enough of them are at
-//! hand, [`FileSet::vote`] names the files that differ from the rest, and [`FileSet::without`]
-//! is the set without them.
+//! A set found among shard files: which blocks each shard holds, and its data or a lost file made
+//! from them block by block. Each block comes from its `k` lowest holders, and every further holder
+//! is compared with them, so files that don't belong together are noticed.
 
 mod shards;
 mod vote;
@@ -287,15 +280,8 @@ impl<'a> FileSet<'a> {
         self.coverage
     }
 
-    /// The blocks of the set, from the first to the last, in stretches that one number of
-    /// shards hold: which parts rebuild, which are confirmed by spare shards, which are lost.
-    /// A stretch with fewer holders than the threshold cannot be made from these files. The
-    /// blocks no file reaches come as one stretch, so the walk costs the blocks that are in
-    /// the files.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Memory`] when there is no memory for the list of the shards.
+    /// The blocks of the set in stretches held by the same number of shards: what rebuilds, what spare
+    /// shards confirm, what is lost. Fails only without memory.
     pub fn stretches(&self) -> Result<Stretches<'_, 'a>, FileError> {
         Ok(Stretches::new(&self.shards, self.facts.blocks())?)
     }
@@ -311,64 +297,26 @@ impl<'a> FileSet<'a> {
         shard.into_iter().flat_map(Shard::disputed)
     }
 
-    /// The steps [`FileSet::rebuild`] needs, to set its limit by.
-    ///
-    /// A step is a unit of this count and of nothing else: it grows with the work of making
-    /// shards and measures neither time nor operations, and reading the files, their checksums
-    /// and memory are no part of it. Preparing the sources of a block costs `k²` steps, charged
-    /// for the first block and for every block whose `k` lowest holders are not those of the
-    /// block before it, also when nothing of that block has to be made. A block of a shard
-    /// that no file holds costs `k · (s + 64)` steps for its `s` symbols, and so does a block of
-    /// every holder beyond the `k` lowest, which is compared with them. A block that a file
-    /// holds is copied and costs nothing more. A set of no data costs nothing.
-    ///
-    /// The count says what the call will cost, not that it will succeed: shards that do not
-    /// agree, and bytes that are not zero after the data, show only when the shards are made.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Shards`] and [`SetError::Blocks`] when the files at hand cannot rebuild the
-    /// set; [`SetError::Memory`] when there is no memory for the count.
+    /// The steps [`FileSet::rebuild`] needs, to set its limit by. A step counts the work of making
+    /// shards only, not time, reading or memory. The count says what the call costs, not that it will
+    /// succeed. Fails when the files can't rebuild the set, or without memory.
     pub fn rebuild_work(&self) -> Result<u128, SetError> {
         self.ready()?;
         self.work(&self.data_shards()?)
     }
 
-    /// The steps [`FileSet::repair`] needs for the shard `index`, counted as
-    /// [`FileSet::rebuild_work`] counts.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Index`] for an index the field does not have, before anything else, as
-    /// [`FileSet::repair`] answers; otherwise as [`FileSet::rebuild_work`].
+    /// The steps [`FileSet::repair`] needs for shard `index`, counted as [`FileSet::rebuild_work`]
+    /// counts. Fails for an index outside the field first, otherwise as that call.
     pub fn repair_work(&self, index: u16) -> Result<u128, SetError> {
         self.target(index)?;
         self.work(&[index])
     }
 
-    /// The data of the set, from whichever files hold each block.
-    ///
-    /// `limit` is the most steps the call may take, as [`FileSet::rebuild_work`] counts them;
-    /// `None` sets no limit. The data is returned only when every block was made and every
-    /// spare shard agreed: there is no partial result.
-    ///
-    /// The result is the data the files agree on. When they state a SHA-256, the call computes
-    /// the digest of exactly the data's bytes, without the zero bytes after them, and gives the
-    /// data back only when the two are equal: [`DigestCheck::Matched`]. Files that state none
-    /// give [`DigestCheck::Unchecked`], and that the data is the data once written is then for
-    /// the program to check: files that were all replaced agree as well. The digest is computed
-    /// outside the steps the limit counts: its work follows the length of the data, which the
-    /// call holds anyway.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Shards`] with fewer different shards than the threshold, also for a set of
-    /// no data; [`SetError::Blocks`] when a block has fewer holders; [`SetError::Work`] above
-    /// the limit, before anything is computed; [`SetError::Inconsistent`] when a spare shard
-    /// differs from what the lowest make; [`SetError::Padding`] when the bytes after the data
-    /// are not zero; [`SetError::Digest`] when the data does not have the SHA-256 the files
-    /// state; [`SetError::Memory`] when there is no memory for the data or for a list the call
-    /// keeps.
+    /// The data of the set, from whichever files hold each block. It is returned only when every block
+    /// was made and every spare shard agreed, and, if the files state a SHA-256, only when the data has
+    /// it ([`DigestCheck::Matched`]). Without a digest, whether this is the original is for the program
+    /// to check. Fails when shards or blocks are missing, above `limit`, on disagreement, on non-zero
+    /// padding, on a digest mismatch, or without memory.
     pub fn rebuild(&self, limit: Option<u128>) -> Result<Rebuilt, SetError> {
         self.ready()?;
         let (mut data, steps) = self.make(&self.data_shards()?, limit)?;
@@ -396,35 +344,17 @@ impl<'a> FileSet<'a> {
         })
     }
 
-    /// The shard file of shard `index` of the set, made from the files at hand: a lost file
-    /// again, byte for byte, or a file the set never had. The files given are not changed.
-    /// `limit` is the most steps the call may take, as [`FileSet::repair_work`] counts them;
-    /// `None` sets no limit.
-    ///
-    /// Only this one shard is made, so less is checked than by [`FileSet::rebuild`]: every
-    /// spare shard is still compared block by block, but the data is not put together, the
-    /// bytes after its end are not looked at and its digest is not compared. The new file
-    /// states the digest the set states; a rebuild that uses it compares that digest.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Index`] for an index the field does not have, before anything else, and
-    /// otherwise as [`FileSet::rebuild`], except [`SetError::Padding`] and
-    /// [`SetError::Digest`].
+    /// The file of shard `index`, made from the files at hand: a lost file byte for byte, or a new one.
+    /// Spare shards are still compared, but the data isn't assembled or its digest checked; a later
+    /// rebuild checks that. Fails as [`FileSet::rebuild`], or for an index outside the field.
     pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Zeroizing<Vec<u8>>, SetError> {
         let header = self.target(index)?;
         let (shard, _) = self.make(&[index], limit)?;
         header.file(&shard).map_err(|_| SetError::Memory)
     }
 
-    /// The steps [`FileSet::repairs`] needs for the shards `indexes`, counted as
-    /// [`FileSet::rebuild_work`] counts: the blocks of every shard asked for are made in one
-    /// pass, so the sources of a block are prepared once for all of them. An index asked for
-    /// twice counts once; no index costs nothing.
-    ///
-    /// # Errors
-    ///
-    /// As [`FileSet::repair_work`].
+    /// The steps [`FileSet::repairs`] needs for `indexes`. All of them are made in one pass, so each
+    /// block's sources are prepared once; a repeated index counts once.
     pub fn repairs_work(&self, indexes: &[u16]) -> Result<u128, SetError> {
         let targets = self.targets(indexes)?;
         if targets.is_empty() {
@@ -433,17 +363,9 @@ impl<'a> FileSet<'a> {
         self.work(&targets)
     }
 
-    /// The shard files of the shards `indexes`, in the order asked, made in one pass over the
-    /// files at hand: every block is read and compared once, and its sources prepared once, for
-    /// all of them. Each file is the one [`FileSet::repair`] makes for its index. An index asked
-    /// for twice gives the same file twice; no index gives no file and does no work. `limit` is
-    /// the most steps the call may take, as [`FileSet::repairs_work`] counts them; `None` sets
-    /// no limit.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Index`] for an index the field does not have, before anything else, and
-    /// otherwise as [`FileSet::repair`].
+    /// The files of shards `indexes`, in the order asked, made in one pass: each block is read and
+    /// compared once for all of them. A repeated index gives the same file twice. Fails as
+    /// [`FileSet::repair`].
     pub fn repairs(
         &self,
         indexes: &[u16],
@@ -486,17 +408,9 @@ impl<'a> FileSet<'a> {
         Ok(targets)
     }
 
-    /// The set without the files at the places `files` among the files given: the choice of a
-    /// program that has reason to distrust them, as after [`FileSet::vote`]. A file is left out
-    /// whole, so that a file that was wrong in one block is no silent source of another.
-    ///
-    /// No block is read again. The files left of every shard are compared anew, so a shard
-    /// whose files differed holds its blocks again once only files that agree are left, and
-    /// the coverage is counted anew. A place that is none of the set's files changes nothing.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Memory`] when there is no memory for the lists of the set.
+    /// The set without the files at `files`, for a program that distrusts them, as after
+    /// [`FileSet::vote`]. Files are dropped whole, so a file wrong in one block can't silently feed
+    /// another. Fails only without memory.
     pub fn without(&self, files: &[usize]) -> Result<Self, FileError> {
         let mut left_out = Vec::new();
         room(&mut left_out, files.len())?;

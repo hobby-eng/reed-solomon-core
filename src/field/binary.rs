@@ -1,10 +1,6 @@
-//! GF(2^m) for a degree `m` from 2 to 16 that a program chooses, with a primitive polynomial of
-//! that degree: an element is a number below 2^m, bit `i` the coefficient of x^i.
-//!
-//! As in the other fields, a product is `m` steps of add, shift and reduce, each chosen by a mask
-//! made from one bit, and an inverse the same chain of squarings and multiplications for every
-//! element: no table is indexed by an element and no branch depends on one, except that the
-//! inverse of zero is told apart.
+//! GF(2^m) for a degree from 2 to 16 chosen by the program, with a primitive polynomial of that
+//! degree. Products and inverses use masks and fixed chains, never tables or branches on an
+//! element, except that zero has no inverse.
 
 use core::fmt;
 

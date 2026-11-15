@@ -1,13 +1,7 @@
-//! Correcting with symbols marked unreadable, and saying what would change before anything does.
-//!
-//! A symbol marked unreadable is a gap at a known place: it costs one spare shard of its column,
-//! where a wrong symbol at an unknown place costs two. Its contribution is taken out of the
-//! syndromes: with `G(X) = Π (X − x)` over the points of the marked symbols, the sums
-//! `T_j = Σ_i g_i · S_(j+i)` for `j` below `m − k − s` are the power sums of the wrong symbols
-//! alone, each scaled by `G` at its point, which is not zero. Berlekamp–Massey finds those
-//! symbols in them as without marks, and the error of every symbol of the column, marked or
-//! found, follows from the syndromes by the one solver of [`Code::correct`]. A column is put
-//! right whenever `2e + s ≤ m − k`.
+//! Correcting with symbols marked unreadable, and listing every change before anything changes.
+//! A marked symbol costs one spare shard instead of two, because its place is known: it is taken
+//! out of the syndromes, and Berlekamp–Massey finds the remaining wrong symbols as usual. A column
+//! is fixed whenever `2e + s ≤ m − k`.
 
 use super::{Decoder, roomy};
 use crate::code::{Code, CodeError};
@@ -94,26 +88,11 @@ pub enum Plan {
 }
 
 impl Code {
-    /// Finds what would put `shards`, given as `(index, bytes)`, right, with the symbols of
-    /// `marks` known to be unreadable, and changes nothing. With `m` shards, the threshold `k`
-    /// and `s` marked symbols in a column, up to `e` wrong symbols are found there wherever they
-    /// are, as long as `2e + s ≤ m − k`. A shard that is missing altogether is simply not given,
-    /// as for [`Code::correct`]; a mark is for a shard that is there and has a gap. A mark given
-    /// twice counts once. [`Code::apply`] makes the changes.
-    ///
-    /// A marked symbol may hold any element of the field: its value is not used. Every marked
-    /// symbol appears among the changes, as [`ChangeKind::Filled`], also when it already holds
-    /// the right value; a program shows the person what each place becomes before it applies.
-    ///
-    /// The working memory is that of [`Code::correct`] with room for `m − k` symbols of a column
-    /// instead of half as many, a copy of the marks and the changes found: at most the marks and
-    /// `(m − k) / 2` symbols for every column.
-    ///
-    /// # Errors
-    ///
-    /// As [`Code::correct`], and [`CodeError::Mark`] for a mark outside the shards, reported
-    /// after the counts, the indexes and the lengths and before a symbol that is not an element
-    /// of the field.
+    /// Finds the changes that would put `shards` right, with `marks` known to be unreadable, and changes
+    /// nothing; [`Code::apply`] makes them. Fixes up to `e` wrong symbols per column while
+    /// `2e + s ≤ m − k`. Every marked symbol is listed, as [`ChangeKind::Filled`], even when it already
+    /// holds the right value, so a program can show each change first. Fails as [`Code::correct`] does,
+    /// or with [`CodeError::Mark`] for a mark outside the shards.
     pub fn plan(&self, shards: &[(u16, &[u8])], marks: &[Mark]) -> Result<Plan, CodeError> {
         let indexes = shards.iter().map(|&(index, _)| index);
         let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
@@ -166,14 +145,9 @@ impl Code {
         Ok(Plan::Changes(changes))
     }
 
-    /// Makes `changes`, as [`Code::plan`] found them for these shards, in the same order. Every
-    /// change is checked before the first is made: its place must be in the shards, the symbol
-    /// there must still hold what the change says was there, and the new value must be an
-    /// element of the field.
-    ///
-    /// # Errors
-    ///
-    /// [`CodeError::Changes`] when a change does not fit; nothing is changed then.
+    /// Makes `changes`, as [`Code::plan`] found them for these shards. Every change is checked first
+    /// (its place, the value still there, the new value), and if one doesn't fit, nothing is changed and
+    /// it fails with [`CodeError::Changes`].
     pub fn apply(
         &self,
         shards: &mut [(u16, &mut [u8])],

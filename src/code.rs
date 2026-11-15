@@ -1,11 +1,6 @@
-//! The code: shard `i` of a set is the value at point `i` of the one polynomial of degree below
-//! `k` whose values at the points 0 to `k - 1` are the data shards.
-//!
-//! Every operation is one interpolation. From any `k` shards with the points `x_1 … x_k`, the
-//! shard at point `t` is `Σ L_i(t) · shard_i`, with the Lagrange coefficients
-//! `L_i(t) = Π_{l≠i} (t − x_l) / (x_i − x_l)`. Taking the data shards as sources writes a set,
-//! taking any `k` survivors makes a lost shard again or a new one, and no matrix is inverted.
-//! Any `k` shards do, because a polynomial of degree below `k` is fixed by `k` of its values.
+//! The code: shard `i` is the value at point `i` of the one polynomial of degree below `k` that goes
+//! through the data shards. Every operation is one Lagrange interpolation from any `k` shards, so
+//! no matrix is ever inverted.
 
 #[cfg(feature = "alloc")]
 mod owned;
@@ -17,12 +12,8 @@ use zeroize::Zeroizing;
 #[cfg(feature = "alloc")]
 pub use owned::Redundancy;
 
-/// Why a request was refused. No output was written when one is returned: an output buffer or
-/// a shard to correct is as it was. Working memory lent for the call, the weights of
-/// [`Code::sources`], may hold anything afterwards.
-///
-/// When a request is wrong in more than one way, the counts, the indexes and the lengths are
-/// reported before a symbol that is not an element of the field.
+/// Why a request was refused. Nothing was written then; lent working memory may hold anything.
+/// Counts, indexes and lengths are reported before a symbol outside the field.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CodeError {
     /// The threshold is zero or above the number of shards the field allows.
@@ -99,17 +90,10 @@ impl Code {
         self.threshold
     }
 
-    /// The shards numbered `indexes` as the sources of others: exactly `threshold` different
-    /// shards of one set. `weights` is working memory of at least `threshold` elements, kept by
-    /// the result. The work is `threshold` squared field multiplications, done once for any
-    /// number of shards made afterwards.
-    ///
-    /// # Errors
-    ///
-    /// [`CodeError::Count`] unless `indexes` holds exactly `threshold` indexes,
-    /// [`CodeError::Buffer`] for a `weights` shorter than that, [`CodeError::Index`] for an index
-    /// the field does not have and [`CodeError::Repeated`] for one given twice. After a refusal
-    /// `weights` may hold anything.
+    /// Takes the shards numbered `indexes` (exactly `threshold` different ones) as sources for others.
+    /// `weights` is working memory of at least `threshold` elements; the cost, `threshold²`
+    /// multiplications, is paid once for any number of shards made later. Fails on a wrong count, a
+    /// short buffer, or a bad or repeated index.
     pub fn sources<'a>(
         &self,
         indexes: &'a [u16],
@@ -213,18 +197,10 @@ impl Sources<'_> {
         }
     }
 
-    /// Writes into `out` the bytes of shard `target` for one stretch of the set: `stripes` holds
-    /// the same stretch of every source, in the order of the indexes given to [`Code::sources`].
-    /// A whole shard is one stretch; a large one can be made piece by piece. A target that is
-    /// one of the sources is copied.
-    ///
-    /// # Errors
-    ///
-    /// [`CodeError::Index`] for a target the field does not have, [`CodeError::Count`] unless
-    /// there is one stripe per source, [`CodeError::Length`] unless the stripes and `out` have
-    /// one length that is a whole number of symbols, [`CodeError::Symbol`] for a symbol of a
-    /// stripe that is not an element of the field. `out` is left as it was; what it held
-    /// before is never read.
+    /// Writes into `out` shard `target` for one stretch of the set, from the same stretch of every
+    /// source, in the order given to [`Code::sources`]. A large shard can be made piece by piece. Fails
+    /// on a bad target, a wrong stripe count, unequal lengths or a symbol outside the field; `out` is
+    /// then left as it was.
     pub fn build(&self, target: u16, stripes: &[&[u8]], out: &mut [u8]) -> Result<(), CodeError> {
         self.geometry(stripes, out.len())?;
         let recipe = self.recipe(target)?;
@@ -245,12 +221,8 @@ impl Sources<'_> {
         Ok(())
     }
 
-    /// Whether `shard` is what [`Sources::build`] would write for `target` from `stripes`: the
-    /// check of a further shard against the sources, without a buffer for the expected bytes.
-    ///
-    /// # Errors
-    ///
-    /// As [`Sources::build`], with `shard` in the place of `out`.
+    /// Whether `shard` is what [`Sources::build`] would write for `target`, checked without a buffer for
+    /// the expected bytes. Fails as [`Sources::build`] does.
     pub fn agrees(&self, target: u16, stripes: &[&[u8]], shard: &[u8]) -> Result<bool, CodeError> {
         /// Bytes compared at a time: a whole number of symbols of either field.
         const STEP: usize = 256;

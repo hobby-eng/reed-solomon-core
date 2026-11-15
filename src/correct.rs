@@ -1,25 +1,7 @@
-//! Finding and correcting wrong symbols among the shards of a set, when nobody knows which shards
-//! are wrong.
-//!
-//! The symbols at one offset of all shards form one code word. For the `m` shards present, with
-//! the points `x_i` and the weights `u_i = 1 / Π_{l≠i} (x_i − x_l)`, the `m − k` syndromes of that
-//! word are `S_j = Σ u_i · x_i^j · symbol_i`. They are all zero exactly when the symbols lie on
-//! one polynomial of degree below `k`; otherwise they are the power sums `Σ Y_i · X_i^j` of the
-//! wrong symbols alone, with `X_i` the point of a wrong symbol and `Y_i = u_i · error_i`.
-//! Berlekamp–Massey finds the shortest recurrence the syndromes obey; its characteristic
-//! polynomial has the points of the wrong symbols as its roots, the point 0 of shard 0 included.
-//! The error values follow from the first syndromes, and every syndrome is then checked again.
-//!
-//! A missing shard is simply not among the `m`, so with `e` wrong and `s` missing symbols of `n`,
-//! a column is put right whenever `2e + s ≤ n − k`. Beyond that the answer is "unresolved" or
-//! another valid code word: only a digest or an authentication of the data, checked by the
-//! caller, says that the result is the original.
-//!
-//! The syndromes are computed by the scaling kernel, which never branches on shard bytes or
-//! indexes a table by them. They depend on the errors alone, not on the data. The search for the
-//! wrong symbols branches on the shape of the errors, how many and where, and the field
-//! arithmetic takes no table and no branch on a value. Every buffer of the search is wiped when
-//! the decoder is dropped.
+//! Finding and correcting wrong symbols when nobody knows which shards are wrong. The symbols at
+//! one offset form a code word; its `m − k` syndromes are zero exactly when the word is valid, and
+//! otherwise Berlekamp–Massey finds the errors, up to `(m − k) / 2` per column. The arithmetic
+//! never branches on shard bytes or indexes a table by them; search buffers are wiped on drop.
 
 mod plan;
 
@@ -59,26 +41,10 @@ pub enum Correction {
 }
 
 impl Code {
-    /// Finds wrong symbols among `shards`, given as `(index, bytes)`, and corrects them in place.
-    /// With `m` shards and the threshold `k`, up to `(m − k) / 2` wrong symbols are found in
-    /// every symbol column, wherever they are; shards that are missing are simply not given, and
-    /// [`Code::rebuild`] makes them afterwards. Either every column is put right or nothing is
-    /// changed.
-    ///
-    /// A line of symbols read from paper is the same case with shards of one symbol each: the
-    /// unreadable symbols are left out, the misread ones are found.
-    ///
-    /// The working memory is at most [`Code::correction_memory`] bytes, under 8 MiB for any set.
-    /// The work is `m^2` field multiplications once, for the weights of the shards present, then
-    /// `m · (m − k)` scalings of every stripe, and per wrong column about `(m − k)^2 + m · e`
-    /// field multiplications for `e` wrong symbols.
-    ///
-    /// # Errors
-    ///
-    /// [`CodeError::Count`] for fewer than `threshold` shards, [`CodeError::Index`] and
-    /// [`CodeError::Repeated`] for their indexes, [`CodeError::Length`] unless they have one
-    /// length that is a whole number of symbols, [`CodeError::Symbol`] for a symbol that is not
-    /// an element of the field. Nothing is changed then.
+    /// Finds wrong symbols among `shards`, given as `(index, bytes)`, and corrects them in place: up to
+    /// `(m − k) / 2` per column, wherever they are. Missing shards are simply not given. Either every
+    /// column is fixed or nothing changes. Uses at most [`Code::correction_memory`] bytes (under 8 MiB).
+    /// Fails on too few shards, bad indexes, unequal lengths or a symbol outside the field.
     pub fn correct(&self, shards: &mut [(u16, &mut [u8])]) -> Result<Correction, CodeError> {
         let indexes = shards.iter().map(|&(index, _)| index);
         let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
@@ -401,16 +367,9 @@ impl Decoder {
         length
     }
 
-    /// The error of each wrong symbol in `self.errors`: solves `Σ Y_e · X_e^j = S_j` for the
-    /// first syndromes, checks every syndrome against the solution and turns `Y_e` into the
-    /// error `Y_e / u_e`. False when the syndromes are not those of these wrong symbols. The
-    /// first `found` symbols were found by the search, and an error of zero there is no error;
-    /// the ones after them are marked, and may turn out to be right as they are.
-    ///
-    /// With `Q(z) = Π (z − X_l)` over the wrong symbols and `q_e = Q / (z − X_e)`, the sum
-    /// `Σ_j S_j · q_{e,j}` is `Y_e · q_e(X_e)`, because `q_e` is zero at every other point. So
-    /// each `Y_e` takes one synthetic division: memory in proportion to the number of wrong
-    /// symbols, work to its square, and no matrix.
+    /// The error value of each wrong symbol, from the first syndromes, then a check of every syndrome
+    /// against it; false when they don't fit. Each value takes one synthetic division, so memory grows
+    /// with the number of errors and no matrix is built. Marked symbols may turn out to be right.
     fn values(&mut self, found: usize) -> bool {
         let field = self.field;
         let count = self.errors.len();
@@ -495,15 +454,9 @@ pub(crate) struct Look {
     pub(crate) searches: usize,
 }
 
-/// The search for the shards that differ from the word the others share, block after block of
-/// one list of shards. Nothing is corrected: the shards are only read.
-///
-/// With `m` shards and the threshold `k`, a word that all but `t = (m − k) / 2` shards share in
-/// every column of a block is the only such word, because two of them would agree on `k`
-/// shards. The shards found start empty in every block. A column whose syndromes obey the
-/// recurrence of the shards found so far has its wrong symbols among theirs; any other column
-/// is searched, and what the search finds joins them. So a shard that is wrong in every column
-/// costs one search a block, and a block takes at most `t + 1` searches.
+/// Finds, block by block, the shards that differ from the word the others share; nothing is
+/// corrected. A column that fits the shards already found needs no new search, so a shard that is
+/// wrong everywhere costs one search per block.
 pub(crate) struct Finder {
     decoder: Decoder,
     /// The positions of the shards found to differ in the block at hand.

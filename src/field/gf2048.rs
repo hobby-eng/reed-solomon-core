@@ -1,10 +1,6 @@
-//! GF(2^11) with the polynomial x^11 + x^2 + 1 (0x805): an element is a number below 2,048, bit
-//! `i` the coefficient of x^i. One symbol holds one word of a list of 2,048 words.
-//!
-//! There are no tables here: a product is eleven steps of add, shift and reduce, each chosen by
-//! a mask made from one bit, and an inverse a fixed chain of squarings and multiplications. No
-//! branch depends on an element, which can be a word of a recovery phrase; only the inverse of
-//! zero is told apart, as `None`.
+//! GF(2^11) with the polynomial 0x805, one symbol per word of a 2,048-word list. No tables and no
+//! branches on an element, since an element can be a word of a recovery phrase; only zero is told
+//! apart, as having no inverse.
 
 /// The reduction polynomial, its x^11 term included.
 const POLYNOMIAL: u16 = 0x805;

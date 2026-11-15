@@ -118,12 +118,8 @@ pub(super) fn add_scaled_words(out: &mut [u8], source: &[u8], factor: u16) {
     }
 }
 
-/// `out ^= factor · source` in GF(2^m) by its polynomial: one byte per symbol up to `m` = 8,
-/// two bytes above, every symbol below 2^m.
-///
-/// Every lane of a word is doubled at once: its low `m − 1` bits move up by one, and its bit
-/// `m − 1`, brought down to the lowest bit of the lane, comes back times the polynomial without
-/// its x^m term, a number below 2^m that stays in its lane.
+/// `out ^= factor · source` in GF(2^m) by its polynomial, one byte per symbol up to `m = 8`, two
+/// above. Every lane of a word is doubled at once, without carries crossing lanes.
 pub(super) fn add_scaled_binary(out: &mut [u8], source: &[u8], factor: u16, field: Binary) {
     let degree = field.degree();
     let ones = if degree <= 8 { LANE_ONES } else { PAIR_ONES };
@@ -154,12 +150,8 @@ pub(super) fn add_scaled_binary(out: &mut [u8], source: &[u8], factor: u16, fiel
     }
 }
 
-/// `out ^= factor · source` in GF(2^16), two bytes `[high, low]` per symbol.
-///
-/// With the factor `fh·x + fl`, the symbol `dh·x + dl` and x^2 = MIDDLE·x + CONSTANT:
-/// the product's high byte is `dh·(fl + MIDDLE·fh) + dl·fh` and its low byte
-/// `dh·(CONSTANT·fh) + dl·fl`. The first terms of each come from the word as it is, the second
-/// from the word with the bytes of every symbol swapped.
+/// `out ^= factor · source` in GF(2^16), two bytes per symbol. Half of each product comes from the
+/// word as it is, half from the word with every symbol's bytes swapped.
 pub(super) fn add_scaled_pairs(out: &mut [u8], source: &[u8], factor: u16) {
     let [fh, fl] = factor.to_be_bytes();
     match factor {

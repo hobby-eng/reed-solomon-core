@@ -1,17 +1,6 @@
-//! Which files of a set differ from what its shards share, block by block.
-//!
-//! The holders of a block vote on it. With `m` of them, the threshold `k` and `r = m − k` spare
-//! ones, a word that all holders but at most `r / 2` share is the only such word; the search of
-//! [`Finder`] finds it and the holders that differ. A shard whose files differ on the block does
-//! not vote: each of its files is compared with what the agreeing holders make.
-//!
-//! Every shard with a file that carries a word is one witness of that word, however many of its
-//! files carry it. With `w` holders that differ from the word of the others and `u` shards in
-//! dispute of which no file carries it, that word is sure to have more witnesses than any other
-//! word when `2·w + u ≤ r`: another word agrees with fewer than `k` of the agreeing holders, and
-//! the most it can gain is every holder that differs and every shard in dispute. Only then is
-//! the word established and a file that differs from it outvoted. The rule is on the safe side:
-//! a word can be ahead of all others without meeting it, and is then not established.
+//! Which files of a set differ from what its shards agree on, block by block. With `r` spare
+//! holders, a word shared by all but `r / 2` of them is the only such word. A word is accepted only
+//! when it is sure to beat every other (`2·w + u ≤ r`), which errs on the safe side.
 
 use super::shards::{Bits, Shard, Sweep, reach, room};
 use super::{ALLOWANCE, FileSet, SetError, wide};
@@ -158,26 +147,9 @@ fn symbols_of(holders: &[(u16, &[u8])], width: usize) -> u128 {
 }
 
 impl FileSet<'_> {
-    /// The most steps [`FileSet::vote`] can take, to set its limit by. The steps are those of
-    /// [`FileSet::rebuild_work`], and unlike there the count is a bound: how many columns of a
-    /// block disagree shows only when they are looked at.
-    ///
-    /// Take a block with `m` holders, the threshold `k`, `r = m − k` spare holders and `s`
-    /// symbols. With `r = 0` its holders have nothing to be compared with and cost nothing.
-    /// Otherwise their syndromes cost `r · m · (s + 64)` steps, and their weights `m²` more
-    /// when it is the first such block or its holders are not those of the one before. With
-    /// `t = r / 2` at least 1, every column whose
-    /// holders disagree costs `r · (t + 1)` steps until the block is given up, and every column
-    /// that is searched `(4 · m + 64) · (r + 1)`; at most `t + 1` columns of a block are
-    /// searched. A block with `k` or more holders and `d` shards whose files differ on it costs
-    /// `k² + d · k · (s + 64)` steps more, unless its holders settle on nothing. The count
-    /// takes every column to disagree, `t + 1` columns of every block to be searched, or all
-    /// of them when it has fewer, and every shard in dispute to be judged. Comparing the bytes
-    /// of files and asking for memory are no part of it.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Memory`] when there is no memory for the count.
+    /// An upper bound on the steps [`FileSet::vote`] can take, to set its limit by. It assumes every
+    /// column disagrees and the most searches per block; reading files and asking for memory are not
+    /// counted. Fails only when there's no memory for the count.
     pub fn vote_work(&self) -> Result<u128, SetError> {
         let code = self.facts.code();
         let (threshold, width) = (code.threshold(), code.field().symbol_bytes());
@@ -208,41 +180,10 @@ impl FileSet<'_> {
         Ok(steps)
     }
 
-    /// Which files of the set differ from what its shards share, block by block. Nothing is
-    /// changed and nothing rebuilt: the answer names files, and [`FileSet::without`] gives the
-    /// set without them. It is worth asking after [`SetError::Inconsistent`], and whenever the
-    /// set has shards in dispute: those are passed over by a rebuild, which can succeed while
-    /// the vote still tells which of their files differs from the rest.
-    ///
-    /// The holders of a block are the shards that hold it with a checksum that holds and whose
-    /// files do not differ on it, as in [`FileSet::rebuild`]. With `m` holders and the
-    /// threshold `k` there are `r = m − k` spare ones. A block's word is established when all
-    /// holders but `w` share it and `2·w + u ≤ r`, where `u` counts the shards in dispute of
-    /// which no file carries that word: a holder that differs takes two spare ones, a shard in
-    /// dispute that does not confirm takes one. Then every file that holds the block and
-    /// differs from the word is outvoted there: the files of the `w` holders, and the files of
-    /// shards in dispute that differ. So one spare holder shows that holders differ and cannot
-    /// say which; two outvote one; and `k` holders with one shard in dispute are settled by the
-    /// file of that shard that agrees with them. A block whose holders differ and whose word
-    /// is not established is undecided.
-    ///
-    /// The answer is right when the wrong files are within that bound in every block. Beyond
-    /// it a block is undecided or settled on other files, and files that were written together
-    /// from wrong data agree with each other. No undecided block does not mean that every
-    /// block was confirmed: a block with `k` holders or fewer has nothing to be compared with,
-    /// which [`FileSet::coverage`] shows. That rebuilt data is the data once written is said
-    /// only by a digest or an authentication the program trusts from elsewhere; the digest the
-    /// files state shows only that the data fits what those files say of it.
-    ///
-    /// `limit` is the most steps the call may take; `None` sets no limit. It is compared with
-    /// [`FileSet::vote_work`] before anything is computed. The working memory is a search of
-    /// under 8 MiB, one block, and one bit per block for every outvoted file and for the
-    /// undecided blocks.
-    ///
-    /// # Errors
-    ///
-    /// [`SetError::Work`] when the limit is below the count; [`SetError::Memory`] when there is
-    /// no memory for the search or for a list the call keeps.
+    /// Names the files that differ from what the other shards agree on, block by block; nothing is
+    /// rebuilt, and [`FileSet::without`] gives the set without them. Worth asking after
+    /// [`SetError::Inconsistent`]. A block's word is accepted when the dissenters fit within the spare
+    /// shards (`2·w + u ≤ r`); otherwise the block is undecided. Fails above `limit` or without memory.
     pub fn vote(&self, limit: Option<u128>) -> Result<Vote, SetError> {
         let needed = self.vote_work()?;
         if limit.is_some_and(|limit| needed > limit) {

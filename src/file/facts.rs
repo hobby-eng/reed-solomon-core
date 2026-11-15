@@ -56,27 +56,11 @@ struct Sizes {
 }
 
 impl SetFacts {
-    /// The facts of a set: its field and threshold, its identifier `id` of 1 to 32 bytes, the
-    /// length of its data in bytes, the length of a block in bytes and, optionally, the SHA-256
-    /// of the data.
-    ///
-    /// The identifier tells the sets of one program apart: the program chooses it, and two sets
-    /// never share one. A block is the unit of damage: a wrong byte costs the block it is in, and
-    /// each block costs four bytes of checksum.
-    ///
-    /// The digest is the one the files will state: [`SetFacts::files`] writes them only for data
-    /// that has it, and a rebuild gives the data back only when it has it. A program that holds
-    /// the data describes the set with [`SetFacts::for_data`], which computes the digest; this
-    /// call is for facts known otherwise, such as those of a header that was read.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Field`] for [`Field::Gf2048`], whose symbols are not the bytes of a file;
-    /// [`FileError::Id`] for an identifier that is empty or longer than 32 bytes;
-    /// [`FileError::Threshold`] for a threshold the field does not allow; [`FileError::Block`]
-    /// for a block length of zero or of half a symbol; [`FileError::Blocks`] when a shard would
-    /// have more than 2^32 blocks; [`FileError::Size`] when a file would be longer than 2^64 − 1
-    /// bytes.
+    /// The facts of a set: field, threshold, an identifier of 1 to 32 bytes, data length, block length
+    /// and optionally the data's SHA-256. A block is the unit of damage: a wrong byte loses its block.
+    /// A program that has the data should use [`SetFacts::for_data`]; this is for facts read from a
+    /// header. Fails for GF(2^11), a bad identifier, threshold or block length, or files that would be
+    /// too large.
     pub fn new(
         field: Field,
         id: &[u8],
@@ -110,13 +94,8 @@ impl SetFacts {
         })
     }
 
-    /// The facts of the set whose data is `data`, as [`SetFacts::new`] takes them, with the length
-    /// of the data and, for [`DataDigest::Sha256`], its SHA-256 computed from `data` itself.
-    ///
-    /// # Errors
-    ///
-    /// As [`SetFacts::new`], whose checks come first; the digest is computed only for facts that
-    /// pass them.
+    /// The facts of the set whose data is `data`, with its length and, for [`DataDigest::Sha256`], its
+    /// digest computed from `data`. Fails as [`SetFacts::new`] does, before the digest is computed.
     pub fn for_data(
         field: Field,
         id: &[u8],

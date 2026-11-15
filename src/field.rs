@@ -33,25 +33,11 @@ pub enum Field {
 }
 
 impl Field {
-    /// GF(2^`degree`), for a degree from 2 to 16, by `polynomial` or, for `None`, by the
-    /// standard primitive polynomial of that degree: 0x7, 0xB, 0x13, 0x25, 0x43, 0x89, 0x11D,
-    /// 0x211, 0x409, 0x805, 0x1053, 0x201B, 0x4443, 0x8003 and 0x1100B for the degrees 2 to 16.
-    /// A polynomial is written with its x^m term: x^4 + x + 1 is 0x13. It must be primitive, so
-    /// that the powers of x are every nonzero element; the check takes at most 65,535 steps.
-    ///
-    /// The degree 8 with 0x11D is [`Field::Gf256`] and the degree 11 with 0x805 is
-    /// [`Field::Gf2048`]: one field has one value. [`Field::Gf65536`] is GF(2^16) in another
-    /// form, as an extension of GF(2^8), and the degree 16 here is a field of polynomials; the
-    /// two write other bytes.
-    ///
-    /// The size of the field limits only how many shards a set can have. A larger field makes
-    /// every symbol longer and every step slower, so a program takes the smallest field whose
-    /// symbols hold what it codes and whose elements number at least its shards.
-    ///
-    /// # Errors
-    ///
-    /// [`FieldError::Degree`] for a degree outside 2 to 16, [`FieldError::Polynomial`] for a
-    /// polynomial that is not a primitive polynomial of that degree.
+    /// GF(2^`degree`) for a degree from 2 to 16, by `polynomial` (with its x^m term, so x^4 + x + 1 is
+    /// 0x13) or by the standard primitive polynomial of that degree. Degree 8 with 0x11D is
+    /// [`Field::Gf256`] and degree 11 with 0x805 is [`Field::Gf2048`]. Take the smallest field whose
+    /// symbols hold your data and that has as many elements as you need shards. Fails for a degree
+    /// outside 2..=16 or a polynomial that isn't primitive.
     pub fn binary(degree: u8, polynomial: Option<u32>) -> Result<Self, FieldError> {
         if !binary::DEGREES.contains(&degree) {
             return Err(FieldError::Degree);

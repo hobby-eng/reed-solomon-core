@@ -181,14 +181,9 @@ impl Header {
         Some((start, length))
     }
 
-    /// The whole shard file of `shard`, the bytes of this header's shard: the header, the blocks
-    /// with a checksum each, the header again and the trailer. It comes in a [`Zeroizing`]
-    /// buffer, which wipes itself when it is dropped: the blocks are the shard's bytes.
-    ///
-    /// # Errors
-    ///
-    /// [`FileError::Shard`] unless `shard` has the set's shard length; [`FileError::Memory`]
-    /// when this machine has no memory for the file: nothing is written then.
+    /// The whole shard file for `shard`: header, blocks with checksums, the header again and the
+    /// trailer, in a [`Zeroizing`] buffer. Fails with [`FileError::Shard`] for a wrong length or
+    /// [`FileError::Memory`] when there's no memory.
     #[cfg(feature = "alloc")]
     pub fn file(&self, shard: &[u8]) -> Result<Zeroizing<Vec<u8>>, FileError> {
         if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {

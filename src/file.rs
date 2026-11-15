@@ -1,21 +1,6 @@
-//! The shard file: one shard of a set together with what a program needs to find its set again
-//! and to tell which of its bytes survived.
-//!
-//! A file is the header, the shard in blocks with a checksum each, the header a second time and
-//! a trailer that names the header's length:
-//!
-//! ```text
-//! header | block 0, checksum | block 1, checksum | … | header | trailer
-//! ```
-//!
-//! The header ([`Header`]) holds the facts of the set ([`SetFacts`]) and the index of the shard,
-//! under a checksum of its own. Each block's checksum also covers the header's checksum and the
-//! block's number, so a block is tied to its file and its place. [`ShardFile::read`] takes a file
-//! that may be damaged, cut short or followed by other bytes and says what is left of it.
-//! `docs/TECHNICAL.md` has every byte and every rule.
-//!
-//! The checksums are CRC-32C: they find accidental damage. They are no signature, and someone
-//! who changes a file on purpose can make every one of them fit.
+//! The shard file: one shard plus what a program needs to find its set and tell which bytes
+//! survived. It is the header, the blocks with a checksum each, the header again and a trailer;
+//! docs/TECHNICAL.md has every byte. The checksums (CRC-32C) catch accidents, not tampering.
 
 mod crc32c;
 mod facts;

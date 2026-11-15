@@ -1,10 +1,6 @@
-//! GF(2^8) with the polynomial x^8 + x^4 + x^3 + x^2 + 1 (0x11D) and the generator 2.
-//!
-//! A product is eight steps of add, shift and reduce, each step chosen by a mask made from one
-//! bit, and an inverse a fixed chain of squarings and multiplications: no table is indexed by an
-//! element and no branch depends on one, because the elements here can follow from the data, as
-//! the errors and the gaps of a column do. Only the inverse of zero is told apart, as `None`.
-//! The bytes of whole shards go through `lanes`.
+//! GF(2^8) with the polynomial 0x11D. No tables and no branches on an element, because errors and
+//! gaps can follow from the data; only zero is told apart, as having no inverse. Whole shards go
+//! through `lanes`.
 
 /// The reduction polynomial, its x^8 term included.
 const POLYNOMIAL: u16 = 0x11D;
