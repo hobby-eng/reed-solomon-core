@@ -5,6 +5,8 @@ mod gf2048;
 mod gf256;
 mod gf65536;
 mod lanes;
+#[cfg(test)]
+mod proof;
 
 pub use binary::{Binary, FieldError};
 

@@ -240,6 +240,7 @@ Data can be a secret. The crate wipes every buffer it filled with data when it l
 - A file is read through the bytes a program gives: one larger than memory is given as a mapping of it, which must not change from `Pile::new` until the last call on its set returns, and the calls that end in `_into` write into mappings as well. Where a system has no mappings, as in a browser, the files and the data have to fit in memory. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
 - A rebuild compares the SHA-256 only when the files state one; files written without it rebuild with nothing compared, and with exactly `k` files no shard is compared either. Making one lost file again compares no digest.
 - The vote names the files that differ from what most shards share, within a stated bound: a wrong file takes two spare files in every block it is wrong in. It does not say that the files left hold the data once written; a digest the program trusts does.
+- A step of the work limit took about one and a half nanoseconds in GF(2^8) and four and a half in GF(2^16) on one laptop, natively and in a browser's engine ([measured time](docs/TECHNICAL.md#measured-time)); a phone was not measured.
 - The [roadmap](docs/ROADMAP.md) lists the planned work.
 
 ## Use from Rust

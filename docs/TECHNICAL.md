@@ -17,6 +17,7 @@ This document describes how the crate is built and why, in enough detail to chec
 - [The cyclic code](#the-cyclic-code)
 - [What is guaranteed](#what-is-guaranteed)
 - [Memory and work](#memory-and-work)
+- [Measured time](#measured-time)
 - [The data path](#the-data-path)
 - [Secrets in memory](#secrets-in-memory)
 - [The shard file](#the-shard-file)
@@ -207,6 +208,8 @@ Its known answers come from outside the crate: the repair words that MHFE-REPAIR
 - With exactly `k` shards nothing can be checked: any `k` shards are a valid set, and the answer is `Unchecked`.
 - Nothing here says who made a shard. Someone who can replace every shard can make a consistent set of other data.
 
+The first point rests on a fact of fields: a polynomial of degree below `k` that is not zero has fewer than `k` roots, so `k` values fix it. A test checks by exhaustion that the arithmetic of a field, as the crate computes it, is a field (`src/field/proof.rs`). For every pair of elements the product lies in the field, equals the product in the other order, and is the sum of the products with the basis elements of the second factor, so it is linear over GF(2) in both factors; and the kernel that scales whole shards, through which every byte of a made shard passes, gives the same product. On every triple of basis elements the product is associative, and by linearity on every triple. 1 is its unit and every element but zero has an inverse. It checks `Field::Gf256`, `Field::Gf2048`, `Field::Gf65536` and the field of the standard polynomial of each degree from 2 to 16, which for degrees 8 and 11 are the first two, and the fields of 0x187 and 0x1002D. The fields of up to 4,096 elements are checked in every run; the larger ones take minutes and are checked before a release (`cargo test --release --lib field::proof -- --ignored`). A field the program gives another polynomial is computed by the code of `Field::binary` for its degree, as those of 0x187 and 0x1002D are, and is not checked by itself.
+
 ## Memory and work
 
 Without the `alloc` feature nothing is allocated: the caller provides `k` elements for the weights and the output buffer.
@@ -216,6 +219,27 @@ Without the `alloc` feature nothing is allocated: the caller provides `k` elemen
 Its work is `m²` field multiplications for the weights, then `m · (m − k)` scalings of every stretch, and for each wrong offset about `(m − k)² + m · e` multiplications, with `e` wrong symbols.
 
 `CyclicCode::correct` and `CyclicCode::agrees` hold the syndromes of one stripe of words, at most 4 MiB, a few elements per check symbol and one per shard; `CyclicCode::plan` holds its list of changes as well, 24 bytes per change. Making the syndromes takes `n · parity` scalings of every stripe, and a word that disagrees about `parity²` multiplications more and one search over its `n` places.
+
+## Measured time
+
+`cargo run --release --example measure` measures the calls on the machine it runs on, each case in a process of its own. On an Intel Core i7-1260P under Linux 7.0, in one thread, on 2026-11-15:
+
+| Call               | Shape                                                             |   Data | Reading the files | The call | MiB/s | ns per step | Held before | Added by the call |
+| ------------------ | ----------------------------------------------------------------- | -----: | ----------------: | -------: | ----: | ----------: | ----------: | ----------------: |
+| `Code::encode`     | GF(2^8), k = 10, 4 shards made                                    | 80 MiB |                   |   0.35 s |   229 |             |      82 MiB |            32 MiB |
+| `Code::encode`     | GF(2^16), k = 100, 20 shards made                                 | 25 MiB |                   |   1.09 s |    23 |             |      27 MiB |             5 MiB |
+| `Code::correct`    | GF(2^8), k = 10 + 4, two wrong symbols at one offset in a hundred | 80 MiB |                   |   1.26 s |    64 |             |     114 MiB |             4 MiB |
+| `Code::correct`    | GF(2^16), k = 100 + 20, the same                                  | 25 MiB |                   |   2.65 s |     9 |             |      32 MiB |             4 MiB |
+| `FileSet::rebuild` | GF(2^8), k = 10 + 4, 4 data files lost                            | 64 MiB |            0.29 s |   0.30 s |   210 |         1.1 |      92 MiB |            64 MiB |
+| `FileSet::rebuild` | GF(2^16), k = 200 + 50, 50 data files lost                        | 32 MiB |            0.14 s |   3.66 s |     9 |         4.4 |      43 MiB |            31 MiB |
+| `FileSet::repairs` | GF(2^8), the 4 lost files                                         | 64 MiB |            0.29 s |   0.40 s |   161 |         1.5 |      92 MiB |            25 MiB |
+| `FileSet::repairs` | GF(2^16), the 50 lost files                                       | 32 MiB |            0.15 s |   3.70 s |     9 |         4.4 |      43 MiB |             7 MiB |
+
+Reading the files is `Pile::new`, which checks every block's checksum. The sets state no digest, so the time of a call is that of the work its steps count. "Held before" is the resident memory of the process with its inputs, "added" what the call added at its peak: the shards or files it made, its data, and for a correction its syndromes, at most 4 MiB.
+
+The same encoding and rebuilds built for WebAssembly and run once in Node 26, whose engine is Chrome's, with the input made beforehand and the result let go afterwards, took 0.13 seconds to encode 20 MiB in GF(2^8) (156 MiB/s), 0.09 seconds to rebuild 16 MiB in GF(2^8) at 1.4 nanoseconds a step, and 1.03 seconds to rebuild 8 MiB in GF(2^16) at 4.9 nanoseconds a step. The harness for that run is not in the repository, which holds no Node.js script.
+
+So a step of the work limit comes to about one and a half nanoseconds in GF(2^8) and four and a half in GF(2^16) on this machine, natively or in a browser's engine, and a limit of 10^9 steps to one to five seconds of work, with reading and a digest on top. The work grows with `k` times the number of shards made or compared, which is why GF(2^16), used for large sets, is the slow case. No phone was measured: a program there sets its limit from `rebuild_work` and the time of a small call of its own.
 
 ## The data path
 
@@ -444,7 +468,7 @@ For sets the tests write files and rebuild the data from every choice of `k` of 
 
 For the vote the tests put a file of other data among five; one wrong symbol in a file at the point zero, among the sources and among the spare shards; as many wrong files as the spare shards outvote, and one more; files of one shard that differ, with and without a file the others confirm, beside exactly `k` holders and beside more; and files cut short, so that the holders change from block to block. They count the steps by the rule in two ways, hold five votes worked out apart from the crate with their steps and bounds, compare the set without some files with the remaining files read anew, and give headers that state four thousand million blocks over files of three. The search itself is run over every choice of wrong shards of small sets in all three fields.
 
-The tests run with the buffers in protected pages and again with them in the allocator's memory, and check on Linux that a result lies in pages the kernel lists as kept out of core dumps and given to a child process as zeros, and as locked exactly when the buffer says so. CI runs the gates on Linux for x86-64 and the tests on Linux for AArch64, macOS and Windows at every push. The first audit left three fuzz targets beside its report (`docs/audits/AUD-001-harnesses`): any bytes as shard files; sets written by the crate and then damaged, which must give back the data whose SHA-256 they state or refuse; and shards with changed and marked symbols in every field, which a plan must put right within its bound. [Test coverage](COVERAGE.md) has the measured lines.
+The tests run with the buffers in protected pages and again with them in the allocator's memory, and check on Linux that a result lies in pages the kernel lists as kept out of core dumps and given to a child process as zeros, and as locked exactly when the buffer says so. CI runs the gates on Linux for x86-64 and the tests on Linux for AArch64, macOS and Windows at every push. Five fuzz targets lie under `fuzz/`, the first three grown from those the first audit left beside its report: `files`, any bytes as shard files and every call on the sets they make; `sets`, sets written by the crate and then damaged, which must give back the data whose SHA-256 they state or refuse; `plans`, shards with changed and marked symbols in every field, which a plan must put right within its bound; `cyclic`, words of the cyclic code with any roots and errata, put right within the bound, a word of the code otherwise or nothing changed; and `calls`, every public call that takes numbers, lengths or bytes, given any of them, with a file written from any header read back as that header. The calls that write in place answer as those into buffers, and leave their outputs as each refusal promises. Each target ran sixty seconds under AddressSanitizer on 2026-11-15 without a finding. CI lints the crate without an operating system as well, for `thumbv7em-none-eabihf`, with and without an allocator. [Test coverage](COVERAGE.md) has the measured lines.
 
 ## References
 

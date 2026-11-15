@@ -35,6 +35,15 @@ jobs:
           cargo clippy --locked --no-default-features --features alloc --all-targets -- -D warnings
           cargo clippy --locked --no-default-features -- -D warnings
           cargo clippy --locked --target wasm32-unknown-unknown -- -D warnings
+      - name: Lint a target without an operating system
+        run: |
+          rustup target add thumbv7em-none-eabihf
+          cargo clippy --locked --no-default-features --target thumbv7em-none-eabihf -- -D warnings
+          cargo clippy --locked --no-default-features --features alloc --target thumbv7em-none-eabihf -- -D warnings
+      - name: Check and lint the fuzz targets
+        run: |
+          cargo fmt --check --manifest-path fuzz/Cargo.toml
+          cargo clippy --locked --manifest-path fuzz/Cargo.toml --all-targets -- -D warnings
       - name: Run the tests, buffers in protected pages
         run: cargo test --locked
       - name: Run the tests, buffers in the allocator's memory

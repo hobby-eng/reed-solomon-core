@@ -13,10 +13,22 @@ Fast gates (CORE-43):
 - `cargo clippy --no-default-features --features alloc --all-targets -- -D warnings` (buffers in
   the allocator's memory)
 - `cargo clippy --no-default-features -- -D warnings` (the crate without an allocator)
+- `cargo clippy --no-default-features --target thumbv7em-none-eabihf -- -D warnings`, and with
+  `--features alloc`: a target without an operating system (`rustup target add` it first)
 - `cargo test`, and `cargo test --no-default-features --features alloc`
+- `cargo fmt --check --manifest-path fuzz/Cargo.toml` and `cargo clippy --manifest-path
+  fuzz/Cargo.toml --all-targets -- -D warnings`: the fuzz targets
 
 CI (`.github/workflows/ci.yml`) runs these gates on x86-64 Linux and the tests on ARM Linux, macOS
 and Windows; `audit.yml` holds `Cargo.lock` against the RustSec advisories.
+
+Before a release, and after a change of the decoder, the shard file or a call on sets: the fuzz
+targets under `fuzz/` (`files`, `sets`, `plans`, `cyclic`, `calls`) run under the sanitizer, `cargo +nightly
+fuzz run --fuzz-dir fuzz --target x86_64-unknown-linux-gnu <target> -- -max_total_time=60
+-rss_limit_mb=3000 -max_len=4096`, after `cargo +nightly run --manifest-path fuzz/Cargo.toml
+--example seeds --target x86_64-unknown-linux-gnu -- fuzz/corpus/files` gives `files` whole sets to
+start from; and the proof that each field is one checks its largest fields, `cargo test --release
+--lib field::proof -- --ignored` (minutes).
 
 Layout: `src/buffer*` the memory every result and working buffer of data lies in, protected
 pages or the allocator's; `src/field*` the three fields and the word-wide scaling kernel;
