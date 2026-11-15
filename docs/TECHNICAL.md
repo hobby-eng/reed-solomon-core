@@ -109,21 +109,27 @@ The Reed–Solomon libraries of Backblaze and Klaus Post, and the `reed-solomon-
 
 ## Fields
 
-| Field            | Elements | Polynomial                                 | A symbol in bytes                                           | Most shards |
-| ---------------- | -------- | ------------------------------------------ | ----------------------------------------------------------- | ----------- |
-| `Field::Gf256`   | 256      | x^8 + x^4 + x^3 + x^2 + 1 (0x11D)          | one byte                                                    | 256         |
-| `Field::Gf65536` | 65,536   | the field above extended by x^2 + 2x + 128 | `[high, low]` for `high·x + low`                            | 65,536      |
-| `Field::Gf2048`  | 2,048    | x^11 + x^2 + 1 (0x805)                     | two bytes, the high one first, holding a number below 2,048 | 2,048       |
+| Field            | Elements                | Polynomial                                                                                   | A symbol in bytes                                                                     | Most shards |
+| ---------------- | ----------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------- |
+| `Field::Gf256`   | 256                     | x^8 + x^4 + x^3 + x^2 + 1 (0x11D)                                                            | one byte                                                                              | 256         |
+| `Field::Gf65536` | 65,536                  | the field above extended by x^2 + 2x + 128                                                   | `[high, low]` for `high·x + low`                                                      | 65,536      |
+| `Field::Gf2048`  | 2,048                   | x^11 + x^2 + 1 (0x805)                                                                       | two bytes, the high one first, holding a number below 2,048                           | 2,048       |
+| `Field::Binary`  | 2^m, for m from 2 to 16 | a primitive polynomial of degree m: the standard one of the degree, or one the program gives | one byte holding a number below 2^m up to m = 8; two bytes, the high one first, above | 2^m         |
 
 `Field::Gf256` and `Field::Gf65536` take any bytes. `Field::Gf2048` exists so that one symbol can be one word of a list of 2,048 words: the shards a code adds are then words of the list too. Two bytes that hold 2,048 or more are not a symbol of this field, and every call that is given one returns `CodeError::Symbol` before it writes anything. The element 2 generates all 2,047 nonzero elements of this field, so the polynomial is primitive.
 
-**The arithmetic.** In all three fields adding is exclusive or, so subtracting is the same as adding.
+**Choosing a field.** `Field::binary(m, polynomial)` makes GF(2^m) for a degree `m` from 2 to 16, by a primitive polynomial written with its x^m term (x^4 + x + 1 is 0x13), or by the standard one of the degree for `None`: 0x7, 0xB, 0x13, 0x25, 0x43, 0x89, 0x11D, 0x211, 0x409, 0x805, 0x1053, 0x201B, 0x4443, 0x8003 and 0x1100B for the degrees 2 to 16. A polynomial is taken only when its highest term is x^m, its constant term 1, and x has the order 2^m − 1 modulo it, so that the powers of x are every nonzero element: at most 65,535 steps, done once. The degree 8 with 0x11D is `Field::Gf256` and the degree 11 with 0x805 is `Field::Gf2048`, so one field has one value. `Field::Gf65536` stays a field of its own: GF(2^16) as an extension of GF(2^8), whose bytes are those of `reed-solomon-erasure`; the degree 16 of `Field::binary` is a field of polynomials and writes other bytes.
+
+The size of a field limits only how many shards a set can have: 2^m. A larger field makes every symbol longer and every step slower and gains nothing else, so a program takes the smallest field whose symbols hold what it codes and whose elements number at least its shards. Fields above 2^16 are not offered: 65,536 shards are more than any set needs, a symbol of more than two bytes would be slower for every set, and showing a polynomial of a large degree primitive needs the factors of 2^m − 1. The degree 1 makes two points and only `k` = 1. These fields have no shard file: the file format names only `Field::Gf256` and `Field::Gf65536`.
+
+**The arithmetic.** In all fields adding is exclusive or, so subtracting is the same as adding.
 
 - `Field::Gf256`: a byte is a polynomial over GF(2), bit `i` the coefficient of `x^i`, and a product is reduced by 0x11D. The element 2 generates the nonzero elements. A product is eight steps of add, shift and reduce, each chosen by a mask made from one bit of an operand, and an inverse is `a^254` by the same seven squarings and multiplications for every `a`: no table is indexed by an element and no branch depends on one (see [The data path](#the-data-path)).
 - `Field::Gf65536`: the element `[high, low]` is `high·x + low` with `high` and `low` in the field above, and `x^2 = 2x + 128`. So `(a_h·x + a_l)(b_h·x + b_l)` has the high byte `a_h·b_l + a_l·b_h + 2·a_h·b_h` and the low byte `a_l·b_l + 128·a_h·b_h`. For example `[01,00]·[01,00] = x^2 = [02,80]`. The inverse is the conjugate `high·x + (2·high + low)` divided by the norm `low^2 + 2·high·low + 128·high^2`, which lies in GF(2^8).
 - `Field::Gf2048`: bit `i` of the number is the coefficient of `x^i`, and a product is reduced by 0x805. There are no tables: a product is eleven steps of add, shift and reduce, each chosen by a mask, and an inverse the same chain of squarings and multiplications for every element. The sets this field serves are a few dozen symbols.
+- `Field::Binary`: bit `i` of the number is the coefficient of `x^i`, and a product is `m` steps of add, shift and reduce by the polynomial, each chosen by a mask; the inverse is `a^(2^m − 2)` by the same `m − 1` squarings and multiplications for every `a`. Whole shards are scaled by the kernel of the other fields, with lanes of one or two bytes: every lane is doubled at once by moving its low `m − 1` bits up and bringing its bit `m − 1` back as the polynomial without its x^m term.
 
-**Points.** The point of shard `i` is the element whose bytes are the number `i`: in `Field::Gf256` the byte `i` for `i` up to 255, in `Field::Gf2048` the number `i` below 2,048, and in `Field::Gf65536` the element `[i / 256, i mod 256]`. A number the field has no element for is refused with `CodeError::Index`.
+**Points.** The point of shard `i` is the element whose bytes are the number `i`: in `Field::Gf256` the byte `i` for `i` up to 255, in `Field::Gf2048` the number `i` below 2,048, in `Field::Gf65536` the element `[i / 256, i mod 256]`, and in a field of degree `m` the number `i` below 2^m. A number the field has no element for is refused with `CodeError::Index`.
 
 ## Making shards
 

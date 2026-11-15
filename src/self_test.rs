@@ -16,7 +16,7 @@ pub struct Check {
 }
 
 /// The most checks a run holds.
-const MOST: usize = 14;
+const MOST: usize = 15;
 
 /// The checks of one run.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,6 +75,10 @@ pub fn self_test() -> SelfTest {
     run.add(
         "GF(2^11), 0x805: the words 001 7FF 400 give the words 3FE and 7E3 (computed apart)",
         word_field(),
+    );
+    run.add(
+        "GF(2^4), 0x13, and GF(2^13), 0x201B: the data 1 and 2^m - 1 give shards 2 and 3 as E, 0 and 1FE6, 018 (computed apart)",
+        chosen_fields(),
     );
     run.add(
         "A changed shard is told from the one its set makes",
@@ -166,6 +170,23 @@ fn word_field() -> bool {
         && made(Field::Gf2048, [0, 1, 2], data, 4) == Some([0x07, 0xE3])
         // A symbol of 2,048 is not a word.
         && made(Field::Gf2048, [0, 1, 2], [[0x08, 0x00], [0, 0], [0, 0]], 3).is_none()
+}
+
+/// Two fields of a degree a program chooses, by their standard polynomials: the set of two whose
+/// shards 0 and 1 are 1 and the largest element, with its shards 2 and 3 computed apart from this
+/// crate with tables of logarithms.
+fn chosen_fields() -> bool {
+    let (Ok(four), Ok(thirteen)) = (Field::binary(4, None), Field::binary(13, None)) else {
+        return false;
+    };
+    let small = [[0x01], [0x0F]];
+    let large = [[0x00, 0x01], [0x1F, 0xFF]];
+    made(four, [0, 1], small, 2) == Some([0x0E])
+        && made(four, [0, 1], small, 3) == Some([0x00])
+        && made(thirteen, [0, 1], large, 2) == Some([0x1F, 0xE6])
+        && made(thirteen, [0, 1], large, 3) == Some([0x00, 0x18])
+        // 0x10 is not an element of GF(2^4).
+        && made(four, [0, 1], [[0x10], [0x00]], 2).is_none()
 }
 
 fn changed_shard() -> bool {

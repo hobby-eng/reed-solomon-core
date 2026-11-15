@@ -45,7 +45,8 @@ pub use set::{
 /// Why a shard file was not described, written or read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileError {
-    /// The field's symbols are not the bytes of a file: [`crate::Field::Gf2048`].
+    /// The field has no shard file: only [`crate::Field::Gf256`] and [`crate::Field::Gf65536`]
+    /// have one.
     Field,
     /// A set identifier that is empty or longer than 32 bytes.
     Id,

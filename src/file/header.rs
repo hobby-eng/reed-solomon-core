@@ -51,7 +51,7 @@ pub(super) const fn field_code(field: Field) -> Option<u8> {
     match field {
         Field::Gf256 => Some(1),
         Field::Gf65536 => Some(2),
-        Field::Gf2048 => None,
+        Field::Gf2048 | Field::Binary(_) => None,
     }
 }
 

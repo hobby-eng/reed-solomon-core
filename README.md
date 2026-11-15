@@ -5,7 +5,7 @@
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 256, 2,048 or 65,536 shards, depending on the field, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. The crate has one dependency, `sha2`, no `unsafe` code, and works without an allocator.
+reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 2^m shards in a field GF(2^m) the program chooses, from 4 to 65,536, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. The crate has one dependency, `sha2`, no `unsafe` code, and works without an allocator.
 
 The [documentation index](docs/README.md) lists the guides; [How it works](docs/TECHNICAL.md) has the mathematics and the guarantees.
 
@@ -27,22 +27,23 @@ The crate keeps data recoverable where parts of it get lost or damaged: shards s
 
 Most Reed–Solomon crates for Rust do one of two things. The erasure coders (`reed-solomon-erasure`, `reed-solomon-simd`, `reed-solomon-novelpoly`, `leopard-codec`) rebuild shards that are known to be missing, many of them very fast, but do not find a shard that is present and wrong. The error correctors (`reed-solomon`, `reed_solomon_rs`) find wrong symbols in one short message of bytes. PAR2 implementations such as `rust-par2` protect existing files with separate recovery files in their own format. reed-solomon-core brings these together and adds what we found in none of them:
 
-| Feature                                                                                                                       | Here | Elsewhere among the crates above            |
-| ----------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------- |
-| Missing shards rebuilt, and wrong symbols at unknown places found and corrected, on the same set                              | yes  | one or the other                            |
-| Gaps a reader marks inside a shard, one symbol at a time, together with wrong symbols: `2e + s ≤ n − k`                       | yes  | gaps only as whole shards                   |
-| A plan of every change (place, what was read, what it becomes) before anything changes, applied after a check                 | yes  | not found                                   |
-| A field of 2,048 elements: one symbol is one word of a list of 2,048, such as the BIP39 list                                  | yes  | not found                                   |
-| The bytes of `reed-solomon-erasure` in GF(2^8) and GF(2^16), checked shard by shard                                           | yes  | that crate itself                           |
-| A set given more shards later from any `k` at hand, the shards already issued unchanged                                       | yes  | by encoding again with more parity          |
-| A shard file that names its set, with a checksum per block tied to its place and the header at both ends                      | yes  | PAR2 has its own format of recovery files   |
-| Data rebuilt block by block from whichever files still hold each block, even when no `k` files are whole                      | yes  | PAR2 works by slices of the protected files |
-| The files that differ from what the others share named block by block (a vote), and the set rebuilt without them              | yes  | not found                                   |
-| The SHA-256 of the data computed when written and compared before the data is given back                                      | yes  | PAR2 compares MD5                           |
-| A limit on the work of a call, checked before it starts; a stated bound on working memory; no partial result                  | yes  | not found                                   |
-| No allocator needed, work on the caller's buffers; where shards are scaled, no byte of them chooses a branch or a table entry | yes  | some are `no_std`; the rest not stated      |
-| A self-test against answers from outside the crate, for a program to run at start                                             | yes  | not found                                   |
-| Every buffer that held data wiped, results in self-wiping buffers, no data in `Debug` texts                                   | yes  | not found                                   |
+| Feature                                                                                                                         | Here | Elsewhere among the crates above            |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---- | ------------------------------------------- |
+| Missing shards rebuilt, and wrong symbols at unknown places found and corrected, on the same set                                | yes  | one or the other                            |
+| Gaps a reader marks inside a shard, one symbol at a time, together with wrong symbols: `2e + s ≤ n − k`                         | yes  | gaps only as whole shards                   |
+| A plan of every change (place, what was read, what it becomes) before anything changes, applied after a check                   | yes  | not found                                   |
+| A field of 2,048 elements: one symbol is one word of a list of 2,048, such as the BIP39 list                                    | yes  | not found                                   |
+| A field of any size from 4 to 65,536 elements, by a standard primitive polynomial or one the program gives and the crate checks | yes  | GF(2^8) and GF(2^16) only                   |
+| The bytes of `reed-solomon-erasure` in GF(2^8) and GF(2^16), checked shard by shard                                             | yes  | that crate itself                           |
+| A set given more shards later from any `k` at hand, the shards already issued unchanged                                         | yes  | by encoding again with more parity          |
+| A shard file that names its set, with a checksum per block tied to its place and the header at both ends                        | yes  | PAR2 has its own format of recovery files   |
+| Data rebuilt block by block from whichever files still hold each block, even when no `k` files are whole                        | yes  | PAR2 works by slices of the protected files |
+| The files that differ from what the others share named block by block (a vote), and the set rebuilt without them                | yes  | not found                                   |
+| The SHA-256 of the data computed when written and compared before the data is given back                                        | yes  | PAR2 compares MD5                           |
+| A limit on the work of a call, checked before it starts; a stated bound on working memory; no partial result                    | yes  | not found                                   |
+| No allocator needed, work on the caller's buffers; where shards are scaled, no byte of them chooses a branch or a table entry   | yes  | some are `no_std`; the rest not stated      |
+| A self-test against answers from outside the crate, for a program to run at start                                               | yes  | not found                                   |
+| Every buffer that held data wiped, results in self-wiping buffers, no data in `Debug` texts                                     | yes  | not found                                   |
 
 The comparison was made from the documentation of each crate at its latest version on crates.io in November 2026; "not found" means we did not find it there.
 
@@ -75,13 +76,16 @@ A reader often knows that one symbol is unreadable, such as a smudged word on a 
 
 ## Fields
 
-| Field            | Symbol                            | Most shards | Same bytes as                                                                        |
-| ---------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
-| `Field::Gf256`   | one byte                          | 256         | `reed-solomon-erasure` 6.0.0, a port of Backblaze's and Klaus Post's implementations |
-| `Field::Gf65536` | two bytes                         | 65,536      | `galois_16` of `reed-solomon-erasure` 6.0.0                                          |
-| `Field::Gf2048`  | a number below 2,048 in two bytes | 2,048       | values computed independently, pinned in the tests                                   |
+| Field                 | Symbol                                                    | Most shards | Same bytes as                                                                        |
+| --------------------- | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `Field::Gf256`        | one byte                                                  | 256         | `reed-solomon-erasure` 6.0.0, a port of Backblaze's and Klaus Post's implementations |
+| `Field::Gf65536`      | two bytes                                                 | 65,536      | `galois_16` of `reed-solomon-erasure` 6.0.0                                          |
+| `Field::Gf2048`       | a number below 2,048 in two bytes                         | 2,048       | values computed independently, pinned in the tests                                   |
+| `Field::binary(m, …)` | a number below 2^m: one byte up to m = 8, two bytes above | 2^m         | values computed independently for every degree, pinned in the tests                  |
 
 The tests compare every shard with that crate for all shapes up to 16 shards in its two fields, for large sets, and for each of the 65,536 shard numbers. `Field::Gf2048` makes one symbol one word of a list of 2,048 words, so the shards a code adds to such a list are words of it too; bytes that hold a larger number are refused.
+
+A program can also choose the size of the field: `Field::binary(m, None)` is GF(2^m) for any degree `m` from 2 to 16 by its standard primitive polynomial, and `Field::binary(m, Some(polynomial))` by a primitive polynomial of its own, which the crate checks. The size limits only how many shards a set can have, 2^m; a larger field makes symbols longer and work slower, so the smallest that is large enough is the best. These fields have no shard file.
 
 ## Shard files
 

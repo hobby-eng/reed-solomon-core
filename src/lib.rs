@@ -1,5 +1,6 @@
-//! Reed–Solomon coding for sets of shards: data cut into `k` shards becomes a set of up to 256,
-//! 2,048 or 65,536 shards, depending on the field, any `k` of which rebuild it.
+//! Reed–Solomon coding for sets of shards: data cut into `k` shards becomes a set of up to 2^m
+//! shards in a field GF(2^m) from 4 to 65,536 elements ([`Field`], [`Field::binary`]), any `k` of
+//! which rebuild it.
 //!
 //! Shard `i` is the value at point `i` of the one polynomial of degree below `k` whose values at
 //! the points 0 to `k - 1` are the data shards, symbol by symbol. So the first `k` shards are the
@@ -149,7 +150,7 @@ mod file;
 mod self_test;
 
 pub use code::{Code, CodeError, Sources};
-pub use field::Field;
+pub use field::{Binary, Field, FieldError};
 pub use file::{
     Block, Condition, DataDigest, FileError, Frame, Header, Length, SetFacts, ShardFile, Survey,
 };

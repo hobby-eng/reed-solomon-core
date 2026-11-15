@@ -12,6 +12,7 @@
 mod correction;
 mod damage;
 mod digests;
+mod fields;
 mod files;
 mod oracle;
 mod plans;

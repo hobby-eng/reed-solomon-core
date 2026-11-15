@@ -8,10 +8,10 @@ use reed_solomon_erasure::galois_16;
 fn every_check_passes_and_is_named() {
     let run = self_test();
     assert!(run.passed());
-    // Five checks of the code, two of the shard file, one of SHA-256, three of the error
+    // Six checks of the code, two of the shard file, one of SHA-256, three of the error
     // correction, one plan of changes for marked gaps, one of the vote among the files of a set
     // and one of a digest that differs.
-    assert_eq!(run.checks().len(), 14);
+    assert_eq!(run.checks().len(), 15);
     for check in run.checks() {
         assert!(check.passed, "{}", check.name);
         assert!(check.name.len() > 20, "{}", check.name);

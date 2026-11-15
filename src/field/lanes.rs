@@ -4,6 +4,7 @@
 //! a secret included. So the factor picks the masks, and the bytes only pass through `&`, `^`,
 //! shifts and one multiplication by a constant: no branch and no table entry depends on them.
 
+use super::Binary;
 use super::gf256;
 use super::gf65536::{CONSTANT, MIDDLE};
 
@@ -110,6 +111,42 @@ pub(super) fn add_scaled_words(out: &mut [u8], source: &[u8], factor: u16) {
                 for mask in &masks {
                     sum ^= word & mask;
                     word = doubled_pairs(word);
+                }
+                sum
+            });
+        }
+    }
+}
+
+/// `out ^= factor · source` in GF(2^m) by its polynomial: one byte per symbol up to `m` = 8,
+/// two bytes above, every symbol below 2^m.
+///
+/// Every lane of a word is doubled at once: its low `m − 1` bits move up by one, and its bit
+/// `m − 1`, brought down to the lowest bit of the lane, comes back times the polynomial without
+/// its x^m term, a number below 2^m that stays in its lane.
+pub(super) fn add_scaled_binary(out: &mut [u8], source: &[u8], factor: u16, field: Binary) {
+    let degree = field.degree();
+    let ones = if degree <= 8 { LANE_ONES } else { PAIR_ONES };
+    let below_top = ones * ((1_u64 << (degree - 1)) - 1);
+    let reduction = u64::from(field.polynomial()) & ((1_u64 << degree) - 1);
+    let shift = u32::from(degree) - 1;
+    match factor {
+        0 => {}
+        1 => add_products(out, source, |word| word),
+        _ => {
+            // For each bit of the factor: every lane, or none.
+            let mut all = [0_u64; 16];
+            for (bit, mask) in all.iter_mut().enumerate() {
+                if factor >> bit & 1 == 1 {
+                    *mask = u64::MAX;
+                }
+            }
+            let masks = all.get(..usize::from(degree)).unwrap_or_default();
+            add_products(out, source, |mut word| {
+                let mut sum = 0;
+                for mask in masks {
+                    sum ^= word & mask;
+                    word = ((word & below_top) << 1) ^ (((word >> shift) & ones) * reduction);
                 }
                 sum
             });
