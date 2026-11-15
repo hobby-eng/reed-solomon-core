@@ -1,0 +1,61 @@
+name: CI
+
+# The fast checks (CI-04): the formatting, the lints of every feature set, and the tests with the
+# buffers in protected pages and in the allocator's memory.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch or pull request makes a running check pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # The gates of AGENTS.md on x86-64 Linux, and the lint of the browser target.
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup show
+      - name: Check the formatting
+        run: cargo fmt --check
+      - name: Lint every feature set
+        run: |
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo clippy --locked --no-default-features --features alloc --all-targets -- -D warnings
+          cargo clippy --locked --no-default-features -- -D warnings
+          cargo clippy --locked --target wasm32-unknown-unknown -- -D warnings
+      - name: Run the tests, buffers in protected pages
+        run: cargo test --locked
+      - name: Run the tests, buffers in the allocator's memory
+        run: cargo test --locked --no-default-features --features alloc
+
+  # The tests on each other system the crate runs on natively: the protected pages are made by
+  # other calls on each of them.
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup show
+      - name: Run the tests
+        run: cargo test --locked

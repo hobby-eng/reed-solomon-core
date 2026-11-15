@@ -1,6 +1,7 @@
 //! Pages of their own for a buffer, from the `secret-protection-core` crate: a work area, which
-//! that crate locks where the system's lock limit holds all of it, keeps out of core dumps and of
-//! child processes, sets between guard pages and wipes before it gives the pages back.
+//! that crate sets between guard pages, locks where the system's lock limit holds all of it,
+//! keeps out of core dumps and of child processes where the system has a call for that, and
+//! wipes before it gives the pages back.
 
 use secret_protection_core::WorkArea;
 

@@ -3,11 +3,15 @@
 > [!WARNING]
 > **Draft, not ready for production.** reed-solomon-core is an early draft: the interface will still change, the shard file format is a draft, and nobody outside the project has reviewed it. Do not rely on it for data you cannot afford to lose.
 
+[![CI](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml)
+[![RustSec audit](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml/badge.svg)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
 reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 2^m shards in a field GF(2^m) the program chooses, from 4 to 65,536, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. The crate has one dependency, `sha2`, no `unsafe` code, and works without an allocator.
 
 The [documentation index](docs/README.md) lists the guides; [How it works](docs/TECHNICAL.md) has the mathematics and the guarantees.
+
+Line coverage on Linux x86-64, measured on 2026-11-15 with the default features, is **98.19%** for the unit tests and the tests of the public interface (source fingerprint `7702e638`). [Test scope and per-file results](docs/COVERAGE.md).
 
 ## Contents
 
@@ -161,7 +165,7 @@ These calls take a limit on their work, counted in steps by a stated rule and ch
 
 reed-solomon-core holds no secret, and its one cryptographic function, SHA-256 from the `sha2` crate, checks data, not people. Its checks say whether shards belong together and whether the data has the digest its files state, never who made them: someone who can change every shard can make a consistent set of other data and state its digest. Beyond the correction limit the answer is either "unresolved" or a different valid set. A program that needs to know it got the original data back compares a digest or an authentication tag it trusts from elsewhere. The checksums of a shard file find accidental damage and are no signature.
 
-Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate: out of core dumps and child processes, and out of swap where the system's lock limit allows. The crate passes that crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
+Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate, which keeps them out of swap, core dumps and child processes as far as each system allows. The crate passes that crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
 
 ## Limits
 
@@ -196,7 +200,7 @@ assert_eq!(code.correct(&mut given)?, Correction::Corrected(vec![0, 0, 1, 0, 0])
 assert_eq!(*set[2], *b"ijkl");
 ```
 
-The features: `protect`, on by default, keeps the crate's buffers in protected pages; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system; without either the crate allocates nothing, and `Code::sources`, `Sources::build` and `Sources::agrees` work on buffers the caller provides.
+The features: `protect`, on by default, keeps the crate's buffers in protected pages and brings the standard library; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system; without either the crate allocates nothing, and `Code::sources`, `Sources::build` and `Sources::agrees` work on buffers the caller provides.
 
 ## Self-test
 

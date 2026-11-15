@@ -15,6 +15,9 @@ Fast gates (CORE-43):
 - `cargo clippy --no-default-features -- -D warnings` (the crate without an allocator)
 - `cargo test`, and `cargo test --no-default-features --features alloc`
 
+CI (`.github/workflows/ci.yml`) runs these gates on x86-64 Linux and the tests on ARM Linux, macOS
+and Windows; `audit.yml` holds `Cargo.lock` against the RustSec advisories.
+
 Layout: `src/buffer*` the memory every result and working buffer of data lies in, protected
 pages or the allocator's; `src/field*` the three fields and the word-wide scaling kernel;
 `src/code*` the code, its sources and the whole-shard helpers; `src/correct*` the decoder, the correction and the plan of

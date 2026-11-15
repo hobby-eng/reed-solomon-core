@@ -14,8 +14,9 @@ default = ["protect"]
 # the crate allocates nothing and works on the caller's buffers.
 alloc = ["zeroize/alloc"]
 # The owned results and the working buffers of bytes that follow from data lie in pages of their
-# own: locked where the system allows, out of core dumps and child processes, between guard
-# pages. Without it they lie in the allocator's memory, and are wiped all the same.
+# own, between guard pages, which the system is asked to lock and to keep out of core dumps and
+# child processes. Without it they lie in the allocator's memory, and are wiped all the same.
+# It brings the standard library.
 protect = ["alloc", "dep:secret-protection-core"]
 
 [dependencies]

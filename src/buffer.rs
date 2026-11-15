@@ -18,9 +18,10 @@ use core::fmt;
 use core::ops::{Deref, DerefMut};
 
 /// Bytes of data the crate made, wiped when dropped: a shard, a shard file, rebuilt data. With the
-/// `protect` feature they lie in pages of their own, kept out of core dumps and child processes
-/// and, where the lock limit allows, out of swap ([`Buffer::is_locked`]). Its `Debug` text gives
-/// the length only, and two buffers are compared without stopping at the first difference.
+/// `protect` feature they lie in pages of their own, which the system is asked to lock
+/// ([`Buffer::is_locked`] says whether it did) and to keep out of core dumps and child processes,
+/// as far as it has a call for each. Its `Debug` text gives the length only, and two buffers
+/// are compared without stopping at the first difference.
 #[derive(Default)]
 pub struct Buffer(Store);
 
