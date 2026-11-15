@@ -9,11 +9,11 @@ use super::FileError;
 use super::facts::{SetFacts, sha256};
 use super::header::Header;
 use super::reading::{ShardFile, Survey};
+use crate::buffer::Buffer;
 use crate::code::{CodeError, Sources};
 use alloc::vec::Vec;
 use core::fmt;
 use shards::{Full, Gathered, Shard, Sweep, gather, keep, room};
-use zeroize::Zeroizing;
 
 pub use shards::{Stretch, Stretches};
 pub use vote::{Outvoted, Vote};
@@ -69,10 +69,10 @@ pub struct Coverage {
 }
 
 /// The data of a set, rebuilt. Its `Debug` text gives the length of the data, not its bytes.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct Rebuilt {
     /// The data, in a buffer that wipes itself when it is dropped.
-    pub data: Zeroizing<Vec<u8>>,
+    pub data: Buffer,
     /// Whether the SHA-256 of the data was compared with the one the files state.
     pub digest: DigestCheck,
     /// Blocks that were held by exactly `k` shards: rebuilt with nothing to compare them with.
@@ -347,7 +347,7 @@ impl<'a> FileSet<'a> {
     /// The file of shard `index`, made from the files at hand: a lost file byte for byte, or a new one.
     /// Spare shards are still compared, but the data isn't assembled or its digest checked; a later
     /// rebuild checks that. Fails as [`FileSet::rebuild`], or for an index outside the field.
-    pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Zeroizing<Vec<u8>>, SetError> {
+    pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Buffer, SetError> {
         let header = self.target(index)?;
         let (shard, _) = self.make(&[index], limit)?;
         header.file(&shard).map_err(|_| SetError::Memory)
@@ -366,11 +366,7 @@ impl<'a> FileSet<'a> {
     /// The files of shards `indexes`, in the order asked, made in one pass: each block is read and
     /// compared once for all of them. A repeated index gives the same file twice. Fails as
     /// [`FileSet::repair`].
-    pub fn repairs(
-        &self,
-        indexes: &[u16],
-        limit: Option<u128>,
-    ) -> Result<Vec<Zeroizing<Vec<u8>>>, SetError> {
+    pub fn repairs(&self, indexes: &[u16], limit: Option<u128>) -> Result<Vec<Buffer>, SetError> {
         let targets = self.targets(indexes)?;
         let mut files = Vec::new();
         room(&mut files, indexes.len())?;
@@ -501,11 +497,7 @@ impl<'a> FileSet<'a> {
     /// The shards `targets`, given in rising order, one after another in one buffer, and the
     /// steps taken: every block from the `k` lowest shards that hold it, every further holder
     /// compared with them.
-    fn make(
-        &self,
-        targets: &[u16],
-        limit: Option<u128>,
-    ) -> Result<(Zeroizing<Vec<u8>>, u128), SetError> {
+    fn make(&self, targets: &[u16], limit: Option<u128>) -> Result<(Buffer, u128), SetError> {
         let needed = self.work(targets)?;
         if limit.is_some_and(|limit| needed > limit) {
             return Err(SetError::Work { needed });
@@ -523,11 +515,8 @@ impl<'a> FileSet<'a> {
             .shard
             .checked_mul(targets.len())
             .ok_or(SetError::Memory)?;
-        let (mut out, mut stripes) = (Zeroizing::new(Vec::new()), Vec::new());
-        let (mut lowest, mut weights) = (Vec::new(), Vec::new());
-        out.try_reserve_exact(length)
-            .map_err(|_| SetError::Memory)?;
-        out.resize(length, 0);
+        let mut out = Buffer::zeros(length).ok_or(SetError::Memory)?;
+        let (mut stripes, mut lowest, mut weights) = (Vec::new(), Vec::new(), Vec::new());
         room(&mut stripes, threshold)?;
         room(&mut lowest, threshold)?;
         room(&mut weights, threshold)?;

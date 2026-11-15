@@ -10,11 +10,14 @@ Fast gates (CORE-43):
 
 - `cargo fmt --check`
 - `cargo clippy --all-targets -- -D warnings`
+- `cargo clippy --no-default-features --features alloc --all-targets -- -D warnings` (buffers in
+  the allocator's memory)
 - `cargo clippy --no-default-features -- -D warnings` (the crate without an allocator)
-- `cargo test`
+- `cargo test`, and `cargo test --no-default-features --features alloc`
 
-Layout: `src/field*` the three fields and the word-wide scaling kernel; `src/code*` the code, its
-sources and the whole-shard helpers; `src/correct*` the decoder, the correction and the plan of
+Layout: `src/buffer*` the memory every result and working buffer of data lies in, protected
+pages or the allocator's; `src/field*` the three fields and the word-wide scaling kernel;
+`src/code*` the code, its sources and the whole-shard helpers; `src/correct*` the decoder, the correction and the plan of
 changes for marked gaps; `src/file*` the shard file, its header, checksum and reading, and sets of
 files (`pile`, `set`, `writing`), with the vote that names the files that differ from the rest
 (`set/vote`); `tests/suite/` the tests against an independent implementation, over every choice
@@ -25,5 +28,5 @@ The crate holds no secret; its one cryptographic function is SHA-256 of the data
 crate, never written here. It never indexes a table by a byte of a shard and never branches on
 one in the scaling kernel or in the checksum; keep that when changing `src/field/lanes.rs` and
 `src/file/crc32c.rs`. Every buffer that holds data or values that follow from it is wiped
-when let go, every result that holds data comes in `Zeroizing`, and no `Debug` text shows data;
-keep that in new code (`docs/TECHNICAL.md`, Secrets in memory).
+when let go, every result that holds data and every working buffer of its bytes is a `Buffer`,
+and no `Debug` text shows data; keep that in new code (`docs/TECHNICAL.md`, Secrets in memory).

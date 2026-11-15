@@ -65,7 +65,7 @@ fn counts(survey: &Survey) -> (u64, u64, u64) {
 fn one_wrong_bit_anywhere_costs_the_piece_it_is_in_and_nothing_else() {
     let (header, _, file) = sample(4);
     for bit in 0..file.len() * 8 {
-        let mut changed = file.clone();
+        let mut changed = file.to_vec();
         changed[bit / 8] ^= 1 << (bit % 8);
         let read = ShardFile::read(&changed).unwrap();
         assert_eq!(read.header(), &header, "bit {bit}");
@@ -485,7 +485,7 @@ fn damage_of_any_kind_never_passes_other_bytes_as_intact() {
     };
     let (mut read_back, mut refused) = (0, 0);
     for _ in 0..3000 {
-        let mut changed = file.clone();
+        let mut changed = file.to_vec();
         for _ in 0..=next(3) {
             let (at, to) = (next(changed.len()), next(changed.len()));
             let (low, high) = (at.min(to), at.max(to));

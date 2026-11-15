@@ -3,8 +3,8 @@
 use super::FileError;
 use super::facts::{SetFacts, sha256};
 use super::header::Header;
+use crate::buffer::Buffer;
 use alloc::vec::Vec;
-use zeroize::Zeroizing;
 
 /// Room for `more` further items in `list`, or the refusal of the memory.
 fn room<T>(list: &mut Vec<T>, more: usize) -> Result<(), FileError> {
@@ -14,14 +14,10 @@ fn room<T>(list: &mut Vec<T>, more: usize) -> Result<(), FileError> {
 impl SetFacts {
     /// The shard files numbered `indexes` for the set whose data is `data`, in the order asked. The data
     /// is cut into the `k` data shards (the last padded with zeros), so files 0 to `k − 1` hold the data
-    /// itself. Copies made along the way are wiped, and each file comes in a [`Zeroizing`] buffer. If
-    /// the facts state a SHA-256, data with another digest gets no files. Fails on wrong data length or
-    /// digest, an index outside the field, or no memory.
-    pub fn files(
-        &self,
-        data: &[u8],
-        indexes: &[u16],
-    ) -> Result<Vec<Zeroizing<Vec<u8>>>, FileError> {
+    /// itself. Copies made along the way are wiped, and each file comes in a [`Buffer`]. If the facts
+    /// state a SHA-256, data with another digest gets no files. Fails on wrong data length or digest,
+    /// an index outside the field, or no memory.
+    pub fn files(&self, data: &[u8], indexes: &[u16]) -> Result<Vec<Buffer>, FileError> {
         if u64::try_from(data.len()) != Ok(self.data_len()) {
             return Err(FileError::Data);
         }
@@ -52,10 +48,11 @@ impl SetFacts {
         let padded_len = (threshold - whole)
             .checked_mul(shard_len)
             .ok_or(FileError::Memory)?;
-        let (mut padded, mut shards) = (Zeroizing::new(Vec::new()), Vec::new());
-        room(&mut *padded, padded_len)?;
-        padded.extend_from_slice(rest);
-        padded.resize(padded_len, 0);
+        let mut padded = Buffer::zeros(padded_len).ok_or(FileError::Memory)?;
+        if let Some(front) = padded.get_mut(..rest.len()) {
+            front.copy_from_slice(rest);
+        }
+        let mut shards = Vec::new();
         room(&mut shards, threshold)?;
         if shard_len == 0 {
             shards.extend(core::iter::repeat_n(&[][..], threshold));
@@ -70,14 +67,13 @@ impl SetFacts {
             .iter()
             .any(|header| usize::from(header.index()) >= threshold);
         let (mut data_indexes, mut weights) = (Vec::new(), Vec::new());
-        let (mut shard, mut files) = (Zeroizing::new(Vec::new()), Vec::new());
+        let (mut shard, mut files) = (Buffer::default(), Vec::new());
         if made {
             room(&mut data_indexes, threshold)?;
             data_indexes.extend((0..=u16::MAX).take(threshold));
             room(&mut weights, threshold)?;
             weights.resize(threshold, 0);
-            room(&mut *shard, shard_len)?;
-            shard.resize(shard_len, 0);
+            shard = Buffer::zeros(shard_len).ok_or(FileError::Memory)?;
         }
         // The data shards have one length and every index was checked with its header, so the
         // code has nothing left to refuse but an index.

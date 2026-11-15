@@ -279,13 +279,13 @@ mod correction {
             change(7, 0, 0x7C6, ChangeKind::Filled),
             change(10, 0x7FF, 0x6A9, ChangeKind::Replaced),
         ];
-        let planned = code.plan(&shards, &marks)
-            == Ok(Plan::Changes(crate::Zeroizing::new(expected.to_vec())));
+        let planned =
+            code.plan(&shards, &marks) == Ok(Plan::Changes(expected.into_iter().collect()));
         drop(shards);
         let mut buffers: Vec<(u16, &mut [u8])> = (0..)
             .zip(read.iter_mut().map(<[u8; 2]>::as_mut_slice))
             .collect();
-        let applied = code.apply(&mut buffers, &expected).is_ok();
+        let applied = code.apply(&mut buffers, expected).is_ok();
         drop(buffers);
         planned && applied && read == CARD.map(u16::to_be_bytes)
     }

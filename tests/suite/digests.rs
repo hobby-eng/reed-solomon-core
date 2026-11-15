@@ -95,7 +95,7 @@ fn a_rebuild_compares_the_digest_of_exactly_the_bytes_of_the_data() {
         let given: Vec<&[u8]> = chosen.iter().map(|&at| files[at].as_slice()).collect();
         let pile = Pile::new(&given).unwrap();
         let rebuilt = one_set(&pile).rebuild(None).unwrap();
-        assert_eq!(*rebuilt.data, TEXT);
+        assert_eq!(*rebuilt.data, *TEXT);
         assert_eq!(rebuilt.digest, DigestCheck::Matched(digest(TEXT_DIGEST)));
     }
 }
@@ -116,7 +116,7 @@ fn files_without_a_digest_rebuild_and_say_that_nothing_was_compared() {
     let files = facts.files(TEXT, &[0, 1, 2]).unwrap();
     let pile = Pile::new(&slices(&files)).unwrap();
     let rebuilt = one_set(&pile).rebuild(None).unwrap();
-    assert_eq!(*rebuilt.data, TEXT);
+    assert_eq!(*rebuilt.data, *TEXT);
     assert_eq!(rebuilt.digest, DigestCheck::Unchecked);
 }
 

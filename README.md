@@ -161,7 +161,7 @@ These calls take a limit on their work, counted in steps by a stated rule and ch
 
 reed-solomon-core holds no secret, and its one cryptographic function, SHA-256 from the `sha2` crate, checks data, not people. Its checks say whether shards belong together and whether the data has the digest its files state, never who made them: someone who can change every shard can make a consistent set of other data and state its digest. Beyond the correction limit the answer is either "unresolved" or a different valid set. A program that needs to know it got the original data back compares a digest or an authentication tag it trusts from elsewhere. The checksums of a shard file find accidental damage and are no signature.
 
-Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, hands every result that holds data back in a `Zeroizing` buffer that wipes itself, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Keeping memory out of swap files and crash dumps, and other programs out of the process, is for the program that uses the crate: [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
+Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate: out of core dumps and child processes, and out of swap where the system's lock limit allows. The crate passes that crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
 
 ## Limits
 
@@ -193,10 +193,10 @@ assert_eq!(code.redundancy(&[left[0], left[1], left[2], (5, &sixth[0][..])])?, R
 set[2][1] ^= 0x40;
 let mut given: Vec<(u16, &mut [u8])> = (0..).zip(set.iter_mut().map(|shard| shard.as_mut_slice())).collect();
 assert_eq!(code.correct(&mut given)?, Correction::Corrected(vec![0, 0, 1, 0, 0]));
-assert_eq!(*set[2], b"ijkl");
+assert_eq!(*set[2], *b"ijkl");
 ```
 
-Without the `alloc` feature the crate allocates nothing: `Code::sources`, `Sources::build` and `Sources::agrees` work on buffers the caller provides.
+The features: `protect`, on by default, keeps the crate's buffers in protected pages; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system; without either the crate allocates nothing, and `Code::sources`, `Sources::build` and `Sources::agrees` work on buffers the caller provides.
 
 ## Self-test
 

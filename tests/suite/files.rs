@@ -171,7 +171,7 @@ fn reads_back_whole(file: &[u8], header: &Header, shard: &[u8]) {
     }
     assert_eq!(joined, shard);
     assert_eq!(read.block(blocks), None);
-    assert_eq!(*read.header().file(&joined).unwrap(), file);
+    assert_eq!(*read.header().file(&joined).unwrap(), *file);
 }
 
 #[test]

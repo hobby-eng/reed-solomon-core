@@ -10,9 +10,7 @@ use super::facts::{DIGEST, ID_MOST, SetFacts};
 use crate::field::Field;
 
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
-use zeroize::Zeroizing;
+use crate::buffer::Buffer;
 
 /// The mark a header starts with.
 const MARK: [u8; 4] = *b"SHRD";
@@ -182,10 +180,10 @@ impl Header {
     }
 
     /// The whole shard file for `shard`: header, blocks with checksums, the header again and the
-    /// trailer, in a [`Zeroizing`] buffer. Fails with [`FileError::Shard`] for a wrong length or
+    /// trailer, in a [`Buffer`]. Fails with [`FileError::Shard`] for a wrong length or
     /// [`FileError::Memory`] when there's no memory.
     #[cfg(feature = "alloc")]
-    pub fn file(&self, shard: &[u8]) -> Result<Zeroizing<Vec<u8>>, FileError> {
+    pub fn file(&self, shard: &[u8]) -> Result<Buffer, FileError> {
         if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {
             return Err(FileError::Shard);
         }
@@ -194,17 +192,25 @@ impl Header {
         let block = usize::try_from(self.set.block_len()).unwrap_or(usize::MAX);
         // The bytes given do not promise memory for a second copy of them: the memory is asked
         // for once, and a refusal is an answer of its own.
-        let mut file = Zeroizing::new(Vec::new());
-        file.try_reserve_exact(length)
-            .map_err(|_| FileError::Memory)?;
-        file.extend_from_slice(self.as_bytes());
+        let mut file = Buffer::zeros(length).ok_or(FileError::Memory)?;
+        let mut rest = file.as_mut_slice();
+        put(&mut rest, self.as_bytes());
         for (number, bytes) in (0..=u32::MAX).zip(shard.chunks(block)) {
-            file.extend_from_slice(bytes);
-            file.extend_from_slice(&self.block_checksum(number, bytes).to_be_bytes());
+            put(&mut rest, bytes);
+            put(&mut rest, &self.block_checksum(number, bytes).to_be_bytes());
         }
-        file.extend_from_slice(self.as_bytes());
-        file.extend_from_slice(&self.trailer());
+        put(&mut rest, self.as_bytes());
+        put(&mut rest, &self.trailer());
         Ok(file)
+    }
+}
+
+/// Writes `bytes` at the front of `rest` and leaves in `rest` what follows them.
+#[cfg(feature = "alloc")]
+fn put(rest: &mut &mut [u8], bytes: &[u8]) {
+    if let Some((front, after)) = core::mem::take(rest).split_at_mut_checked(bytes.len()) {
+        front.copy_from_slice(bytes);
+        *rest = after;
     }
 }
 

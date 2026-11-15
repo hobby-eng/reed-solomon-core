@@ -9,6 +9,8 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+#[cfg(feature = "alloc")]
+mod buffer;
 mod code;
 #[cfg(feature = "alloc")]
 mod correct;
@@ -22,14 +24,20 @@ pub use file::{
     Block, Condition, DataDigest, FileError, Frame, Header, Length, SetFacts, ShardFile, Survey,
 };
 pub use self_test::{Check, SelfTest, self_test};
-pub use zeroize::{Zeroize, Zeroizing};
+pub use zeroize::Zeroize;
 
+#[cfg(feature = "alloc")]
+pub use buffer::Buffer;
 #[cfg(feature = "alloc")]
 pub use code::Redundancy;
 #[cfg(feature = "alloc")]
-pub use correct::{Change, ChangeKind, Correction, Mark, Plan};
+pub use correct::{Change, ChangeKind, Changes, ChangesIter, Correction, Mark, Plan};
 #[cfg(feature = "alloc")]
 pub use file::{
     Coverage, DigestCheck, Dispute, FileSet, Member, Outvoted, Pile, Rebuilt, SetError, Stretch,
     Stretches, Vote,
 };
+/// The `secret-protection-core` crate, whose pages hold this crate's buffers: for a program that
+/// also isolates its process (`protect::Isolation`) or keeps buffers of its own in such pages.
+#[cfg(feature = "protect")]
+pub use secret_protection_core as protect;

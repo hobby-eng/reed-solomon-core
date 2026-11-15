@@ -9,10 +9,14 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [features]
-default = ["alloc"]
+default = ["protect"]
 # Owned results: whole-shard helpers, error correction and the writing of shard files. Without it
 # the crate allocates nothing and works on the caller's buffers.
 alloc = ["zeroize/alloc"]
+# The owned results and the working buffers of bytes that follow from data lie in pages of their
+# own: locked where the system allows, out of core dumps and child processes, between guard
+# pages. Without it they lie in the allocator's memory, and are wiped all the same.
+protect = ["alloc", "dep:secret-protection-core"]
 
 [dependencies]
 # SHA-256 of the data: computed when a set is written and compared when it is rebuilt. RustCrypto,
@@ -21,6 +25,9 @@ sha2 = { version = "=0.11.1", default-features = false, features = ["zeroize"] }
 # Wiping every buffer that held data or values that follow from it, and the wrapper the owned
 # results come in, which wipes itself when dropped.
 zeroize = { version = "=1.9.1", default-features = false }
+# Pages for data that may be a secret, and the isolation of the process that holds it. Not on
+# crates.io yet: pinned to a commit of its repository.
+secret-protection-core = { version = "=0.1.0", git = "https://github.com/hobby-eng/secret-protection-core", rev = "39e462e946cc300a8a3d3e145517957094eb7c8c", optional = true }
 
 [dev-dependencies]
 # An independent Reed–Solomon implementation: the expected bytes of the oracle tests, in both fields.

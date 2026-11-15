@@ -28,7 +28,7 @@ fn a_set_is_written_rebuilt_grown_and_corrected() -> Result<(), Box<dyn std::err
         code.correct(&mut given)?,
         Correction::Corrected(vec![0, 0, 1, 0, 0])
     );
-    assert_eq!(*set[2], b"ijkl");
+    assert_eq!(*set[2], *b"ijkl");
     Ok(())
 }
 
@@ -65,7 +65,7 @@ fn a_set_of_files_is_rebuilt_and_a_lost_file_repaired() -> Result<(), Box<dyn st
     let pile = Pile::new(&given)?;
     let set = &pile.sets()[0];
     let rebuilt = set.rebuild(None)?;
-    assert_eq!(*rebuilt.data, data);
+    assert_eq!(*rebuilt.data, *data);
     assert!(matches!(rebuilt.digest, DigestCheck::Matched(_)));
 
     // The lost file is made again from the others, byte for byte.
@@ -92,6 +92,6 @@ fn a_file_of_other_bytes_is_named_by_the_vote() -> Result<(), Box<dyn std::error
     let vote = set.vote(None)?;
     assert_eq!(vote.outvoted().len(), 1);
     assert_eq!(vote.outvoted()[0].position, 3);
-    assert_eq!(*set.without(&[3])?.rebuild(None)?.data, data);
+    assert_eq!(*set.without(&[3])?.rebuild(None)?.data, *data);
     Ok(())
 }

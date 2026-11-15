@@ -1,6 +1,6 @@
 //! Deterministic test bytes and whole sets.
 
-use reed_solomon_core::{Code, Field, Zeroizing};
+use reed_solomon_core::{Buffer, Code, Field};
 
 /// Every field.
 pub(crate) const FIELDS: [Field; 3] = [Field::Gf256, Field::Gf65536, Field::Gf2048];
@@ -52,8 +52,9 @@ pub(crate) fn set(code: &Code, data: &[Vec<u8>], n: usize) -> Vec<Vec<u8>> {
 }
 
 /// Owned results as plain vectors, to compare with bytes written out in a test.
-pub(crate) fn plain(shards: Vec<Zeroizing<Vec<u8>>>) -> Vec<Vec<u8>> {
-    shards.into_iter().map(|shard| shard.to_vec()).collect()
+pub(crate) fn plain(shards: impl AsRef<[Buffer]>) -> Vec<Vec<u8>> {
+    let shards = shards.as_ref().iter();
+    shards.map(|shard| shard.to_vec()).collect()
 }
 
 /// The shards numbered `picked`, as `(index, bytes)`.

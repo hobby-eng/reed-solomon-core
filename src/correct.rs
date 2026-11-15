@@ -3,18 +3,24 @@
 //! otherwise Berlekamp–Massey finds the errors, up to `(m − k) / 2` per column. The arithmetic
 //! never branches on shard bytes or indexes a table by them; search buffers are wiped on drop.
 
+mod changes;
 mod plan;
 
+use crate::buffer::Buffer;
 use crate::code::{Code, CodeError};
 use crate::field::Field;
 use alloc::alloc::handle_alloc_error;
-use alloc::collections::TryReserveError;
 use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::ops::Deref;
 use zeroize::Zeroize;
 
+pub use changes::{Changes, ChangesIter};
 pub use plan::{Change, ChangeKind, Mark, Plan};
+
+/// The system gave no memory for a search.
+#[derive(Debug)]
+pub(crate) struct NoMemory;
 
 /// Most bytes of syndromes held at a time, whatever the size of the shards.
 const SYNDROME_BYTES: usize = 1 << 22;
@@ -77,11 +83,11 @@ impl Code {
         Ok(Correction::Corrected(core::mem::take(&mut decoder.changed)))
     }
 
-    /// An upper bound, in bytes, of the memory [`Code::correct`] asks the allocator for with
-    /// `shards` shards, whatever their length: the syndromes of one stripe and a few elements
-    /// per shard and per spare shard. With exactly `threshold` shards only their indexes are
-    /// held while they are checked. Zero for a number of shards `correct` refuses at once: fewer
-    /// than the threshold, or more than the field has indexes.
+    /// An upper bound, in bytes, of the memory [`Code::correct`] asks for with `shards` shards,
+    /// whatever their length: the syndromes of one stripe, which with the `protect` feature take
+    /// whole pages, and a few elements per shard and per spare shard. With exactly `threshold`
+    /// shards only their indexes are held. Zero for a number of shards `correct` refuses at
+    /// once: fewer than the threshold, or more than the field has indexes.
     #[must_use]
     pub fn correction_memory(&self, shards: usize) -> usize {
         if shards < self.threshold() || shards > self.field().order() {
@@ -127,7 +133,7 @@ struct Decoder {
     powers: Vec<u16>,
     /// The syndromes of the stripe at hand, one after another, and per shard the running factor
     /// `u_i · x_i^j` of the syndrome being summed.
-    syndromes: Vec<u8>,
+    syndromes: Buffer,
     factors: Vec<u16>,
     /// Wrong symbols found per shard, in the order the shards were given.
     changed: Vec<usize>,
@@ -137,12 +143,7 @@ impl Decoder {
     /// The decoder of the shards at `points`, `spare` (at least one) of them beyond the
     /// threshold, for shards of `length` bytes. Everything a search needs is allocated here,
     /// and a refusal of the memory is the answer.
-    fn new(
-        field: Field,
-        points: Vec<u16>,
-        spare: usize,
-        length: usize,
-    ) -> Result<Self, TryReserveError> {
+    fn new(field: Field, points: Vec<u16>, spare: usize, length: usize) -> Result<Self, NoMemory> {
         Self::with_room(field, points, spare, length, Self::most_errors(spare))
     }
 
@@ -154,7 +155,7 @@ impl Decoder {
         spare: usize,
         length: usize,
         most: usize,
-    ) -> Result<Self, TryReserveError> {
+    ) -> Result<Self, NoMemory> {
         let shards = points.len();
         let marked = most > Self::most_errors(spare);
         let mut weights = roomy(shards)?;
@@ -184,7 +185,8 @@ impl Decoder {
             sequence: roomy(if marked { spare } else { 0 })?,
             product: roomy(most + 1)?,
             powers: roomy(most)?,
-            syndromes: zeros(spare * Self::stripe(field, spare).min(length))?,
+            syndromes: Buffer::zeros(spare * Self::stripe(field, spare).min(length))
+                .ok_or(NoMemory)?,
             factors: zeros(shards)?,
             changed: zeros(shards)?,
         })
@@ -426,10 +428,9 @@ impl Decoder {
 
 impl Drop for Decoder {
     /// The syndromes, the recurrences and the errors follow from the data, and for a marked
-    /// symbol the error is its value: all of them are wiped. The points, the weights and the
-    /// factors follow from the shard numbers alone.
+    /// symbol the error is its value: all of them are wiped, the stripe's syndromes by their
+    /// buffer. The points, the weights and the factors follow from the shard numbers alone.
     fn drop(&mut self) {
-        self.syndromes.zeroize();
         self.column.zeroize();
         self.connection.zeroize();
         self.previous.zeroize();
@@ -474,7 +475,7 @@ impl Finder {
         points: &[u16],
         spare: usize,
         length: usize,
-    ) -> Result<Self, TryReserveError> {
+    ) -> Result<Self, NoMemory> {
         let mut own = roomy(points.len())?;
         own.extend_from_slice(points);
         let most = Decoder::most_errors(spare);
@@ -592,16 +593,16 @@ impl Finder {
 }
 
 /// `count` elements of zero, or the refusal of the memory.
-fn zeros<T: Clone + Default>(count: usize) -> Result<Vec<T>, TryReserveError> {
+fn zeros<T: Clone + Default>(count: usize) -> Result<Vec<T>, NoMemory> {
     let mut list = roomy(count)?;
     list.resize(count, T::default());
     Ok(list)
 }
 
 /// An empty list with room for `count` elements, or the refusal of the memory.
-fn roomy<T>(count: usize) -> Result<Vec<T>, TryReserveError> {
+fn roomy<T>(count: usize) -> Result<Vec<T>, NoMemory> {
     let mut list = Vec::new();
-    list.try_reserve_exact(count)?;
+    list.try_reserve_exact(count).map_err(|_| NoMemory)?;
     Ok(list)
 }
 
@@ -664,7 +665,7 @@ mod tests {
             + decoder.factors.capacity();
         elements * size_of::<u16>()
             + decoder.errors.capacity() * size_of::<(usize, u16)>()
-            + decoder.syndromes.capacity()
+            + decoder.syndromes.len()
             + decoder.changed.capacity() * size_of::<usize>()
     }
 
@@ -873,7 +874,7 @@ mod tests {
         let points: Vec<u16> = (0..5).collect();
         let mut set = code.encode(&data, &points).unwrap();
         let mut finder = Finder::new(Field::Gf256, &points, 2, length).unwrap();
-        let look = |finder: &mut Finder, set: &[zeroize::Zeroizing<Vec<u8>>]| {
+        let look = |finder: &mut Finder, set: &[Buffer]| {
             let shards: Vec<(u16, &[u8])> = (0..)
                 .zip(set.iter().map(|bytes| bytes.as_slice()))
                 .collect();

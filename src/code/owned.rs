@@ -1,9 +1,9 @@
 //! Whole shards in owned memory: the same operations for a caller who has the shards at hand.
 
 use super::{Code, CodeError};
+use crate::buffer::Buffer;
 use alloc::vec;
 use alloc::vec::Vec;
-use zeroize::Zeroizing;
 
 /// What the shards beyond the threshold say about a set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,13 +84,9 @@ impl Code {
     }
 
     /// The shards numbered `targets` of the set whose data shards are `data`: how a set is written.
-    /// Each shard comes in a [`Zeroizing`] buffer. Fails when `data` has the wrong count or lengths, a
-    /// target is outside the field, or a symbol isn't an element of the field.
-    pub fn encode(
-        &self,
-        data: &[&[u8]],
-        targets: &[u16],
-    ) -> Result<Vec<Zeroizing<Vec<u8>>>, CodeError> {
+    /// Each shard comes in a [`Buffer`]. Fails when `data` has the wrong count or lengths, a target
+    /// is outside the field, a symbol isn't an element of the field, or a shard gets no memory.
+    pub fn encode(&self, data: &[&[u8]], targets: &[u16]) -> Result<Vec<Buffer>, CodeError> {
         if data.len() != self.threshold {
             return Err(CodeError::Count);
         }
@@ -101,13 +97,14 @@ impl Code {
 
     /// The shards numbered `targets` from any `threshold` or more shards, given as `(index, bytes)`:
     /// how a lost shard comes back, how the data is read and how a set grows. The first `threshold`
-    /// shards are the sources; the rest are only checked. Each result comes in a [`Zeroizing`] buffer.
-    /// Fails on too few shards, bad or repeated indexes, unequal lengths, or a symbol outside the field.
+    /// shards are the sources; the rest are only checked. Each result comes in a [`Buffer`]. Fails
+    /// on too few shards, bad or repeated indexes, unequal lengths, a symbol outside the field, or
+    /// when a shard gets no memory.
     pub fn rebuild(
         &self,
         shards: &[(u16, &[u8])],
         targets: &[u16],
-    ) -> Result<Vec<Zeroizing<Vec<u8>>>, CodeError> {
+    ) -> Result<Vec<Buffer>, CodeError> {
         let chosen = self.chosen(shards)?;
         // Every target is checked before the first shard is made.
         for &target in targets {
@@ -118,7 +115,7 @@ impl Code {
         let sources = self.sources(&chosen.indexes, &mut weights)?;
         let mut made = Vec::with_capacity(targets.len());
         for &target in targets {
-            let mut shard = Zeroizing::new(vec![0; chosen.length]);
+            let mut shard = Buffer::zeros(chosen.length).ok_or(CodeError::Memory)?;
             sources.build(target, &chosen.stripes, &mut shard)?;
             made.push(shard);
         }

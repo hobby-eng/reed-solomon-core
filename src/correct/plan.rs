@@ -3,6 +3,7 @@
 //! out of the syndromes, and Berlekamp–Massey finds the remaining wrong symbols as usual. A column
 //! is fixed whenever `2e + s ≤ m − k`.
 
+use super::changes::Changes;
 use super::{Decoder, roomy};
 use crate::code::{Code, CodeError};
 use alloc::alloc::handle_alloc_error;
@@ -10,7 +11,7 @@ use alloc::vec::Vec;
 use core::alloc::Layout;
 use core::fmt;
 use core::ops::Deref;
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 /// A symbol known to be unreadable: whatever its bytes hold, it is a gap at this place.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -67,7 +68,7 @@ impl Zeroize for Change {
 }
 
 /// What [`Code::plan`] found. Nothing was changed.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Plan {
     /// Exactly `threshold` shards and no mark: there is nothing to compare them with, and nothing
     /// was checked.
@@ -78,7 +79,7 @@ pub enum Plan {
     /// one, of the shards. Every marked symbol is among them. Whether the result is the original
     /// data is for a digest or an authentication to say. The list wipes itself when it is
     /// dropped.
-    Changes(Zeroizing<Vec<Change>>),
+    Changes(Changes),
     /// In `columns` symbol columns the spare shards cannot put the column right: more wrong and
     /// marked symbols than `2e + s ≤ m − k` allows, or more marks than spare shards.
     Unresolved {
@@ -131,7 +132,7 @@ impl Code {
         let Ok(mut decoder) = Decoder::with_room(self.field(), points, spare, length, spare) else {
             handle_alloc_error(Layout::new::<Decoder>())
         };
-        let mut changes = Zeroizing::new(Vec::new());
+        let mut changes = Changes::default();
         let unresolved = decoder.plan_pass(shards, length, &sorted, &mut changes);
         if unresolved > 0 {
             return Ok(Plan::Unresolved {
@@ -141,22 +142,23 @@ impl Code {
         if changes.is_empty() {
             return Ok(Plan::Agrees);
         }
-        changes.sort_unstable_by_key(|change| (change.symbol, change.shard));
         Ok(Plan::Changes(changes))
     }
 
-    /// Makes `changes`, as [`Code::plan`] found them for these shards. Every change is checked first
-    /// (its place, the value still there, the new value), and if one doesn't fit, nothing is changed and
-    /// it fails with [`CodeError::Changes`].
-    pub fn apply(
-        &self,
-        shards: &mut [(u16, &mut [u8])],
-        changes: &[Change],
-    ) -> Result<(), CodeError> {
+    /// Makes `changes`, as [`Code::plan`] found them for these shards: a [`Changes`] by reference, or
+    /// changes a program lists itself. Every change is checked first (its place, the value still
+    /// there, the new value), and if one doesn't fit, nothing is changed and it fails with
+    /// [`CodeError::Changes`].
+    pub fn apply<I>(&self, shards: &mut [(u16, &mut [u8])], changes: I) -> Result<(), CodeError>
+    where
+        I: IntoIterator<Item = Change>,
+        I::IntoIter: Clone,
+    {
+        let changes = changes.into_iter();
         let symbol = self.field().symbol_bytes();
         let order = self.field().order();
-        let fits = changes.iter().all(|change| {
-            let held = place(shards, change, symbol).map(value);
+        let fits = changes.clone().all(|change| {
+            let held = place(shards, &change, symbol).map(value);
             held == Some(change.was) && usize::from(change.becomes) < order
         });
         if !fits {
@@ -185,26 +187,6 @@ fn place<'s>(shards: &'s [(u16, &mut [u8])], change: &Change, symbol: usize) -> 
     let start = change.symbol.checked_mul(symbol)?;
     let (_, bytes) = shards.get(change.shard)?;
     bytes.get(start..start.checked_add(symbol)?)
-}
-
-/// Room for `more` further changes. A list that has to grow moves into a new one and the old one
-/// is wiped, so that no copy of a change is left behind in memory given back; a refusal of the
-/// memory stops the call, as in [`Code::correct`].
-fn room(changes: &mut Zeroizing<Vec<Change>>, more: usize) {
-    let needed = changes.len().saturating_add(more);
-    if needed <= changes.capacity() {
-        return;
-    }
-    let mut bigger = Vec::new();
-    if bigger
-        .try_reserve_exact(needed.max(changes.capacity().saturating_mul(2)))
-        .is_err()
-    {
-        handle_alloc_error(Layout::new::<Change>());
-    }
-    bigger.extend_from_slice(changes);
-    // The old list is wiped as it is dropped.
-    *changes = Zeroizing::new(bigger);
 }
 
 /// The value of a symbol's bytes, high byte first.
@@ -280,7 +262,7 @@ impl Decoder {
         shards: &[(u16, B)],
         length: usize,
         marks: &[Mark],
-        changes: &mut Zeroizing<Vec<Change>>,
+        changes: &mut Changes,
     ) -> usize {
         let symbol = self.field.symbol_bytes();
         let stripe = Self::stripe(self.field, self.spare);
@@ -325,19 +307,30 @@ impl Decoder {
                     unresolved += 1;
                     continue;
                 };
-                room(changes, self.errors.len());
-                for (count, &(position, error)) in self.errors.iter().enumerate() {
+                // The symbols found and the marked ones each come in the order of the shards:
+                // the two runs are merged, so that the whole list is in that order.
+                let (found, marked) = self.errors.split_at_checked(found).unwrap_or_default();
+                let (mut found, mut marked) = (found.iter().peekable(), marked.iter().peekable());
+                loop {
+                    let first = match (found.peek(), marked.peek()) {
+                        (Some(replaced), Some(filled)) => replaced.0 < filled.0,
+                        (Some(_), None) => true,
+                        (None, Some(_)) => false,
+                        (None, None) => break,
+                    };
+                    let (next, kind) = match first {
+                        true => (found.next(), ChangeKind::Replaced),
+                        false => (marked.next(), ChangeKind::Filled),
+                    };
+                    let Some(&(position, error)) = next else {
+                        break;
+                    };
                     let begin = start + offset;
                     let bytes = shards
                         .get(position)
                         .and_then(|(_, bytes)| bytes.get(begin..begin + symbol))
                         .unwrap_or_default();
                     let was = value(bytes);
-                    let kind = if count < found {
-                        ChangeKind::Replaced
-                    } else {
-                        ChangeKind::Filled
-                    };
                     changes.push(Change {
                         shard: position,
                         symbol: at,

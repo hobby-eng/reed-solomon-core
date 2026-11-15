@@ -14,7 +14,7 @@ fn three_lost_files_come_back_in_one_pass_in_the_order_asked() {
     let found = one_set(&pile);
     let made = found.repairs(&[4, 1, 3], None).unwrap();
     assert_eq!(
-        plain(made.clone()),
+        plain(&made),
         [
             set.files[4].clone(),
             set.files[1].clone(),

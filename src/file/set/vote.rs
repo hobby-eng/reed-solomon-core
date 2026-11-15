@@ -4,10 +4,10 @@
 
 use super::shards::{Bits, Shard, Sweep, reach, room};
 use super::{ALLOWANCE, FileSet, SetError, wide};
+use crate::buffer::Buffer;
 use crate::code::Code;
 use crate::correct::Finder;
 use alloc::vec::Vec;
-use zeroize::Zeroizing;
 
 /// A file that differs from the word its set establishes, in blocks that it holds with a
 /// checksum that holds.
@@ -227,8 +227,8 @@ struct Poll<'s, 'a> {
     lowest: Vec<u16>,
     weights: Vec<u16>,
     stripes: Vec<&'a [u8]>,
-    /// The block of a shard in dispute, as those holders make it.
-    made: Zeroizing<Vec<u8>>,
+    /// The block of a shard in dispute, as those holders make it, with room for the longest.
+    made: Buffer,
     /// The files of shards in dispute that differ from it in the block at hand: the shard's
     /// place among the shards, and the file's number among its files.
     differing: Vec<(usize, usize)>,
@@ -267,7 +267,7 @@ impl<'s, 'a> Poll<'s, 'a> {
             lowest: Vec::new(),
             weights: Vec::new(),
             stripes: Vec::new(),
-            made: Zeroizing::new(Vec::new()),
+            made: Buffer::default(),
             differing: Vec::new(),
             firsts,
             marks,
@@ -388,19 +388,20 @@ impl<'s, 'a> Poll<'s, 'a> {
             self.stripes.push(bytes);
         }
         let length = self.stripes.first().map_or(0, |stripe| stripe.len());
-        let more = length.saturating_sub(self.made.len());
-        room(&mut *self.made, more)?;
-        self.made.resize(length, 0);
+        if self.made.len() < length {
+            self.made = Buffer::zeros(length).ok_or(SetError::Memory)?;
+        }
+        let made = self.made.get_mut(..length).unwrap_or_default();
         let sources = self.code.sources(&self.lowest, &mut self.weights)?;
         let mut unconfirmed = 0;
         for shard in in_dispute {
-            sources.build(shard.index, &self.stripes, &mut self.made)?;
+            sources.build(shard.index, &self.stripes, made)?;
             let at = self
                 .shards
                 .binary_search_by_key(&shard.index, |shard| shard.index);
             let mut confirmed = false;
             for (slot, bytes) in shard.holding(number) {
-                if *bytes == **self.made {
+                if *bytes == *made {
                     confirmed = true;
                 } else if let Ok(at) = at {
                     room(&mut self.differing, 1)?;

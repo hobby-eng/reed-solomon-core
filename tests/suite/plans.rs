@@ -4,9 +4,7 @@
 //! interpolation in Python.
 
 use crate::support::{FIELDS, bytes, data_in, plain, set};
-use reed_solomon_core::{
-    Change, ChangeKind, Code, CodeError, Field, Mark, Plan, Redundancy, Zeroizing,
-};
+use reed_solomon_core::{Change, ChangeKind, Code, CodeError, Field, Mark, Plan, Redundancy};
 
 /// The twelve words of a card as numbers of the BIP39 English list, and the four words the code
 /// adds at the points 12 to 15 (chronic identify give swift).
@@ -30,7 +28,11 @@ fn given(shards: &[Vec<u8>]) -> Vec<(u16, &[u8])> {
         .collect()
 }
 
-fn applied(code: &Code, shards: &[Vec<u8>], changes: &[Change]) -> Vec<Vec<u8>> {
+fn applied<I>(code: &Code, shards: &[Vec<u8>], changes: I) -> Vec<Vec<u8>>
+where
+    I: IntoIterator<Item = Change>,
+    I::IntoIter: Clone,
+{
     let mut out = shards.to_vec();
     let mut buffers: Vec<(u16, &mut [u8])> = (0..)
         .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
@@ -60,7 +62,7 @@ fn a_card_with_two_gaps_and_a_wrong_word_is_put_right() {
     read[10] = word(0x7FF);
     let marks = [mark(7, 0), mark(2, 0)];
     let plan = code.plan(&given(&read), &marks).unwrap();
-    let expected = vec![
+    let expected = [
         Change {
             shard: 2,
             symbol: 0,
@@ -83,8 +85,8 @@ fn a_card_with_two_gaps_and_a_wrong_word_is_put_right() {
             kind: ChangeKind::Replaced,
         },
     ];
-    assert_eq!(plan, Plan::Changes(Zeroizing::new(expected.clone())));
-    assert_eq!(applied(&code, &read, &expected), card);
+    assert_eq!(plan, Plan::Changes(expected.iter().copied().collect()));
+    assert_eq!(applied(&code, &read, expected.iter().copied()), card);
     // One gap more is beyond the four spare words: 2 · 1 + 3 = 5.
     read[0] = word(0);
     let more = [mark(7, 0), mark(2, 0), mark(0, 0)];
@@ -122,7 +124,7 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
     read[6][0] ^= 0x01;
     // Column 2 has two gaps and a wrong symbol, column 0 a wrong symbol: within four spare.
     let plan = code.plan(&given(&read), &[mark(1, 2), mark(4, 2)]).unwrap();
-    let expected = vec![
+    let expected = [
         Change {
             shard: 6,
             symbol: 0,
@@ -152,8 +154,8 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
             kind: ChangeKind::Replaced,
         },
     ];
-    assert_eq!(plan, Plan::Changes(Zeroizing::new(expected.clone())));
-    assert_eq!(applied(&code, &read, &expected), set);
+    assert_eq!(plan, Plan::Changes(expected.iter().copied().collect()));
+    assert_eq!(applied(&code, &read, expected.iter().copied()), set);
     // Leaving the two shards out instead costs every other column the same two spare shards,
     // and the correction alone still puts this right; with a second wrong symbol in column 0
     // only the marks do.
@@ -185,13 +187,17 @@ fn a_marked_symbol_that_holds_the_right_value_is_still_listed() {
     let held = set[3][1].into();
     assert_eq!(
         plan,
-        Plan::Changes(Zeroizing::new(vec![Change {
-            shard: 3,
-            symbol: 1,
-            was: held,
-            becomes: held,
-            kind: ChangeKind::Filled,
-        }]))
+        Plan::Changes(
+            [Change {
+                shard: 3,
+                symbol: 1,
+                was: held,
+                becomes: held,
+                kind: ChangeKind::Filled,
+            }]
+            .into_iter()
+            .collect()
+        )
     );
     // Without marks the same shards agree; with exactly k shards nothing is checked.
     assert_eq!(code.plan(&given(&set), &[]), Ok(Plan::Agrees));
@@ -419,11 +425,11 @@ fn apply_checks_every_change_before_it_makes_one() {
             .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
             .collect();
         assert_eq!(
-            code.apply(&mut buffers, &[good, bad]),
+            code.apply(&mut buffers, [good, bad]),
             Err(CodeError::Changes)
         );
         assert_eq!(out, set);
     }
-    let out = applied(&code, &set, &[good]);
+    let out = applied(&code, &set, [good]);
     assert_eq!(out[0][..2], [0x01, 0x23]);
 }
