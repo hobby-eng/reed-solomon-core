@@ -1,0 +1,834 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-001",
+  "auditNumber": 1,
+  "date": "2026-11-15",
+  "title": "Audit of reed-solomon-core after its move onto protected buffers",
+  "reviewer": {
+    "name": "Claude Code",
+    "model": "claude-fable-5-2",
+    "reasoningEffort": "max"
+  },
+  "snapshot": {
+    "commit": "4969ec8f020e430983f68188152bb0ccff527c2e",
+    "commitComplete": true,
+    "workingTree": "Clean but for the files this audit added: the fuzz harness and the CI workflows, which are no part of the reviewed source.",
+    "tree": "51c8f001fcf071f807d2f4189a0db8c34992c914"
+  },
+  "scope": {
+    "included": [
+      "Every file under `src/`, read by the coordinator or by the independent reviewer: the fields and the scaling kernel, the code and its owned helpers, the correction and the plan of changes, the buffers, the shard file with its header, checksum and reading, and sets of files with the vote",
+      "The change that moved the crate onto protected buffers, line by line, by both",
+      "The tests under `tests/suite`, the self-test, README.md, docs/TECHNICAL.md, CHANGELOG.md, THIRD_PARTY_NOTICES.md, Cargo.toml and Cargo.lock"
+    ],
+    "excluded": [
+      "The code of `secret-protection-core`, which has audits of its own",
+      "Any system but Linux for x86-64, at the reviewed commit",
+      "A measurement of running time against the bytes of shards: the arithmetic was read, not timed"
+    ],
+    "environment": "Linux 7.0.0-43-generic, x86-64; rustc and Cargo 1.99.1; for the sanitizer, Miri and the fuzzer rustc 1.102.0-nightly (2026-11-13); cargo-fuzz 0.13.2, cargo-llvm-cov 0.9.1, cargo-audit 0.23.0.",
+    "procedureSha256": {
+      "FULL_AUDIT_GUIDE.md": "179fc5e27bcc9f9c0eec75b38b910f4918041e79c904840ef68efa8210d20dd2",
+      "AUDIT_STANDARD.md": "4483291a18714964597ef655bef04bf8629f654849589c8bd1e26a4560915dfa",
+      "AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+      "audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+    }
+  },
+  "checks": [
+    {
+      "command": "cargo fmt --check",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "No difference"
+    },
+    {
+      "command": "cargo clippy --locked --all-targets -- -D warnings",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "No warning, buffers in protected pages"
+    },
+    {
+      "command": "cargo clippy --locked --no-default-features --features alloc --all-targets -- -D warnings",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "No warning, buffers in the allocator's memory"
+    },
+    {
+      "command": "cargo clippy --locked --no-default-features -- -D warnings",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "No warning, no allocator"
+    },
+    {
+      "command": "cargo test",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "44 unit tests and 124 tests of the interface"
+    },
+    {
+      "command": "cargo test --no-default-features --features alloc",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "44 unit tests and 124 tests of the interface"
+    },
+    {
+      "command": "RUSTFLAGS=-Zsanitizer=address cargo +nightly test --target x86_64-unknown-linux-gnu -- --skip with_protect_a_result",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "44 and 123 tests, no sanitizer report; the test left out compares the kernel's lock flag, which the sanitizer's own mlock does not set"
+    },
+    {
+      "command": "cargo +nightly miri test --no-default-features --features alloc --lib -- buffer:: changes::",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "5 tests, 1 left out (an allocation of half the address space, which Miri stops at)"
+    },
+    {
+      "command": "cargo audit",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "45 crates, no advisory"
+    },
+    {
+      "command": "cargo llvm-cov --summary-only",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "98.19 % of 4,026 lines; 44 and 124 tests"
+    },
+    {
+      "command": "cargo +nightly fuzz run --fuzz-dir docs/audits/AUD-001-harnesses/fuzz --target x86_64-unknown-linux-gnu files -- -max_total_time=200 -rss_limit_mb=3000 -max_len=4096",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "1,329,965 runs, no finding"
+    },
+    {
+      "command": "cargo +nightly fuzz run ... sets -- -max_total_time=200 -rss_limit_mb=3000 -max_len=4096",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "194,989 runs, no finding"
+    },
+    {
+      "command": "cargo +nightly fuzz run ... plans -- -max_total_time=200 -rss_limit_mb=3000 -max_len=4096",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "658,240 runs, no finding"
+    },
+    {
+      "command": "Fourteen single changes to the code of the buffers, the list of changes and the plan, each followed by cargo test",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "A test failed for each of the fourteen"
+    },
+    {
+      "command": "dprint check",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "Markdown, TOML, JSON and YAML as formatted"
+    },
+    {
+      "command": "At the fix commit: cargo test, and cargo test --no-default-features --features alloc",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "44 unit tests and 126 tests of the interface in each feature set"
+    },
+    {
+      "command": "At the fix commit: eight single changes to the fixes, each followed by cargo test",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "A test failed for each of the eight; the change of the merge only by the new test of a wrong word before and between marks"
+    },
+    {
+      "command": "At the fix commit: cargo +nightly fuzz run ... files, sets, plans -- -max_total_time=90 -rss_limit_mb=3000 -max_len=4096",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "738,404, 96,446 and 280,228 runs, no finding; `plans` with the new order and kind assertions, `files` with the bounded loop"
+    },
+    {
+      "command": "At the fix commit: cargo +nightly miri test --no-default-features --features alloc --lib -- buffer:: changes::",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "5 tests, the same one left out"
+    },
+    {
+      "command": "At the fix commit: cargo llvm-cov --summary-only",
+      "outcome": "passed",
+      "exitCode": 0,
+      "result": "98.35 % of 4,052 lines; 44 and 126 tests; docs/COVERAGE.md"
+    }
+  ],
+  "coverageLedger": [
+    [
+      "CHECK-SEC-001",
+      "What is secret, who holds it, where it lies",
+      "Passed with two findings",
+      "Data is the caller's and may be a secret; buffers, the list of changes and working bytes read line by line; AUD-001-DOC001, AUD-001-API005"
+    ],
+    [
+      "CHECK-SEC-002",
+      "Browser vault, CSP, transport",
+      "Not applicable",
+      "No browser part"
+    ],
+    [
+      "CHECK-SEC-003",
+      "Network and descriptors",
+      "Passed",
+      "The crate opens no file and no socket; the protection crate's calls are memory calls only"
+    ],
+    [
+      "CHECK-SEC-004",
+      "Randomness, encryption, authentication",
+      "Passed",
+      "No randomness and no encryption; SHA-256 from `sha2`, with the known answer of FIPS 180-4 in the self-test"
+    ],
+    [
+      "CHECK-SEC-005",
+      "Wiping, failure paths, lifetime",
+      "Two findings and two observations",
+      "Buffers wipe themselves; refusals leave outputs untouched (fuzz target `plans`); AUD-001-API002, AUD-001-API003, AUD-001-SEC001, AUD-001-SEC002"
+    ],
+    [
+      "CHECK-SEC-006",
+      "Browser injection and persistence",
+      "Not applicable",
+      "No browser part"
+    ],
+    [
+      "CHECK-SEC-007",
+      "Bounds of work and memory",
+      "Two findings and one observation",
+      "Work limits of sets, the stated bound of correction memory, reading bounded by the bytes given (fuzz target `files`); AUD-001-DOC005, AUD-001-ARC002, AUD-001-API001"
+    ],
+    [
+      "CHECK-FUN-001–007",
+      "Wallet algorithms and formats",
+      "One finding",
+      "No wallet logic. The code itself: fields against values computed apart and against reed-solomon-erasure, every choice of shards, the fuzz target `plans` within and beyond the bound; AUD-001-FUN001"
+    ],
+    [
+      "CHECK-API-001",
+      "Contracts of the dependencies as called",
+      "Passed with one finding",
+      "`WorkArea::new`, `as_slice`, `as_mut_slice`, `is_locked` read in the protection crate at the pinned commit; `sha2` and `zeroize` as before; AUD-001-API004"
+    ],
+    [
+      "CHECK-API-002",
+      "State, cancellation, cleanup",
+      "Passed",
+      "No state between calls; a list that grows moves and the old buffer is wiped"
+    ],
+    [
+      "CHECK-API-003",
+      "Export schemas",
+      "Not applicable",
+      "No export but the shard file"
+    ],
+    [
+      "CHECK-API-004",
+      "Encoding and reading back",
+      "Passed",
+      "The shard file byte for byte against the self-test's file; headers read back as written; fuzz targets `files` and `sets`"
+    ],
+    [
+      "CHECK-BLD-001",
+      "Manifest and features",
+      "Passed with one finding",
+      "Three feature sets lint and two test; the dependency is pinned to a commit; AUD-001-BLD002"
+    ],
+    [
+      "CHECK-BLD-002",
+      "Systems and targets",
+      "Passed with one finding",
+      "Linux x86-64 here; AUD-001-BLD001 for the others"
+    ],
+    [
+      "CHECK-BLD-003",
+      "Lock file, provenance, notices",
+      "Passed",
+      "`cargo audit`; THIRD_PARTY_NOTICES.md names the new crates"
+    ],
+    [
+      "CHECK-BLD-004",
+      "Generated artifacts",
+      "Not applicable",
+      "None committed"
+    ],
+    [
+      "CHECK-BLD-005",
+      "CI and release workflows",
+      "Finding",
+      "AUD-001-BLD001; no release exists"
+    ],
+    [
+      "CHECK-UI-001–003",
+      "Pages and presentation",
+      "Not applicable",
+      "No user interface"
+    ],
+    [
+      "CHECK-ARC-001",
+      "Modules and unsafe code",
+      "Passed",
+      "`forbid(unsafe_code)` holds; the two stores of a buffer behind one type"
+    ],
+    [
+      "CHECK-ARC-002",
+      "Copies and dead code",
+      "Passed",
+      "No second copy of a rule found; the old growing list of changes is gone"
+    ],
+    [
+      "CHECK-ARC-003",
+      "Tests able to fail",
+      "Three findings",
+      "Fourteen single changes each failed a test; expected values come from outside the code under test; AUD-001-ARC001, AUD-001-ARC003, AUD-001-ARC004"
+    ],
+    [
+      "CHECK-DOC-001",
+      "What the documents promise",
+      "Findings",
+      "AUD-001-DOC001, AUD-001-DOC003, AUD-001-DOC004, AUD-001-DOC005"
+    ],
+    [
+      "CHECK-DOC-002",
+      "Commands, metadata, notices",
+      "Finding",
+      "AUD-001-DOC002; the gates of AGENTS.md run as written"
+    ],
+    [
+      "CHECK-DOC-003",
+      "Audit records",
+      "Passed",
+      "This report and its JSON companion, validated against the schema"
+    ]
+  ],
+  "findings": [
+    {
+      "id": "AUD-001-DOC001",
+      "category": "DOC",
+      "title": "The documents promise of a buffer's pages what not every system gives",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "README.md",
+        "docs/TECHNICAL.md",
+        "CHANGELOG.md",
+        "Cargo.toml",
+        "src/buffer.rs",
+        "src/buffer/pages.rs"
+      ],
+      "evidence": "They say that a buffer is kept out of core dumps and of child processes. The protection crate gives both on Linux and Android, child processes only on macOS and iOS, error reports on Windows, and neither in WebAssembly, where a buffer is the allocator's memory. They do not say that the `protect` feature brings the standard library.",
+      "reproduction": "Read the section Secrets in memory against the table of systems in secret-protection-core's technical description.",
+      "expected": "The documents claim no more than each system gives (DOC-07).",
+      "observed": "One sentence for every system.",
+      "impact": "A reader on macOS, Windows or in a browser takes a dump of the process to hold no data of a buffer.",
+      "recommendedFix": "Say what each system gives, and that the feature needs the standard library.",
+      "requiredVerification": "The changed sentences against the protection crate's table."
+    },
+    {
+      "id": "AUD-001-DOC002",
+      "category": "DOC",
+      "title": "No measured test coverage is published",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "README.md",
+        "docs/"
+      ],
+      "evidence": "The README and docs/ give no line coverage, its platform, scope and command (DOC-09).",
+      "reproduction": "Look for a coverage figure in README.md and docs/.",
+      "expected": "The latest measured line coverage in the README, with the details in docs/.",
+      "observed": "None.",
+      "impact": "A reader cannot tell how much of the code the tests run.",
+      "recommendedFix": "Measure with cargo-llvm-cov and publish the figure and its record.",
+      "requiredVerification": "The record's counts against a run of the command it names."
+    },
+    {
+      "id": "AUD-001-BLD001",
+      "category": "BLD",
+      "title": "The gates and the tests run on one machine only",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        ".github/workflows/"
+      ],
+      "evidence": "The repository has no workflow. With the `protect` feature the buffers are made by other system calls on macOS and Windows than on Linux, and no test of this crate had run there.",
+      "reproduction": "List .github/ at the reviewed commit.",
+      "expected": "The fast gates at every push, and the tests on each system the crate runs on natively.",
+      "observed": "None of it runs outside the development machine.",
+      "impact": "A break on another system or feature set shows only when a program is built there.",
+      "recommendedFix": "A CI workflow with the gates of AGENTS.md and the tests on Linux for AArch64, macOS and Windows, and the RustSec audit of Cargo.lock.",
+      "requiredVerification": "A green run on every system."
+    },
+    {
+      "id": "AUD-001-ARC001",
+      "category": "ARC",
+      "title": "A test holds 65,536 buffers at once and fails where the system allows fewer mappings",
+      "severity": "medium",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "tests/suite/oracle.rs",
+        "tests/suite/support.rs"
+      ],
+      "evidence": "`every_one_of_the_65536_shards_equals_reed_solomon_erasure` makes the whole set in one call. With `protect` every shard is a mapping of its own, so the call needs more than 65,536 mappings; Linux allows 65,530 by default.",
+      "reproduction": "`cargo test` on a Linux system with `vm.max_map_count = 65530`, such as Debian 12 or RHEL 9.",
+      "expected": "The tests pass on a system with the default limits.",
+      "observed": "By reading: `CodeError::Memory` and a panic at `unwrap`; tests that correct at the same time could stop the binary. It passed on the development machine, which allows 1,048,576 mappings.",
+      "impact": "The test suite fails on common systems and in containers on them.",
+      "recommendedFix": "Make the shards a few thousand at a time.",
+      "requiredVerification": "The test passes with the shards made in batches, and its expected bytes are unchanged."
+    },
+    {
+      "id": "AUD-001-DOC003",
+      "category": "DOC",
+      "title": "Two examples in the README no longer compile",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "README.md"
+      ],
+      "evidence": "`assert_eq!(*set.rebuild(None)?.data, data)` compares bytes with a reference to an array now that the data comes in a `Buffer`. The same lines in `tests/suite/examples.rs` were changed; the README was not.",
+      "reproduction": "Compile the README's example of a set of files.",
+      "expected": "The README's examples compile, as the tests that copy them do.",
+      "observed": "Two `assert_eq!` lines without an implementation of `PartialEq` for their types.",
+      "impact": "A reader who copies the example gets a compile error.",
+      "recommendedFix": "Compare with `*data`.",
+      "requiredVerification": "The README lines equal those of `tests/suite/examples.rs`."
+    },
+    {
+      "id": "AUD-001-DOC004",
+      "category": "DOC",
+      "title": "The README names one dependency",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "README.md"
+      ],
+      "evidence": "Its first paragraph says that the crate has one dependency, `sha2`, and works without an allocator. The default build also takes `zeroize` and `secret-protection-core`, which brings the standard library and its own dependencies.",
+      "reproduction": "Read the first paragraph against Cargo.toml.",
+      "expected": "The paragraph names the dependencies of the default build (DOC-07).",
+      "observed": "One dependency named.",
+      "impact": "A reader who wants few dependencies is misled.",
+      "recommendedFix": "Name the dependencies and say when the crate needs no allocator.",
+      "requiredVerification": "The paragraph against Cargo.toml."
+    },
+    {
+      "id": "AUD-001-FUN001",
+      "category": "FUN",
+      "title": "A list of changes keeps a shard's place in sixteen bits",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct/changes.rs"
+      ],
+      "evidence": "A record kept the shard's place in two bytes and saturated a larger one to 65,535, which is a real place in a set of GF(2^16).",
+      "reproduction": "Collect `Change { shard: 70_000, .. }` into a `Changes` list and apply it to 65,536 shards whose last one holds the value the change names.",
+      "expected": "`CodeError::Changes`, as for any place outside the shards.",
+      "observed": "By reading: shard 65,535 is changed. Two lists with shards 70,000 and 65,535 also compare equal. A plan never makes such a change; only a list a program collects can hold one.",
+      "impact": "A program that lists a wrong place gets another shard changed instead of a refusal.",
+      "recommendedFix": "Keep the shard's place in more bytes.",
+      "requiredVerification": "A unit test with a place above sixteen bits."
+    },
+    {
+      "id": "AUD-001-API002",
+      "category": "API",
+      "title": "`Code::apply` checks one pass of an iterator and writes another",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct/plan.rs"
+      ],
+      "evidence": "`apply` took any iterator that can be cloned, checked the changes on a clone and wrote them from the original. An iterator with shared state can give other changes the second time, and an owned `Vec<Change>` is copied whole by the clone, which is freed unwiped.",
+      "reproduction": "Call `apply` with `iter::from_fn` over a `Cell`, or with `vec.into_iter()`.",
+      "expected": "Exactly the changes checked are written, and no copy of them is left unwiped.",
+      "observed": "By reading: unchecked changes can be written, with arithmetic that panics in a debug build, or nothing is written and the call succeeds.",
+      "impact": "A program with such an iterator changes shards it did not check, or keeps an unwiped copy of symbols.",
+      "recommendedFix": "Take only a list the crate holds.",
+      "requiredVerification": "The signature and its callers."
+    },
+    {
+      "id": "AUD-001-API003",
+      "category": "API",
+      "title": "A refused working memory stops the program",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct.rs",
+        "src/correct/plan.rs",
+        "src/correct/changes.rs",
+        "src/buffer.rs",
+        "docs/TECHNICAL.md"
+      ],
+      "evidence": "`Code::correct`, `Code::plan` and a list of changes that grows called `handle_alloc_error` when a buffer was refused. With `protect` that happens at the system's limit on mappings, not only without memory, and the documents named only the `Memory` errors.",
+      "reproduction": "Correct or plan while the process is at its limit on mappings.",
+      "expected": "`CodeError::Memory`, which the crate already has.",
+      "observed": "By reading: the process stops.",
+      "impact": "A program that could have answered a refusal is ended instead.",
+      "recommendedFix": "Return `CodeError::Memory`.",
+      "requiredVerification": "No `handle_alloc_error` left on these paths; the documents name the calls."
+    },
+    {
+      "id": "AUD-001-DOC005",
+      "category": "DOC",
+      "title": "`Code::correction_memory` is called an upper bound while pages round its largest part up",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct.rs",
+        "README.md"
+      ],
+      "evidence": "With `protect` the syndromes take whole pages, and the figure counts the bytes asked for: with GF(2^8), 200 spare shards and long shards, 4,194,200 bytes are counted and 4,194,304 mapped.",
+      "reproduction": "Compare the figure with the pages of the syndromes' buffer.",
+      "expected": "The documents say what the figure counts.",
+      "observed": "\"At most\" in the README and in the comment of `correct`.",
+      "impact": "A program that budgets exactly to the figure is off by less than a page.",
+      "recommendedFix": "Round the figure up to a page, or say what it counts.",
+      "requiredVerification": "The changed comments and README line."
+    },
+    {
+      "id": "AUD-001-API004",
+      "category": "API",
+      "title": "A buffer says only whether it is locked",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/buffer.rs",
+        "docs/TECHNICAL.md"
+      ],
+      "evidence": "The protection crate also says whether pages are out of core dumps and out of child processes; `Buffer` did not pass that on. On Windows a process can keep only a limited number of blocks out of error reports, and locked pages still go into a hibernation image; the documents named neither.",
+      "reproduction": "Look for `is_out_of_dumps` on `Buffer`; make more buffers than Windows registers.",
+      "expected": "A program can ask what each buffer got, and the documents name both limits.",
+      "observed": "One answer of three; neither limit named.",
+      "impact": "A program on Windows that holds many buffers cannot tell which are left in error reports.",
+      "recommendedFix": "Pass the two answers on and name both limits.",
+      "requiredVerification": "The two methods and their unit test; the documents."
+    },
+    {
+      "id": "AUD-001-ARC002",
+      "category": "ARC",
+      "title": "A vote makes a new buffer at each change of holders, and a list of changes starts with room for four",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/file/set/vote.rs",
+        "src/correct/changes.rs",
+        "docs/TECHNICAL.md"
+      ],
+      "evidence": "Each time the shards that hold a block change, the vote drops its search and makes a new one, which with `protect` is a new work area: a handful of system calls and a wipe. A list of changes mapped and unmapped six times before it filled one page.",
+      "reproduction": "A pile whose holders change at every block; a plan with a hundred changes.",
+      "expected": "Costs that the documents name, and no remapping of a list inside one page.",
+      "observed": "By reading, as described; the step limit counts the arithmetic, not the system calls.",
+      "impact": "Slower votes on unusual piles and slower plans; no wrong answer.",
+      "recommendedFix": "Keep the syndromes' buffer between searches; start a list at a page.",
+      "requiredVerification": "The list's first room; the documents."
+    },
+    {
+      "id": "AUD-001-ARC003",
+      "category": "ARC",
+      "title": "No test catches a merge that lists found symbols after the marked ones",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct/plan.rs",
+        "tests/suite/plans.rs",
+        "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/plans.rs"
+      ],
+      "evidence": "The fixed cases and the self-test have the found symbol after every mark, the random test sorts before it compares, and the fuzz target says nothing about order or kind.",
+      "reproduction": "Change the merge of found and marked runs to put the marked run first, then run the tests.",
+      "expected": "A test fails.",
+      "observed": "By reading: none would.",
+      "impact": "A wrong order of changes, which a program shows to its user, could pass every test.",
+      "recommendedFix": "A case with a wrong symbol at shard 0 and marks at shards 1 and 4; order and kind assertions in the fuzz target.",
+      "requiredVerification": "The new test fails on the changed merge."
+    },
+    {
+      "id": "AUD-001-ARC004",
+      "category": "ARC",
+      "title": "The fuzz target of files can walk 2^32 block numbers",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/files.rs"
+      ],
+      "evidence": "The target asked for every block number a header states, up to 2^32 per file, where the survey stops at the first missing block. A header with a consistent checksum and a large length would stall a run.",
+      "reproduction": "Read the loop over `read.block`.",
+      "expected": "The target asks only for the blocks the survey counts.",
+      "observed": "Not seen in the 200-second runs.",
+      "impact": "A stalled fuzz run reported as a timeout, not a defect of the crate.",
+      "recommendedFix": "Loop over the blocks the survey counts.",
+      "requiredVerification": "The changed loop."
+    },
+    {
+      "id": "AUD-001-API005",
+      "category": "API",
+      "title": "A list of changes cannot say whether it is locked, and two costs of protected pages go unnamed",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct/changes.rs",
+        "src/buffer.rs",
+        "docs/TECHNICAL.md"
+      ],
+      "evidence": "`Changes` had no `is_locked`. On Linux a child made by `fork` reads zeros from every buffer, and buffers draw on the lock limit the program's own secrets need: about 2,048 one-page buffers use up the default 8 MiB. The documents said neither.",
+      "reproduction": "Read `Changes` and the section Secrets in memory.",
+      "expected": "A list says what a buffer says, and the documents name both effects.",
+      "observed": "Neither.",
+      "impact": "A program that forks or locks secrets of its own meets them without warning.",
+      "recommendedFix": "Add `Changes::is_locked`; name both effects.",
+      "requiredVerification": "The method and the documents."
+    },
+    {
+      "id": "AUD-001-BLD002",
+      "category": "BLD",
+      "title": "The protection crate is pinned to a commit above `fixup!` commits",
+      "severity": "low",
+      "kind": "finding",
+      "status": "open",
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "Cargo.toml"
+      ],
+      "evidence": "The pinned commit of `secret-protection-core` follows three `fixup!` commits. If that history is regrouped, the pin names a commit no branch holds.",
+      "reproduction": "`git log` of the protection crate up to the pinned commit.",
+      "expected": "A pin that stays reachable.",
+      "observed": "The pinned commit is on the published main branch.",
+      "impact": "A future regrouping of the other repository would break the build until the pin is moved.",
+      "recommendedFix": "Pin after the regrouping, or to a tag.",
+      "requiredVerification": "None while the history stands."
+    }
+  ],
+  "observations": [
+    {
+      "id": "AUD-001-SEC001",
+      "category": "SEC",
+      "title": "Words of data on the stack are not wiped",
+      "severity": "info",
+      "kind": "observation",
+      "status": null,
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/field/lanes.rs",
+        "src/correct/changes.rs"
+      ],
+      "evidence": "The scaling kernel pads the last bytes of a shard into an array of eight bytes on the stack, and a change read from a list is a plain value. Neither is wiped. The documents leave the stack to the program, which can run a call on a protected stack.",
+      "reproduction": "Read `add_products` and `Changes::get`.",
+      "expected": "As documented.",
+      "observed": "As documented.",
+      "impact": "Bytes of data in stack memory until it is overwritten.",
+      "recommendedFix": "None.",
+      "requiredVerification": "None."
+    },
+    {
+      "id": "AUD-001-SEC002",
+      "category": "SEC",
+      "title": "The short lists of a search lie in the allocator's memory",
+      "severity": "info",
+      "kind": "observation",
+      "status": null,
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/correct.rs"
+      ],
+      "evidence": "The recurrences, the syndromes of one column and the errors of the decoder, a few elements per spare shard, are vectors of two-byte elements. They are wiped when the decoder is dropped and are not in protected pages, which hold bytes. The documents say so.",
+      "reproduction": "Read `Decoder` and its `Drop`.",
+      "expected": "As documented.",
+      "observed": "As documented.",
+      "impact": "For a marked gap an error value is the symbol itself: a few symbols of data in memory that can reach swap, for the length of a call.",
+      "recommendedFix": "None now; typed protected memory would need unsafe code or a new interface of the protection crate.",
+      "requiredVerification": "None."
+    },
+    {
+      "id": "AUD-001-API001",
+      "category": "API",
+      "title": "A set of tens of thousands of shards made in one call can run out of mappings",
+      "severity": "info",
+      "kind": "observation",
+      "status": null,
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/code/owned.rs",
+        "src/buffer/pages.rs"
+      ],
+      "evidence": "With `protect` every shard returned is a mapping of its own with two guard pages. The call answers `CodeError::Memory` then; the documents name the limit and the way round it, `Sources::build` into one buffer of the program's.",
+      "reproduction": "`Code::encode` for more targets than the system allows mappings.",
+      "expected": "A refusal, not a stop.",
+      "observed": "`CodeError::Memory`, by reading; not run, since this machine allows 1,048,576 mappings.",
+      "impact": "A refusal of a call that the allocator's memory would serve.",
+      "recommendedFix": "None.",
+      "requiredVerification": "None."
+    },
+    {
+      "id": "AUD-001-API006",
+      "category": "API",
+      "title": "The owned results can be neither copied nor made by a program",
+      "severity": "info",
+      "kind": "observation",
+      "status": null,
+      "releaseBlocking": false,
+      "affectedFiles": [
+        "src/buffer.rs",
+        "src/correct/plan.rs",
+        "src/file/set.rs",
+        "src/code.rs"
+      ],
+      "evidence": "`Buffer` has no public constructor and no `Clone`; `Plan` and `Rebuilt` are no longer `Clone`; the `Zeroizing` re-export is gone; `CodeError` gained a variant and has no `non_exhaustive`. A copy of a result would be a second place for data; a program that wants protected memory of its own has `protect::WorkArea` and `protect::Secret`. The crate has no release yet.",
+      "reproduction": "Read the types.",
+      "expected": "As designed.",
+      "observed": "As designed.",
+      "impact": "A program that cloned results before has to keep one.",
+      "recommendedFix": "None.",
+      "requiredVerification": "None."
+    }
+  ],
+  "remediation": [
+    {
+      "id": "AUD-001-DOC001",
+      "status": "fixed",
+      "fixCommit": "4afe60775c150c34a4631d71ac50bab2a4f3a6b7",
+      "verificationCommit": null,
+      "evidence": "The documents, the feature's comment and the type's own comment say what each system gives and that the feature brings the standard library."
+    },
+    {
+      "id": "AUD-001-DOC002",
+      "status": "fixed",
+      "fixCommit": "4afe60775c150c34a4631d71ac50bab2a4f3a6b7",
+      "verificationCommit": null,
+      "evidence": "docs/COVERAGE.md records 98.19 % of 4,026 lines on Linux x86-64 with the default features, by file, with the command and the source fingerprint; the README names the figure."
+    },
+    {
+      "id": "AUD-001-BLD001",
+      "status": "fixed",
+      "fixCommit": "4afe60775c150c34a4631d71ac50bab2a4f3a6b7",
+      "verificationCommit": null,
+      "evidence": "`.github/workflows/ci.yml` runs the gates on Linux for x86-64, with both feature sets, and the tests on Linux for AArch64, macOS and Windows; `audit.yml` holds Cargo.lock against RustSec."
+    },
+    {
+      "id": "AUD-001-ARC001",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "The test makes the shards 4,096 at a time and compares the same 65,536 shards."
+    },
+    {
+      "id": "AUD-001-DOC003",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "Both lines compare with `*data`, as the tests do."
+    },
+    {
+      "id": "AUD-001-DOC004",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "The paragraph names `sha2`, `zeroize` and, by default, `secret-protection-core`, and says that the crate needs no allocator without its default features."
+    },
+    {
+      "id": "AUD-001-FUN001",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "A record is 24 bytes and keeps both places in eight; a unit test reads back places up to `usize::MAX` and tells 70,000 from 65,535."
+    },
+    {
+      "id": "AUD-001-API002",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "`apply` takes `&Changes`: the plan's own list, or one a program collects. The list lies in a `Buffer` and is read twice from the same records."
+    },
+    {
+      "id": "AUD-001-API003",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "The three paths return `CodeError::Memory`; only collecting a list with `FromIterator` stops the program, as a `Vec` does. The documents say so."
+    },
+    {
+      "id": "AUD-001-DOC005",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "The figure is the memory asked for, and the comments and the README say that with `protect` the system maps whole pages for the syndromes; the bound of 8 MiB holds either way."
+    },
+    {
+      "id": "AUD-001-API004",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "`Buffer::is_out_of_dumps` and `Buffer::is_out_of_children` pass the protection crate's answers on; the documents name the Windows limit (`WER_MAX_REGISTERED_ENTRIES`) and hibernation."
+    },
+    {
+      "id": "AUD-001-ARC002",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "A list starts with room for 128 records, most of a page. The vote keeps making a new search per change of holders, and the documents now name that cost: keeping the buffer would change the decoder for piles that only damage makes."
+    },
+    {
+      "id": "AUD-001-ARC003",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "`a_wrong_word_below_or_between_the_gaps_keeps_its_place_in_the_list` puts a wrong word before and then between two marks; the fuzz target `plans` checks the order, the kind and the value read of every change, and that every mark is listed."
+    },
+    {
+      "id": "AUD-001-ARC004",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "The loop stops at the number of intact and damaged blocks the survey counts."
+    },
+    {
+      "id": "AUD-001-API005",
+      "status": "fixed",
+      "fixCommit": "92b842d27173af44268330b4f081cd123435a75c",
+      "verificationCommit": null,
+      "evidence": "`Changes::is_locked` exists; the documents and the comment of `Buffer::is_out_of_children` say what a child gets after `fork` on each system (zeros on Linux and Android, no pages on macOS and iOS), and the documents name the shared lock limit."
+    },
+    {
+      "id": "AUD-001-BLD002",
+      "status": "accepted",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": "Accepted: the pinned commit is on the published main branch, which is rewritten only by a force-push; the pin moves in the same step as any regrouping."
+    }
+  ],
+  "limitations": [
+    "Only Linux for x86-64 ran at the reviewed commit. The tests on Linux for AArch64, macOS and Windows run in CI from the fix commit on.",
+    "The fuzz targets ran 200 seconds each: enough to pass the checksums of whole sets through structured inputs, not a long campaign.",
+    "Running time was not measured against the bytes of shards; that no branch or table entry depends on them was read in the code.",
+    "Miri ran the unit tests of the buffer and of the list of changes with the allocator's memory; the protected pages are system calls, which it does not run.",
+    "This is a review of code and tests, not a certification of the code."
+  ]
+}

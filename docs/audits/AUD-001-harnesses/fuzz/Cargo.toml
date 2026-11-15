@@ -1,0 +1,50 @@
+[package]
+name = "reed-solomon-core-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.10"
+reed-solomon-core = { path = "../../../.." }
+
+# Bytes that claim to be shard files: reading, sorting into sets and every call on a set.
+[[bin]]
+name = "files"
+path = "fuzz_targets/files.rs"
+test = false
+doc = false
+bench = false
+
+# A set written by the crate and then damaged: what comes back is the data, or a refusal.
+[[bin]]
+name = "sets"
+path = "fuzz_targets/sets.rs"
+test = false
+doc = false
+bench = false
+
+# Shards with wrong and marked symbols: a plan that is applied leaves a set that agrees.
+[[bin]]
+name = "plans"
+path = "fuzz_targets/plans.rs"
+test = false
+doc = false
+bench = false
+
+[lints.rust]
+unsafe_code = "forbid"
+
+# A fuzz target answers by stopping the run: its unwraps and assertions are its checks, so the
+# three lints against them are left out of the table (RUST-01).
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+too_many_lines = "deny"
+mod_module_files = "deny"
+undocumented_unsafe_blocks = "deny"
+
+# Its own workspace: the crate under test stays a crate without one.
+[workspace]
