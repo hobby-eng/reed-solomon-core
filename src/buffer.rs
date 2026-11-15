@@ -60,8 +60,8 @@ impl Buffer {
     }
 
     /// Whether a child process gets none of the bytes: no mapping of the pages, or zeros in
-    /// their place. After `fork` a child reads zeros from a buffer on Linux and Android; on macOS
-    /// and iOS it has no such pages, and reading one ends it.
+    /// their place. A child of `fork` must leave its parent's buffers alone: there a buffer says
+    /// it is not protected, dropping it touches nothing, and reading it ends the child.
     #[must_use]
     pub fn is_out_of_children(&self) -> bool {
         self.0.is_out_of_children()
