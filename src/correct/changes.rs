@@ -72,7 +72,7 @@ impl Changes {
 
     /// Adds `change` after the others. A list that has to grow moves into a larger buffer, and
     /// the old one is wiped as it is dropped; a refusal of the memory leaves the list as it was.
-    pub(super) fn push(&mut self, change: Change) -> Result<(), NoMemory> {
+    pub(crate) fn push(&mut self, change: Change) -> Result<(), NoMemory> {
         let room = self.records.len() / RECORD;
         if self.count == room {
             let more = room.saturating_mul(2).max(FIRST_ROOM);

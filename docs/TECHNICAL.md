@@ -14,6 +14,7 @@ This document describes how the crate is built and why, in enough detail to chec
 - [Checking a set](#checking-a-set)
 - [Correcting wrong symbols](#correcting-wrong-symbols)
 - [Gaps at known places and a plan of changes](#gaps-at-known-places-and-a-plan-of-changes)
+- [The cyclic code](#the-cyclic-code)
 - [What is guaranteed](#what-is-guaranteed)
 - [Memory and work](#memory-and-work)
 - [The data path](#the-data-path)
@@ -42,7 +43,7 @@ Without the `alloc` feature the crate allocates nothing and offers the fields, t
 
 ## Principles
 
-- **One construction.** Shard `i` is the value at point `i` of one polynomial. Writing a set, rebuilding it, making a lost shard again and giving a set more shards are the same interpolation, and "any `k` shards are enough" follows from one fact: `k` values fix a polynomial of degree below `k`.
+- **Two constructions, chosen by type.** In the code by points, shard `i` is the value at point `i` of one polynomial: writing a set, rebuilding it, making a lost shard again and giving a set more shards are the same interpolation, and "any `k` shards are enough" follows from one fact: `k` values fix a polynomial of degree below `k`. The cyclic code adds to data that stays as it is the remainder of its division by a generator, as formats such as QR codes fix it ([The cyclic code](#the-cyclic-code)). Nothing is guessed from the symbols.
 - **The bytes of established implementations.** Where another implementation of the same code exists, the crate writes its bytes, and the tests compare them shard by shard.
 - **Refuse first, then work.** Every request is checked before the first byte of an output is written. A correction changes every column or none, a rebuild returns all the data or none, and a list the crate keeps is asked for before it is filled.
 - **Never guess.** A file whose two headers differ is refused, not resolved by choosing one. Two sets with one identifier are both listed. Which construction made a list of symbols is never guessed from the symbols.
@@ -73,21 +74,22 @@ Without the `alloc` feature the crate allocates nothing and offers the fields, t
 
 ## Where things are in the code
 
-| Module                             | What it holds                                                                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `src/field.rs` and `src/field/`    | the three fields; `lanes.rs` is the scaling kernel through which every byte of a shard passes        |
-| `src/code.rs`, `src/code/owned.rs` | `Code`, `Sources`: interpolation on buffers, and the owned helpers `encode`, `rebuild`, `redundancy` |
-| `src/correct.rs`                   | the decoder: syndromes, Berlekamp–Massey, error values; `Code::correct` and the search the vote uses |
-| `src/correct/plan.rs`              | marked gaps and the plan of changes: `Code::plan`, `Code::apply`                                     |
-| `src/file/header.rs`, `crc32c.rs`  | the header of a shard file, byte for byte, and its checksum                                          |
-| `src/file/facts.rs`                | `SetFacts`: what a set states, the sizes that follow, the SHA-256 of the data                        |
-| `src/file/reading.rs`              | `ShardFile::read`: a file that may be damaged, cut short or followed by other bytes                  |
-| `src/file/writing.rs`              | `SetFacts::files`: the files of a set from its data                                                  |
-| `src/file/pile.rs`                 | `Pile::new`: any files sorted into sets                                                              |
-| `src/file/set.rs`, `set/shards.rs` | `FileSet`: who holds each block, rebuild, repair, coverage, stretches, the set without some files    |
-| `src/file/set/vote.rs`             | `FileSet::vote`: which files differ from what the others share                                       |
-| `src/self_test.rs`                 | the known answers a program runs before it relies on the crate                                       |
-| `tests/suite/`                     | the tests of the public interface, each file one subject                                             |
+| Module                              | What it holds                                                                                        |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `src/field.rs` and `src/field/`     | the three fields; `lanes.rs` is the scaling kernel through which every byte of a shard passes        |
+| `src/code.rs`, `src/code/owned.rs`  | `Code`, `Sources`: interpolation on buffers, and the owned helpers `encode`, `rebuild`, `redundancy` |
+| `src/correct.rs`                    | the decoder: syndromes, Berlekamp–Massey, error values; `Code::correct` and the search the vote uses |
+| `src/correct/plan.rs`               | marked gaps and the plan of changes: `Code::plan`, `Code::apply`                                     |
+| `src/cyclic.rs`, `cyclic/decode.rs` | `CyclicCode`: the generator, the remainder, the words a stripe at a time, and one word put right     |
+| `src/file/header.rs`, `crc32c.rs`   | the header of a shard file, byte for byte, and its checksum                                          |
+| `src/file/facts.rs`                 | `SetFacts`: what a set states, the sizes that follow, the SHA-256 of the data                        |
+| `src/file/reading.rs`               | `ShardFile::read`: a file that may be damaged, cut short or followed by other bytes                  |
+| `src/file/writing.rs`               | `SetFacts::files`: the files of a set from its data                                                  |
+| `src/file/pile.rs`                  | `Pile::new`: any files sorted into sets                                                              |
+| `src/file/set.rs`, `set/shards.rs`  | `FileSet`: who holds each block, rebuild, repair, coverage, stretches, the set without some files    |
+| `src/file/set/vote.rs`              | `FileSet::vote`: which files differ from what the others share                                       |
+| `src/self_test.rs`                  | the known answers a program runs before it relies on the crate                                       |
+| `tests/suite/`                      | the tests of the public interface, each file one subject                                             |
 
 ## The code
 
@@ -183,6 +185,18 @@ Example: a card of 12 words of a list of 2,048 and 4 words that the code adds, i
 
 Marks are checked after the counts, the numbers and the lengths of the shards and before their symbols: a mark outside the shards is `CodeError::Mark`. The working memory is that of `Code::correct` with room for `m − k` symbols of a column instead of half as many, a sorted copy of the marks and the list of changes, which holds at most the marks and `(m − k) / 2` symbols for each column.
 
+## The cyclic code
+
+`CyclicCode::new(field, data, parity, first_root, root_step)` is a shortened systematic cyclic Reed–Solomon code. α is the element x, which generates the field when its polynomial is primitive, as every field of the crate but `Field::Gf65536` has; β = α^root_step, and the generator is g(x) = Π (x + β^(first_root + i)) for i below `parity`. β has the order (2^m − 1) / gcd(root_step, 2^m − 1), and a word of `data + parity` places must not be longer: then the roots differ, the places' locators differ, and the bound of the BCH argument holds. Anything else is refused with `CodeError::Shape`, before any symbol is looked at.
+
+A word has a fixed layout. Place i holds the coefficient of x^(n − 1 − i) of c(x), n = data + parity: the data come first, d_0 at the highest power, and the check symbols r_(parity − 1) … r_0 follow, the remainder of d(x)·x^parity divided by g(x). Each shard is one place, and each symbol of the shards a word of its own, so long shards are words side by side. Making the check symbols adds each data shard, scaled by the coefficients of x^(parity + t) mod g(x), to the check shards: the same kernel as the code by points, and the factors follow from the generator, which is public.
+
+Putting a word right takes its syndromes S_l = c(β^(first_root + l)), made a stripe of words at a time in protected pages, at most 4 MiB at once. The symbols at marked places count as zero; their locators X = β^(n − 1 − i) give the erasure locator Γ(x) = Π (1 + X x), and Berlekamp–Massey over the syndromes Γ leaves gives the locator of the wrong places. When 2e + s goes beyond `parity` the word is not put right. Otherwise a search over the n places finds the roots of the errata locator Ψ = Λ·Γ, which must be as many as its degree, all inside the word; Forney's formula X^(1 − first_root) Ω(X⁻¹) / Ψ'(X⁻¹), with Ω = S·Ψ mod x^parity, gives the value at each, a place not marked must get a value that is not zero, and the word with the values added must have no syndrome left. A word that fails any of this is unresolved, and then `plan` and `correct` change nothing. Beyond the bound the answer is unresolved or another word of the code, as for the code by points.
+
+`plan` lists every change in the order of the words and, within one, of the places; every marked symbol is listed, as filled, even when it held the right value, and `apply` checks every change before it writes one, with the same function as the code by points. `correct` finds every change in a first pass and makes them in a second, as the code by points does, so that it keeps no list; `agrees` stops at the first stripe that holds a word with a syndrome. The lengths, the symbols, the marks, the stripe and Berlekamp–Massey are checked and done by the same functions as for the code by points. A lost shard is given as symbols of the field, such as zeros, every one of them marked, and the plan then lists each of its symbols: this version has no way to name a whole shard lost, and no cyclic code without an allocator. The code needs the allocator for its generator and its working lists, which are wiped when a call ends.
+
+Its known answers come from outside the crate: the repair words that MHFE-REPAIR-1 publishes for four containers and 2, 4, 6 and 8 words, the generators its specification prints and its three repairs; the parity of the version 1-M example of ISO/IEC 18004, annex I; and words of two other sets of parameters (GF(2^11) with first root 5 and step 3, GF(2^8) with first root 1), with the refusals, computed by a reference in Python written from the text of MHFE-REPAIR-1 and textbook definitions.
+
 ## What is guaranteed
 
 - Any `k` shards of a set make every shard of it.
@@ -201,6 +215,8 @@ Without the `alloc` feature nothing is allocated: the caller provides `k` elemen
 
 Its work is `m²` field multiplications for the weights, then `m · (m − k)` scalings of every stretch, and for each wrong offset about `(m − k)² + m · e` multiplications, with `e` wrong symbols.
 
+`CyclicCode::correct` and `CyclicCode::agrees` hold the syndromes of one stripe of words, at most 4 MiB, a few elements per check symbol and one per shard; `CyclicCode::plan` holds its list of changes as well, 24 bytes per change. Making the syndromes takes `n · parity` scalings of every stripe, and a word that disagrees about `parity²` multiplications more and one search over its `n` places.
+
 ## The data path
 
 `out ^= factor · source` is the one operation applied to the bytes of shards. It works on eight bytes at a time with shifts and masks. The factor follows from shard numbers and is public; the bytes of the shards choose no branch and no table entry. The CRC-32C of a block is computed one bit at a time without a table, and `Sources::agrees` compares every byte of a stretch, whichever differs.
@@ -211,9 +227,9 @@ Single elements are multiplied and inverted without tables and without a branch 
 
 The data a program gives the crate can be a secret, such as the words of a recovery phrase on a card. The crate keeps no copy of it longer than a call and leaves none behind in memory it gives back:
 
-- Every result that holds data comes in a `Buffer`: the shards of `Code::encode` and `Code::rebuild`, the files of `SetFacts::files`, `Header::file`, `FileSet::repair` and `FileSet::repairs`, the data of `FileSet::rebuild`, and the changes of `Code::plan`, whose list (`Changes`) keeps its records in one and gives a change when asked for it. The working buffers of bytes that follow from data are buffers of the same kind: the copy a writer makes of the end of the data, the shard it makes, the buffer a set is put together in, the block a vote makes to judge a dispute, and the syndromes of the stretch a search looks at.
+- Every result that holds data comes in a `Buffer`: the shards of `Code::encode` and `Code::rebuild`, the files of `SetFacts::files`, `Header::file`, `FileSet::repair` and `FileSet::repairs`, the data of `FileSet::rebuild`, the check shards of `CyclicCode::encode`, and the changes of `Code::plan` and `CyclicCode::plan`, whose list (`Changes`) keeps its records in one and gives a change when asked for it. The working buffers of bytes that follow from data are buffers of the same kind: the copy a writer makes of the end of the data, the shard it makes, the buffer a set is put together in, the block a vote makes to judge a dispute, and the syndromes of the stretch a search looks at.
 - With the `protect` feature, on by default, a `Buffer` is a work area of the `secret-protection-core` crate: memory pages of its own between guard pages, wiped before they are given back, locked against swap where the system's lock limit holds them, and kept out of core dumps and of child processes where the system has a call for that: both on Linux and Android, child processes on macOS and iOS, error reports on Windows, neither in WebAssembly, where a buffer is the allocator's memory. `Buffer::is_locked`, `Buffer::is_out_of_dumps` and `Buffer::is_out_of_children` say what a buffer got, and `Changes::is_locked` what a list got. Windows keeps a limited number of blocks of a process out of its error reports (`WER_MAX_REGISTERED_ENTRIES`), one per buffer; a buffer beyond them stays in, and says so. Locked pages still go into the image a machine writes when it hibernates. A child made by `fork` must leave its parent's buffers alone: their pages are gone there or zeros, so the protection crate has a buffer there say it is not protected, its drop touch nothing, and a read of it end the child. The feature brings the standard library with that crate. Without the feature it is the allocator's memory, wiped by the `zeroize` crate, whose writes the compiler cannot leave out. An empty buffer takes no memory.
-- What is not a `Buffer` is wiped when it is let go: the expected bytes `Sources::agrees` compares, which lie on the stack, and the short lists of the decoder, a few elements per spare shard (the recurrences, the syndromes of one column and the errors), which lie in the allocator's memory. A list of changes that has to grow moves into a larger buffer and the old one is wiped.
+- What is not a `Buffer` is wiped when it is let go: the expected bytes `Sources::agrees` compares, which lie on the stack, and the short lists of both decoders, a few elements per spare shard or check symbol (the recurrences, the syndromes of one column, the places and the errors), which lie in the allocator's memory. A list of changes that has to grow moves into a larger buffer and the old one is wiped.
 - The state of SHA-256 is wiped when the hash is done (the `zeroize` feature of `sha2`).
 - No `Debug` text shows the bytes of data: a file read, a block and rebuilt data give their lengths, a change gives its place and kind, a buffer its length and a list of changes their number. Two buffers, and two lists of changes, are compared without stopping at the first difference.
 
@@ -427,6 +443,9 @@ For the vote the tests put a file of other data among five; one wrong symbol in 
 The tests run with the buffers in protected pages and again with them in the allocator's memory, and check on Linux that a result lies in pages the kernel lists as kept out of core dumps and given to a child process as zeros, and as locked exactly when the buffer says so. CI runs the gates on Linux for x86-64 and the tests on Linux for AArch64, macOS and Windows at every push. The first audit left three fuzz targets beside its report (`docs/audits/AUD-001-harnesses`): any bytes as shard files; sets written by the crate and then damaged, which must give back the data whose SHA-256 they state or refuse; and shards with changed and marked symbols in every field, which a plan must put right within its bound. [Test coverage](COVERAGE.md) has the measured lines.
 
 ## References
+
+- ISO/IEC 18004:2015, QR code bar code symbology specification, annex I: the worked example of a version 1-M symbol.
+- MHFE-REPAIR-1, the optional profile of repair words of the MHFE specification: its generators and published vectors.
 
 - I. S. Reed, G. Solomon, "Polynomial codes over certain finite fields", Journal of the Society for Industrial and Applied Mathematics 8(2), 1960.
 - E. R. Berlekamp, Algebraic Coding Theory, McGraw-Hill, 1968.

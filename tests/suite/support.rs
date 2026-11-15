@@ -19,11 +19,15 @@ pub(crate) fn bytes(seed: u64, count: usize) -> Vec<u8> {
         .collect()
 }
 
-/// `bytes` as symbols of `field`: a word is below 2,048, so the five high bits of each go.
+/// `bytes` as symbols of `field`: each keeps its bits below the field's degree, so that a word
+/// of GF(2^11) is below 2,048 and a symbol of GF(2^4) below 16.
 pub(crate) fn symbols(field: Field, mut bytes: Vec<u8>) -> Vec<u8> {
-    if field == Field::Gf2048 {
+    let mask = field.order() - 1;
+    if field.symbol_bytes() == 1 {
+        bytes.iter_mut().for_each(|byte| *byte &= mask as u8);
+    } else {
         for pair in bytes.as_chunks_mut::<2>().0 {
-            pair[0] &= 0x07;
+            *pair = (u16::from_be_bytes(*pair) & mask as u16).to_be_bytes();
         }
     }
     bytes

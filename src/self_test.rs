@@ -16,7 +16,7 @@ pub struct Check {
 }
 
 /// The most checks a run holds.
-const MOST: usize = 15;
+const MOST: usize = 17;
 
 /// The checks of one run.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,8 +48,8 @@ impl SelfTest {
 
 /// Runs the known answers: a few field multiplications' and hashes' worth of work. Without the
 /// `alloc` feature it allocates nothing and leaves out the three checks of the error correction,
-/// the plan of changes for a card, the check of the vote among the files of a set and the check
-/// of a digest that differs.
+/// the plan of changes for a card, the vote among the files of a set, a digest that differs and
+/// the two checks of the cyclic code.
 #[must_use]
 pub fn self_test() -> SelfTest {
     let empty = Check {
@@ -121,6 +121,14 @@ pub fn self_test() -> SelfTest {
         run.add(
             "Files that agree on \"abc\" and state the SHA-256 of \"abd\" are refused; stating their own, they rebuild",
             crate::file::digest_refusal_known_answer(),
+        );
+        run.add(
+            "A cyclic code of GF(2^8), roots α^0 to α^9: the data of the QR example gives A5 24 D4 C1 ED 36 C7 87 2C 55 (ISO/IEC 18004, annex I)",
+            cyclic::qr_example(),
+        );
+        run.add(
+            "A cyclic code of GF(2^11), first root 5, step 3: one wrong and two marked words get a plan that puts them right (words computed apart)",
+            cyclic::marked_word(),
         );
     }
     run
@@ -199,6 +207,68 @@ fn changed_shard() -> bool {
     };
     let stripes: [&[u8]; 4] = [&[1], &[2], &[3], &[4]];
     set.agrees(4, &stripes, &[0x45]) == Ok(true) && set.agrees(4, &stripes, &[0x44]) == Ok(false)
+}
+
+#[cfg(feature = "alloc")]
+mod cyclic {
+    use crate::correct::{ChangeKind, Mark, Plan};
+    use crate::cyclic::CyclicCode;
+    use crate::field::Field;
+    use alloc::vec::Vec;
+
+    /// The parity of the version 1-M example of ISO/IEC 18004, annex I.
+    pub(super) fn qr_example() -> bool {
+        let data: [u8; 16] = [
+            0x10, 0x20, 0x0C, 0x56, 0x61, 0x80, 0xEC, 0x11, 0xEC, 0x11, 0xEC, 0x11, 0xEC, 0x11,
+            0xEC, 0x11,
+        ];
+        let expected = [0xA5, 0x24, 0xD4, 0xC1, 0xED, 0x36, 0xC7, 0x87, 0x2C, 0x55];
+        let Ok(code) = CyclicCode::new(Field::Gf256, 16, 10, 0, 1) else {
+            return false;
+        };
+        let shards: Vec<&[u8]> = data.iter().map(core::slice::from_ref).collect();
+        code.encode(&shards).is_ok_and(|parity| {
+            parity.len() == expected.len()
+                && parity
+                    .iter()
+                    .zip(expected)
+                    .all(|(shard, byte)| **shard == [byte])
+        })
+    }
+
+    /// The word 001 7FF 400 123 000 410 680 321 134, read with word 1 wrong and words 3 and 6
+    /// marked: the plan replaces word 1 and fills words 3 and 6, and applied gives the word back.
+    pub(super) fn marked_word() -> bool {
+        let whole: [u16; 9] = [
+            0x001, 0x7FF, 0x400, 0x123, 0x000, 0x410, 0x680, 0x321, 0x134,
+        ];
+        let damaged: [u16; 9] = [
+            0x001, 0x55A, 0x400, 0x7FF, 0x000, 0x410, 0x000, 0x321, 0x134,
+        ];
+        let Ok(code) = CyclicCode::new(Field::Gf2048, 5, 4, 5, 3) else {
+            return false;
+        };
+        let mut read = damaged.map(u16::to_be_bytes);
+        let marks = [3, 6].map(|shard| Mark { shard, symbol: 0 });
+        let views: Vec<&[u8]> = read.iter().map(<[u8; 2]>::as_slice).collect();
+        let Ok(Plan::Changes(changes)) = code.plan(&views, &marks) else {
+            return false;
+        };
+        let kinds = [
+            (1, ChangeKind::Replaced),
+            (3, ChangeKind::Filled),
+            (6, ChangeKind::Filled),
+        ];
+        let planned = changes.len() == 3
+            && changes
+                .iter()
+                .zip(kinds)
+                .all(|(change, (shard, kind))| change.shard == shard && change.kind == kind);
+        let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(<[u8; 2]>::as_mut_slice).collect();
+        let applied = code.apply(&mut buffers, &changes).is_ok();
+        drop(buffers);
+        planned && applied && read == whole.map(u16::to_be_bytes)
+    }
 }
 
 #[cfg(feature = "alloc")]

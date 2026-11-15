@@ -2,8 +2,36 @@
 
 use super::{Code, CodeError};
 use crate::buffer::Buffer;
+use crate::field::Field;
 use alloc::vec;
 use alloc::vec::Vec;
+
+/// The one length of shards whose lengths are `lengths`, a whole number of symbols of `field`;
+/// [`CodeError::Length`] otherwise.
+pub(crate) fn one_length(
+    field: Field,
+    mut lengths: impl Iterator<Item = usize>,
+) -> Result<usize, CodeError> {
+    let length = lengths.next().unwrap_or(0);
+    let whole = length.is_multiple_of(field.symbol_bytes());
+    if !whole || lengths.any(|other| other != length) {
+        return Err(CodeError::Length);
+    }
+    Ok(length)
+}
+
+/// Whether every symbol of `shards` is an element of `field`, [`CodeError::Symbol`] if not. Every
+/// shard is looked at to its end, wherever the first wrong symbol lies.
+pub(crate) fn in_field<'a>(
+    field: Field,
+    shards: impl Iterator<Item = &'a [u8]>,
+) -> Result<(), CodeError> {
+    if shards.fold(true, |all, bytes| all & field.canonical(bytes)) {
+        Ok(())
+    } else {
+        Err(CodeError::Symbol)
+    }
+}
 
 /// What the shards beyond the threshold say about a set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,7 +52,7 @@ impl Code {
     pub(crate) fn check_set(
         &self,
         indexes: impl Iterator<Item = u16> + Clone,
-        mut lengths: impl Iterator<Item = usize>,
+        lengths: impl Iterator<Item = usize>,
     ) -> Result<usize, CodeError> {
         // Counted and looked at one by one first: a number of shards that cannot be a set is
         // refused before any memory is taken for them.
@@ -48,12 +76,7 @@ impl Code {
         if seen.windows(2).any(|pair| pair.first() == pair.last()) {
             return Err(CodeError::Repeated);
         }
-        let length = lengths.next().unwrap_or(0);
-        let whole = length.is_multiple_of(self.field.symbol_bytes());
-        if !whole || lengths.any(|other| other != length) {
-            return Err(CodeError::Length);
-        }
-        Ok(length)
+        one_length(self.field, lengths)
     }
 
     /// Checks that every symbol of every shard is an element of the field: the shards beyond
@@ -62,11 +85,7 @@ impl Code {
         &self,
         shards: impl Iterator<Item = &'a [u8]>,
     ) -> Result<(), CodeError> {
-        if shards.fold(true, |all, bytes| all & self.field.canonical(bytes)) {
-            Ok(())
-        } else {
-            Err(CodeError::Symbol)
-        }
+        in_field(self.field, shards)
     }
 
     /// The indexes and bytes of the first `threshold` of `shards`, after checking the number,

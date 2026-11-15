@@ -95,3 +95,44 @@ fn a_file_of_other_bytes_is_named_by_the_vote() -> Result<(), Box<dyn std::error
     assert_eq!(*set.without(&[3])?.rebuild(None)?.data, *data);
     Ok(())
 }
+
+#[test]
+fn a_card_gets_its_repair_words_by_remainder_and_is_put_right()
+-> Result<(), Box<dyn std::error::Error>> {
+    use reed_solomon_core::{CyclicCode, Field, Mark, Plan};
+
+    // The twelve words of a card, as numbers of a list of 2,048 words, and four repair words after
+    // them, as the printed cards of MHFE-REPAIR-1 compute them: GF(2^11), first root α, step 1.
+    let code = CyclicCode::new(Field::Gf2048, 12, 4, 1, 1)?;
+    let card: [u16; 12] = [
+        0x371, 0x6CE, 0x220, 0x11D, 0x2DB, 0x73E, 0x12B, 0x7C6, 0x7D5, 0x7AF, 0x6A9, 0x453,
+    ];
+    let words: Vec<[u8; 2]> = card.iter().map(|word| word.to_be_bytes()).collect();
+    let data: Vec<&[u8]> = words.iter().map(|word| word.as_slice()).collect();
+    let repair = code.encode(&data)?;
+    assert_eq!(*repair[0], 0x52C_u16.to_be_bytes());
+
+    // Read back with word 3 smudged and word 11 copied wrong: one mark, one word found.
+    let mut read: Vec<[u8; 2]> = words.clone();
+    read.extend(repair.iter().map(|word| [word[0], word[1]]));
+    read[2] = [0, 0];
+    read[10] = 0x7FF_u16.to_be_bytes();
+    let views: Vec<&[u8]> = read.iter().map(|word| word.as_slice()).collect();
+    let Plan::Changes(changes) = code.plan(
+        &views,
+        &[Mark {
+            shard: 2,
+            symbol: 0,
+        }],
+    )?
+    else {
+        return Err("the card is within 2e + s ≤ 4".into());
+    };
+    let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(|word| word.as_mut_slice()).collect();
+    code.apply(&mut buffers, &changes)?;
+    assert_eq!(
+        (read[2], read[10]),
+        (0x220_u16.to_be_bytes(), 0x6A9_u16.to_be_bytes())
+    );
+    Ok(())
+}

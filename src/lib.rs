@@ -14,6 +14,8 @@ mod buffer;
 mod code;
 #[cfg(feature = "alloc")]
 mod correct;
+#[cfg(feature = "alloc")]
+mod cyclic;
 mod field;
 mod file;
 mod self_test;
@@ -32,6 +34,8 @@ pub use buffer::Buffer;
 pub use code::Redundancy;
 #[cfg(feature = "alloc")]
 pub use correct::{Change, ChangeKind, Changes, ChangesIter, Correction, Mark, Plan};
+#[cfg(feature = "alloc")]
+pub use cyclic::CyclicCode;
 #[cfg(feature = "alloc")]
 pub use file::{
     Coverage, DigestCheck, Dispute, FileSet, Member, Outvoted, Pile, Rebuilt, SetError, Stretch,

@@ -10,6 +10,7 @@
 )]
 
 mod correction;
+mod cyclic;
 mod damage;
 mod digests;
 mod examples;

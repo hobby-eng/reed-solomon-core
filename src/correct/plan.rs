@@ -4,8 +4,9 @@
 //! is fixed whenever `2e + s ≤ m − k`.
 
 use super::changes::Changes;
-use super::{Decoder, NoMemory, roomy};
+use super::{Decoder, NoMemory, roomy, stripe_bytes};
 use crate::code::{Code, CodeError};
+use crate::field::Field;
 use alloc::vec::Vec;
 use core::fmt;
 use core::ops::Deref;
@@ -95,19 +96,9 @@ impl Code {
     pub fn plan(&self, shards: &[(u16, &[u8])], marks: &[Mark]) -> Result<Plan, CodeError> {
         let indexes = shards.iter().map(|&(index, _)| index);
         let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
-        let symbol = self.field().symbol_bytes();
-        let symbols = length / symbol;
-        if marks
-            .iter()
-            .any(|mark| mark.shard >= shards.len() || mark.symbol >= symbols)
-        {
-            return Err(CodeError::Mark);
-        }
+        let symbols = length / self.field().symbol_bytes();
+        let sorted = sorted_marks(marks, shards.len(), symbols)?;
         self.check_symbols(shards.iter().map(|(_, bytes)| *bytes))?;
-        let mut sorted = roomy(marks.len()).map_err(|_| CodeError::Memory)?;
-        sorted.extend_from_slice(marks);
-        sorted.sort_unstable_by_key(|mark| (mark.symbol, mark.shard));
-        sorted.dedup();
         let spare = shards.len() - self.threshold();
         if spare == 0 {
             if sorted.is_empty() {
@@ -151,31 +142,41 @@ impl Code {
         shards: &mut [(u16, &mut [u8])],
         changes: &Changes,
     ) -> Result<(), CodeError> {
-        let symbol = self.field().symbol_bytes();
-        let order = self.field().order();
-        let fits = changes.iter().all(|change| {
-            let held = place(shards, &change, symbol).map(value);
-            held == Some(change.was) && usize::from(change.becomes) < order
-        });
-        if !fits {
-            return Err(CodeError::Changes);
-        }
-        for change in changes {
-            let start = change.symbol * symbol;
-            let bytes = shards
-                .get_mut(change.shard)
-                .and_then(|(_, bytes)| bytes.get_mut(start..start + symbol));
-            let new = change.becomes.to_be_bytes();
-            for (byte, &b) in bytes
-                .into_iter()
-                .flatten()
-                .zip(new.iter().skip(new.len() - symbol))
-            {
-                *byte = b;
-            }
-        }
-        Ok(())
+        apply_changes(self.field(), shards, changes)
     }
+}
+
+/// Makes `changes` in `shards`, given by place: every change is checked first, and if one does not
+/// fit, nothing is changed. Both codes apply their plans this way.
+pub(crate) fn apply_changes(
+    field: Field,
+    shards: &mut [(u16, &mut [u8])],
+    changes: &Changes,
+) -> Result<(), CodeError> {
+    let symbol = field.symbol_bytes();
+    let order = field.order();
+    let fits = changes.iter().all(|change| {
+        let held = place(shards, &change, symbol).map(value);
+        held == Some(change.was) && usize::from(change.becomes) < order
+    });
+    if !fits {
+        return Err(CodeError::Changes);
+    }
+    for change in changes {
+        let start = change.symbol * symbol;
+        let bytes = shards
+            .get_mut(change.shard)
+            .and_then(|(_, bytes)| bytes.get_mut(start..start + symbol));
+        let new = change.becomes.to_be_bytes();
+        for (byte, &b) in bytes
+            .into_iter()
+            .flatten()
+            .zip(new.iter().skip(new.len() - symbol))
+        {
+            *byte = b;
+        }
+    }
+    Ok(())
 }
 
 /// The bytes of the symbol a change names, when the shards have it.
@@ -185,8 +186,26 @@ fn place<'s>(shards: &'s [(u16, &mut [u8])], change: &Change, symbol: usize) -> 
     bytes.get(start..start.checked_add(symbol)?)
 }
 
+/// `marks` sorted by symbol and shard, each once, once each is known to lie inside `shards`
+/// shards of `symbols` symbols: [`CodeError::Mark`] for one outside.
+pub(crate) fn sorted_marks(
+    marks: &[Mark],
+    shards: usize,
+    symbols: usize,
+) -> Result<Vec<Mark>, CodeError> {
+    let outside = |mark: &Mark| mark.shard >= shards || mark.symbol >= symbols;
+    if marks.iter().any(outside) {
+        return Err(CodeError::Mark);
+    }
+    let mut sorted = roomy(marks.len()).map_err(|_| CodeError::Memory)?;
+    sorted.extend_from_slice(marks);
+    sorted.sort_unstable_by_key(|mark| (mark.symbol, mark.shard));
+    sorted.dedup();
+    Ok(sorted)
+}
+
 /// The value of a symbol's bytes, high byte first.
-fn value(bytes: &[u8]) -> u16 {
+pub(crate) fn value(bytes: &[u8]) -> u16 {
     bytes
         .iter()
         .fold(0, |value, &byte| value << 8 | u16::from(byte))
@@ -261,7 +280,7 @@ impl Decoder {
         changes: &mut Changes,
     ) -> Result<usize, NoMemory> {
         let symbol = self.field.symbol_bytes();
-        let stripe = Self::stripe(self.field, self.spare);
+        let stripe = stripe_bytes(self.field, self.spare);
         let mut syndromes = core::mem::take(&mut self.syndromes);
         let mut factors = core::mem::take(&mut self.factors);
         let mut marks = marks.iter().peekable();

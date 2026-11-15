@@ -15,13 +15,14 @@ use zeroize::Zeroize;
 
 pub use changes::{Changes, ChangesIter};
 pub use plan::{Change, ChangeKind, Mark, Plan};
+pub(crate) use plan::{apply_changes, sorted_marks, value};
 
 /// The system gave no memory for a search.
 #[derive(Debug)]
 pub(crate) struct NoMemory;
 
 /// Most bytes of syndromes held at a time, whatever the size of the shards.
-const SYNDROME_BYTES: usize = 1 << 22;
+pub(crate) const SYNDROME_BYTES: usize = 1 << 22;
 
 /// What [`Code::correct`] found.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -182,7 +183,7 @@ impl Decoder {
             sequence: roomy(if marked { spare } else { 0 })?,
             product: roomy(most + 1)?,
             powers: roomy(most)?,
-            syndromes: Buffer::zeros(spare * Self::stripe(field, spare).min(length))
+            syndromes: Buffer::zeros(spare * stripe_bytes(field, spare).min(length))
                 .ok_or(NoMemory)?,
             factors: zeros(shards)?,
             changed: zeros(shards)?,
@@ -192,14 +193,6 @@ impl Decoder {
     /// The most wrong symbols a column can be cleared of: half the spare shards.
     const fn most_errors(spare: usize) -> usize {
         spare / 2
-    }
-
-    /// Bytes of one stripe of all syndromes: within `SYNDROME_BYTES`, but at least one symbol
-    /// of each.
-    const fn stripe(field: Field, spare: usize) -> usize {
-        let symbol = field.symbol_bytes();
-        let symbols = SYNDROME_BYTES / spare / symbol;
-        (if symbols == 0 { 1 } else { symbols }) * symbol
     }
 
     /// An upper bound of the bytes this decoder allocates for `shards` shards, of which `spare`
@@ -214,7 +207,7 @@ impl Decoder {
         shards * per_shard
             + per_spare
             + (Self::most_errors(spare) + 1) * per_error
-            + spare * Self::stripe(field, spare)
+            + spare * stripe_bytes(field, spare)
     }
 
     /// Goes through the shards stripe by stripe and finds the wrong symbols of every column:
@@ -222,7 +215,7 @@ impl Decoder {
     /// them. Returns how many columns it could not resolve.
     fn pass(&mut self, shards: &mut [(u16, &mut [u8])], length: usize, apply: bool) -> usize {
         let symbol = self.field.symbol_bytes();
-        let stripe = Self::stripe(self.field, self.spare);
+        let stripe = stripe_bytes(self.field, self.spare);
         // The stripe's two buffers leave the decoder for the pass, so that the search can use
         // the rest of it while they are read; they come back for the next pass.
         let mut syndromes = core::mem::take(&mut self.syndromes);
@@ -325,45 +318,17 @@ impl Decoder {
         self.errors.len() == length && self.values(length)
     }
 
-    /// Berlekamp–Massey: the shortest recurrence `Σ_{i=0..=L} c_i · s_{n−i} = 0` (c_0 = 1) that
-    /// the syndromes obey, or with `marked` the syndromes with the marked symbols taken out.
-    /// Leaves its polynomial in `self.connection` and returns `L`.
+    /// The shortest recurrence that the syndromes obey, or with `marked` the syndromes with the
+    /// marked symbols taken out: left in `self.connection`, its length returned.
     fn recurrence(&mut self, marked: bool) -> usize {
-        let field = self.field;
-        self.connection.fill(0);
-        self.previous.fill(0);
-        if let (Some(c), Some(b)) = (self.connection.first_mut(), self.previous.first_mut()) {
-            (*c, *b) = (1, 1);
-        }
         let sequence: &[u16] = if marked { &self.sequence } else { &self.column };
-        let (mut length, mut shift, mut last) = (0, 1, 1);
-        for (n, &syndrome) in sequence.iter().enumerate() {
-            // The difference between the syndrome and what the recurrence so far predicts.
-            let taps = self.connection.iter().skip(1).take(length);
-            let earlier = sequence.iter().take(n).rev();
-            let discrepancy = taps
-                .zip(earlier)
-                .fold(syndrome, |sum, (&c, &s)| sum ^ field.multiply(c, s));
-            if discrepancy == 0 {
-                shift += 1;
-                continue;
-            }
-            let scale = field.multiply(discrepancy, field.inverse(last).unwrap_or(0));
-            let grows = 2 * length <= n;
-            if grows {
-                self.saved.copy_from_slice(&self.connection);
-            }
-            for (c, &b) in self.connection.iter_mut().skip(shift).zip(&self.previous) {
-                *c ^= field.multiply(scale, b);
-            }
-            if grows {
-                core::mem::swap(&mut self.previous, &mut self.saved);
-                (length, last, shift) = (n + 1 - length, discrepancy, 1);
-            } else {
-                shift += 1;
-            }
-        }
-        length
+        berlekamp_massey(
+            self.field,
+            sequence,
+            &mut self.connection,
+            &mut self.previous,
+            &mut self.saved,
+        )
     }
 
     /// The error value of each wrong symbol, from the first syndromes, then a check of every syndrome
@@ -503,7 +468,7 @@ impl Finder {
     /// no longer than the finder was made for.
     pub(crate) fn look(&mut self, shards: &[(u16, &[u8])]) -> Look {
         let symbol = self.decoder.field.symbol_bytes();
-        let stripe = Decoder::stripe(self.decoder.field, self.decoder.spare);
+        let stripe = stripe_bytes(self.decoder.field, self.decoder.spare);
         let length = shards.first().map_or(0, |(_, bytes)| bytes.len());
         let mut syndromes = core::mem::take(&mut self.decoder.syndromes);
         let mut factors = core::mem::take(&mut self.decoder.factors);
@@ -597,7 +562,7 @@ fn zeros<T: Clone + Default>(count: usize) -> Result<Vec<T>, NoMemory> {
 }
 
 /// An empty list with room for `count` elements, or the refusal of the memory.
-fn roomy<T>(count: usize) -> Result<Vec<T>, NoMemory> {
+pub(crate) fn roomy<T>(count: usize) -> Result<Vec<T>, NoMemory> {
     let mut list = Vec::new();
     list.try_reserve_exact(count).map_err(|_| NoMemory)?;
     Ok(list)
@@ -605,15 +570,74 @@ fn roomy<T>(count: usize) -> Result<Vec<T>, NoMemory> {
 
 /// Removes `error` from the symbol at byte `at` of the shard at `position`.
 fn remove(shards: &mut [(u16, &mut [u8])], position: usize, at: usize, symbol: usize, error: u16) {
-    let bytes = shards
-        .get_mut(position)
-        .and_then(|(_, bytes)| bytes.get_mut(at..at + symbol));
+    if let Some((_, bytes)) = shards.get_mut(position) {
+        remove_error(bytes, at, symbol, error);
+    }
+}
+
+/// Removes `error` from the symbol of `symbol` bytes at byte `at` of `shard`: the error is added,
+/// which in the field takes it out.
+pub(crate) fn remove_error(shard: &mut [u8], at: usize, symbol: usize, error: u16) {
     // The last `symbol` bytes of the error, high byte first.
     let error = error.to_be_bytes();
     let error = error.iter().skip(error.len() - symbol);
+    let bytes = shard.get_mut(at..at + symbol);
     for (byte, e) in bytes.into_iter().flatten().zip(error) {
         *byte ^= e;
     }
+}
+
+/// Bytes of one stripe of each syndrome, so that `spare` syndromes take at most
+/// [`SYNDROME_BYTES`]: a whole number of symbols, at least one.
+pub(crate) const fn stripe_bytes(field: Field, spare: usize) -> usize {
+    let symbol = field.symbol_bytes();
+    let symbols = SYNDROME_BYTES / spare / symbol;
+    (if symbols == 0 { 1 } else { symbols }) * symbol
+}
+
+/// Berlekamp–Massey: the shortest recurrence `Σ_{i=0..=L} c_i · s_{n−i} = 0` (c_0 = 1) that
+/// `sequence` obeys. Leaves its polynomial in `connection` and returns `L`. `previous` and `saved`
+/// are working room as long as `connection`, which is longer than `sequence`.
+pub(crate) fn berlekamp_massey(
+    field: Field,
+    sequence: &[u16],
+    connection: &mut [u16],
+    previous: &mut [u16],
+    saved: &mut [u16],
+) -> usize {
+    connection.fill(0);
+    previous.fill(0);
+    if let (Some(c), Some(b)) = (connection.first_mut(), previous.first_mut()) {
+        (*c, *b) = (1, 1);
+    }
+    let (mut length, mut shift, mut last) = (0, 1, 1);
+    for (n, &syndrome) in sequence.iter().enumerate() {
+        // The difference between the syndrome and what the recurrence so far predicts.
+        let taps = connection.iter().skip(1).take(length);
+        let earlier = sequence.iter().take(n).rev();
+        let discrepancy = taps
+            .zip(earlier)
+            .fold(syndrome, |sum, (&c, &s)| sum ^ field.multiply(c, s));
+        if discrepancy == 0 {
+            shift += 1;
+            continue;
+        }
+        let scale = field.multiply(discrepancy, field.inverse(last).unwrap_or(0));
+        let grows = 2 * length <= n;
+        if grows {
+            saved.copy_from_slice(connection);
+        }
+        for (c, &b) in connection.iter_mut().skip(shift).zip(previous.iter()) {
+            *c ^= field.multiply(scale, b);
+        }
+        if grows {
+            previous.copy_from_slice(saved);
+            (length, last, shift) = (n + 1 - length, discrepancy, 1);
+        } else {
+            shift += 1;
+        }
+    }
+    length
 }
 
 #[cfg(test)]

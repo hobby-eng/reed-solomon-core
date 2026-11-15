@@ -11,6 +11,8 @@ use zeroize::Zeroizing;
 
 #[cfg(feature = "alloc")]
 pub use owned::Redundancy;
+#[cfg(feature = "alloc")]
+pub(crate) use owned::{in_field, one_length};
 
 /// Why a request was refused. Nothing was written then; lent working memory may hold anything.
 /// Counts, indexes and lengths are reported before a symbol outside the field.
@@ -40,6 +42,9 @@ pub enum CodeError {
     Changes,
     /// The system gave no memory for a shard to return, for a search or for a list of changes.
     Memory,
+    /// The lengths, field or roots of a [`crate::CyclicCode`] make no code: no data or no parity,
+    /// a field in which x is no generator, or a word longer than the order of its roots.
+    Shape,
 }
 
 impl fmt::Display for CodeError {
@@ -55,6 +60,7 @@ impl fmt::Display for CodeError {
             Self::Mark => "a symbol marked unreadable is not among the shards given",
             Self::Changes => "a change does not fit the shards it is applied to",
             Self::Memory => "the system gave no memory for the call",
+            Self::Shape => "the lengths, field or roots make no cyclic code",
         })
     }
 }

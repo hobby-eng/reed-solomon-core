@@ -17,6 +17,7 @@ Line coverage on Linux x86-64, measured on 2026-11-15 with the default features,
 
 - [What it is for](#what-it-is-for)
 - [What it does](#what-it-does)
+- [Two constructions](#two-constructions)
 - [Fields](#fields)
 - [Shard files](#shard-files)
 - [What it does not do](#what-it-does-not-do)
@@ -51,7 +52,7 @@ Most Reed–Solomon crates for Rust do one of two things. The erasure coders (`r
 
 The comparison was made from the documentation of each crate at its latest version on crates.io in November 2026; "not found" means we did not find it there.
 
-What the others do better. The fast erasure coders work in O(n log n) and with SIMD: for thousands of shards and gigabytes of data they are much faster than this crate, whose work grows with `k` times the number of shards. PAR2 is a format many programs read. Here, files and data are still held in memory as a whole; the [roadmap](docs/ROADMAP.md) lists reading them piece by piece, a second construction compatible with printed repair words, and fields of a size the program chooses.
+What the others do better. The fast erasure coders work in O(n log n) and with SIMD: for thousands of shards and gigabytes of data they are much faster than this crate, whose work grows with `k` times the number of shards. PAR2 is a format many programs read. Here, files and data are still held in memory as a whole; the [roadmap](docs/ROADMAP.md) lists reading them piece by piece.
 
 ## What it does
 
@@ -73,10 +74,49 @@ A set is written from `k` data shards of equal length. The first `k` shards of t
 | Make a lost file again                        | `FileSet::repair`                                            | files that hold `k` of every block |
 | Make several lost files in one pass           | `FileSet::repairs`                                           | files that hold `k` of every block |
 | Tell which files differ from the rest         | `FileSet::vote`, then `FileSet::without`                     | spare files beyond `k`             |
+| Add check symbols after data, as QR codes do  | `CyclicCode::encode`                                         | the data                           |
+| Put such words right, with marked gaps        | `CyclicCode::plan`, then `CyclicCode::apply`                 | every shard of the word            |
 
 Correction finds wrong symbols without being told where they are. With `m` shards at hand it puts right up to `(m − k) / 2` wrong symbols at every position of the shards; shards that are missing are simply not given. In short, a set of `n` shards survives `e` wrong and `s` missing shards when `2e + s ≤ n − k`. Either every position is corrected or nothing is changed.
 
 A reader often knows that one symbol is unreadable, such as a smudged word on a card, while the rest of its shard is fine. `Code::plan` takes such marks: a marked symbol costs one spare shard where a wrong one costs two, and the plan lists every change, with the place, what was read there and what it becomes, before anything is touched. `Code::apply` makes the changes after checking that the shards still hold what the plan was made for.
+
+## Two constructions
+
+The crate makes Reed–Solomon codes in two ways, and a program chooses one by its type; nothing is guessed from the symbols. Both put a word right while `2e + s ≤` the number of check symbols, take marks of unreadable symbols, and give a plan of every change before anything is written. Their check symbols differ, so a word made one way is checked only the same way.
+
+- **`Code`, by points.** Shard `i` is the value at point `i` of one polynomial, and the data shards are the values at the first `k` points. Any `k` shards rebuild every other one, a lost shard can be made again, and a set can be given more shards later, up to the size of the field, with the shards already handed out unchanged. Choose it to spread data over several carriers (files, photos, places) and rebuild it from whichever are left. Shard files use it.
+- **`CyclicCode`, by remainder.** The data stays as it is, and the check symbols after it are the remainder of the data divided by a generator polynomial, as QR codes, CDs and printed repair cards compute them. A word has a fixed length, at most the order of the code's roots. Choose it to add check symbols to data that stays where it is, and whenever a format fixes the code: a QR code is `CyclicCode::new(Field::Gf256, data, check, 0, 1)` with its numbers of data and check codewords, and the repair words of MHFE-REPAIR-1 are `CyclicCode::new(Field::Gf2048, words, repair, 1, 1)` with the numbers of a card's words and of its repair words.
+
+```rust
+use reed_solomon_core::{CyclicCode, Field, Mark, Plan};
+
+// The twelve words of a card, as numbers of a list of 2,048 words, and four repair words after
+// them, as the printed cards of MHFE-REPAIR-1 compute them: GF(2^11), first root α, step 1.
+let code = CyclicCode::new(Field::Gf2048, 12, 4, 1, 1)?;
+let card: [u16; 12] = [
+    0x371, 0x6CE, 0x220, 0x11D, 0x2DB, 0x73E, 0x12B, 0x7C6, 0x7D5, 0x7AF, 0x6A9, 0x453,
+];
+let words: Vec<[u8; 2]> = card.iter().map(|word| word.to_be_bytes()).collect();
+let data: Vec<&[u8]> = words.iter().map(|word| word.as_slice()).collect();
+let repair = code.encode(&data)?;
+assert_eq!(*repair[0], 0x52C_u16.to_be_bytes());
+
+// Read back with word 3 smudged and word 11 copied wrong: one mark, one word found.
+let mut read: Vec<[u8; 2]> = words.clone();
+read.extend(repair.iter().map(|word| [word[0], word[1]]));
+read[2] = [0, 0];
+read[10] = 0x7FF_u16.to_be_bytes();
+let views: Vec<&[u8]> = read.iter().map(|word| word.as_slice()).collect();
+let Plan::Changes(changes) = code.plan(&views, &[Mark { shard: 2, symbol: 0 }])? else {
+    return Err("the card is within 2e + s ≤ 4".into());
+};
+let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(|word| word.as_mut_slice()).collect();
+code.apply(&mut buffers, &changes)?;
+assert_eq!((read[2], read[10]), (0x220_u16.to_be_bytes(), 0x6A9_u16.to_be_bytes()));
+```
+
+The same twelve words get other repair words from `Code` (0x143, 0x384, 0x313, 0x6DE), which a card made by the cyclic code does not check.
 
 ## Fields
 
@@ -170,7 +210,7 @@ Data can be a secret. The crate wipes every buffer it filled with data when it l
 ## Limits
 
 - Shards of one set have one length, a whole number of symbols.
-- Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards; with `protect` the system maps whole pages for the largest part.
+- Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards, and `CyclicCode::correct` for at most 4 MiB of syndromes and a few elements per shard; with `protect` the system maps whole pages for the largest part. A plan of either code holds every change it lists.
 - Files are read and sets rebuilt in memory: the files and the data have to fit there. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
 - A rebuild compares the SHA-256 only when the files state one; files written without it rebuild with nothing compared, and with exactly `k` files no shard is compared either. Making one lost file again compares no digest.
 - The vote names the files that differ from what most shards share, within a stated bound: a wrong file takes two spare files in every block it is wrong in. It does not say that the files left hold the data once written; a digest the program trusts does.
