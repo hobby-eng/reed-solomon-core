@@ -394,20 +394,24 @@ Memory: one entry per file and one bit per block that is in a file. The data is 
 
 ## Self-test and tests
 
-Every expected value comes from outside the crate. The sources:
+Every expected value comes from outside the crate, and every one of them matches what the crate computes: a test fails on the first that does not. The sources:
 
-| Source                                      | What it gives                                                                          |
-| ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `reed-solomon-erasure` 6.0.0                | every shard in `Field::Gf256` and `Field::Gf65536`; its products in the field of pairs |
-| the parity 45 5E of Backblaze and klauspost | the shards of the data 01 02 03 04                                                     |
-| interpolation by hand                       | a set grown from three shards to seven                                                 |
-| values computed independently               | products, an inverse, shards and syndromes of `Field::Gf2048`; the votes of five piles |
-| the published check value of CRC-32C        | E3069283 for "123456789"                                                               |
-| a bit-by-bit CRC and a long division        | the checksums of the shard files the tests hold                                        |
-| FIPS 180-4 and Python's `hashlib`           | the SHA-256 of "abc", of no bytes and of the texts of the tests                        |
-| Lagrange interpolation in Python            | the words a card adds, for the plans of changes                                        |
+| Source                                      | What it gives                                                                                                                                        |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reed-solomon-erasure` 6.0.0                | every shard in `Field::Gf256` and `Field::Gf65536`; its products in the field of pairs                                                               |
+| the parity 45 5E of Backblaze and klauspost | the shards of the data 01 02 03 04                                                                                                                   |
+| interpolation by hand                       | a set grown from three shards to seven                                                                                                               |
+| values computed independently               | products, an inverse, shards and syndromes of `Field::Gf2048`; the votes of five piles                                                               |
+| the published check value of CRC-32C        | E3069283 for "123456789"                                                                                                                             |
+| a bit-by-bit CRC and a long division        | the checksums of the shard files the tests hold                                                                                                      |
+| FIPS 180-4 and Python's `hashlib`           | the SHA-256 of "abc", of no bytes and of the texts of the tests                                                                                      |
+| Lagrange interpolation in Python            | the words a card adds, for the plans of changes                                                                                                      |
+| tables of logarithms in Python              | for every degree from 2 to 16 and two further polynomials: a product, an inverse and two shards of a set; that each standard polynomial is primitive |
+| the shift-and-reduce product and its tables | every product and inverse of `Field::Gf256` and of `Field::Gf2048`, against the mask arithmetic                                                      |
 
 `self_test()` checks, against answers from outside the crate: the published parity 45 5E for the data 01 02 03 04; a set of three shards grown to seven, computed by hand; one shard of the field of pairs, equal to what `reed-solomon-erasure` writes; two words of the field of words computed apart; a changed shard being told from the right one; the published check value of CRC-32C; a shard file of 86 bytes whose three checksums were computed apart, read back whole and refused in the block where one bit was changed; the SHA-256 of "abc" given in FIPS 180-4. With the `alloc` feature it also corrects two byte words and one word of the field of words whose errors were placed by hand, gives up a word with three wrong symbols of seven for which no valid set lies within two symbols, and names, among five files of a set of three, the one that holds other bytes, in the number of steps computed apart; and refuses three files that agree on "abc" and state the SHA-256 of "abd", while the same files stating their own digest rebuild. It checks these known answers; it is not a proof that the build has no other fault.
+
+For the fields of a chosen degree, a reference written apart from the crate in Python, with tables of logarithms and Lagrange interpolation, gave for each of the fifteen standard polynomials and for 0x187 and 0x1002D a product, an inverse and two shards of a set; all seventeen fields match it in every value. The tests also scale shards in every degree against single products and write, rebuild, correct and plan a set in every degree.
 
 The tests in `tests/suite` compare every shard with `reed-solomon-erasure` 6.0.0 for all shapes up to 16 shards in its two fields, for large sets and for each of the 65,536 shard numbers. In all three fields they rebuild every shard from each choice of `k` out of up to 10, correct each placement of wrong symbols within the bound for up to 9 shards, check that one wrong symbol too many is never called clean, and compare the decoder with a search over every choice of `k` shards. The field of words has no second implementation to compare with; its products, an inverse, two shards and three sets of syndromes were computed independently and are pinned in the tests.
 
