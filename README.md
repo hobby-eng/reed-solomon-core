@@ -9,15 +9,23 @@ reed-solomon-core is a Rust library for recovering data when pieces of a backup 
 
 [Documentation index](docs/README.md)
 
-| Section                                                               | Description                                                                       |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [Recovery](#recovery)                                                 | Choose a threshold for missing shards and incorrect symbols.                      |
-| [Shard files](#shard-files)                                           | Recover a backup when different parts of its files are damaged.                   |
-| [Printed records and repair words](#printed-records-and-repair-words) | Add check words to a record that someone will copy by hand.                       |
-| [Secrets in memory](#secrets-in-memory)                               | Choose the memory protections for plaintext and see which platforms support them. |
-| [Verification](#verification)                                         | Find the measured coverage and the built-in self-test.                            |
-| [License](#license)                                                   | Check the license options and dependency notices.                                 |
-| [Security reviews](#security-reviews)                                 | Read the findings and follow-up checks.                                           |
+## Recover a missing shard
+
+Two data shards and one parity shard can go on three separate drives. Here the second drive is lost. Its contents can be rebuilt from the first data shard (index 0) and the parity shard (index 2).
+
+```rust
+use reed_solomon_core::{Code, CodeError, Field};
+
+fn main() -> Result<(), CodeError> {
+    let code = Code::new(Field::Gf256, 2)?;
+    let parity = code.encode(&[b"east", b"west"], &[2])?;
+
+    let surviving = [(0, &b"east"[..]), (2, parity[0].as_slice())];
+    let recovered = code.rebuild(&surviving, &[1])?;
+    assert_eq!(recovered[0].as_slice(), b"west");
+    Ok(())
+}
+```
 
 ## Recovery
 
@@ -57,4 +65,4 @@ MIT or Apache-2.0, at your option. [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Security reviews
 
-AI reviewers cross-checked the implementation and its fixes across five documented reviews. An independent human security audit is still outstanding. [Audit records](docs/audits/README.md).
+AI reviewers examined the decoder and the protected-memory API, then retested fixes against the reported failures. An independent human security audit is still outstanding. [Audit records](docs/audits/README.md).

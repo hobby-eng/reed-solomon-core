@@ -7,7 +7,7 @@
 | [How it works](TECHNICAL.md)                     | Field arithmetic, the two code constructions, correction bounds, file format, voting and memory use.         |
 | [Comparison with other libraries](COMPARISON.md) | Feature comparison with Rust erasure coders, error correctors and PAR2 implementations.                      |
 | [Test coverage](COVERAGE.md)                     | Measured line coverage and how to reproduce it.                                                              |
-| [Security policy](../SECURITY.md)                | Protected memory, untrusted shards, the caller’s responsibilities and how to report a problem.               |
+| [Security policy](../SECURITY.md)                | Protected memory, untrusted shards and the caller’s responsibilities.                                        |
 | [Audit reports](audits/README.md)                | Findings, reviewed revisions and follow-up checks.                                                           |
 | [Roadmap](ROADMAP.md)                            | Planned work.                                                                                                |
 | [Changelog](../CHANGELOG.md)                     | Changes by version.                                                                                          |

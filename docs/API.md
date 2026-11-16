@@ -45,16 +45,7 @@ commit=$(git rev-parse --verify "refs/tags/${tag}^{commit}") && \
 
 For a set with n distinct shard indexes, k is the minimum needed to recover from losses. With three output shards, k = 2 tolerates one missing shard and k = 3 requires all three. A duplicate copy of a shard can replace a damaged copy of the same index. It supplies no additional index.
 
-### Recover one missing shard from a 2-of-3 set
-
-```rust
-use reed_solomon_core::{Code, Field};
-
-let code = Code::new(Field::Gf256, 2)?;
-let shards = code.encode(&[b"ab", b"cd"], &[0, 1, 2])?;
-let recovered = code.rebuild(&[(0, &shards[0]), (2, &shards[2])], &[1])?;
-assert_eq!(recovered[0].as_slice(), b"cd");
-```
+The [2-of-3 example in the README](../README.md#recover-a-missing-shard) shows how to rebuild a missing data shard from one data shard and one parity shard.
 
 ### Recover, extend and correct a set
 
