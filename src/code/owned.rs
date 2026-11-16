@@ -1,37 +1,9 @@
 //! Whole shards in owned memory: the same operations for a caller who has the shards at hand.
 
-use super::{Code, CodeError};
+use super::{COMPARED, Code, CodeError, in_field, one_length};
 use crate::buffer::Buffer;
-use crate::field::Field;
 use alloc::vec;
 use alloc::vec::Vec;
-
-/// The one length of shards whose lengths are `lengths`, a whole number of symbols of `field`;
-/// [`CodeError::Length`] otherwise.
-pub(crate) fn one_length(
-    field: Field,
-    mut lengths: impl Iterator<Item = usize>,
-) -> Result<usize, CodeError> {
-    let length = lengths.next().unwrap_or(0);
-    let whole = length.is_multiple_of(field.symbol_bytes());
-    if !whole || lengths.any(|other| other != length) {
-        return Err(CodeError::Length);
-    }
-    Ok(length)
-}
-
-/// Whether every symbol of `shards` is an element of `field`, [`CodeError::Symbol`] if not. Every
-/// shard is looked at to its end, wherever the first wrong symbol lies.
-pub(crate) fn in_field<'a>(
-    field: Field,
-    shards: impl Iterator<Item = &'a [u8]>,
-) -> Result<(), CodeError> {
-    if shards.fold(true, |all, bytes| all & field.canonical(bytes)) {
-        Ok(())
-    } else {
-        Err(CodeError::Symbol)
-    }
-}
 
 /// What the shards beyond the threshold say about a set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -152,8 +124,10 @@ impl Code {
         }
         let mut weights = vec![0; self.threshold];
         let sources = self.sources(&chosen.indexes, &mut weights)?;
+        // One room for the expected bytes of every shard compared.
+        let mut room = Buffer::zeros(COMPARED).ok_or(CodeError::Memory)?;
         for &(index, bytes) in spare {
-            if !sources.agrees(index, &chosen.stripes, bytes)? {
+            if !sources.agrees_in(index, &chosen.stripes, bytes, &mut room)? {
                 return Ok(Redundancy::Differs);
             }
         }

@@ -1,7 +1,7 @@
 //! Wrong requests are refused before anything is written.
 
 use crate::support::{FIELDS, data, data_in, pick, set};
-use reed_solomon_core::{Code, CodeError, Field, Redundancy};
+use reed_solomon_core::{COMPARED, Code, CodeError, Field, Redundancy};
 
 #[test]
 fn thresholds_outside_the_field_are_refused() {
@@ -214,4 +214,52 @@ fn a_wrong_number_is_reported_before_a_wrong_symbol() {
     let uneven: [&[u8]; 2] = [&[0x08, 0x00], &[0x00, 0x00, 0x00, 0x00]];
     assert_eq!(sources.build(2, &uneven, &mut out), Err(CodeError::Length));
     assert_eq!(code.encode(&uneven, &[2]), Err(CodeError::Length));
+}
+
+/// `Sources::agrees_in` refuses as `agrees` does, with a room shorter than `COMPARED` after the
+/// counts and lengths, and answers as `agrees` in any room long enough.
+#[test]
+fn a_comparison_in_the_callers_room_answers_as_agrees() {
+    let code = Code::new(Field::Gf2048, 2).unwrap();
+    let mut weights = [0; 2];
+    let sources = code.sources(&[0, 1], &mut weights).unwrap();
+    let good: [&[u8]; 2] = [&[0x01, 0x23], &[0x04, 0x56]];
+    let mut made = [0; 2];
+    sources.build(2, &good, &mut made).unwrap();
+    let mut room = vec![0xEE; COMPARED + 44];
+    for length in [COMPARED, COMPARED + 44] {
+        let room = &mut room[..length];
+        assert_eq!(sources.agrees_in(2, &good, &made, room), Ok(true));
+        let other = [0x00, 0x01];
+        let answer = sources.agrees_in(2, &good, &other, room);
+        assert_eq!(
+            (answer, sources.agrees(2, &good, &other)),
+            (Ok(false), Ok(false))
+        );
+    }
+    let mut short = [0; COMPARED - 1];
+    assert_eq!(
+        sources.agrees_in(2, &good[..1], &made, &mut short),
+        Err(CodeError::Count)
+    );
+    assert_eq!(
+        sources.agrees_in(2, &good, &made[..1], &mut short),
+        Err(CodeError::Length)
+    );
+    assert_eq!(
+        sources.agrees_in(2048, &good, &made, &mut short),
+        Err(CodeError::Buffer)
+    );
+    assert_eq!(
+        sources.agrees_in(2, &good, &made, &mut []),
+        Err(CodeError::Buffer)
+    );
+    assert_eq!(
+        sources.agrees_in(2048, &good, &made, &mut room),
+        Err(CodeError::Index)
+    );
+    assert_eq!(
+        sources.agrees_in(2, &good, &[0x08, 0x00], &mut room),
+        Err(CodeError::Symbol)
+    );
 }

@@ -7,12 +7,11 @@ mod owned;
 
 use crate::field::Field;
 use core::fmt;
+#[cfg(not(feature = "protect"))]
 use zeroize::Zeroizing;
 
 #[cfg(feature = "alloc")]
 pub use owned::Redundancy;
-#[cfg(feature = "alloc")]
-pub(crate) use owned::{in_field, one_length};
 
 /// Why a request was refused. Nothing was written then; lent working memory may hold anything.
 /// Counts, indexes and lengths are reported before a symbol outside the field.
@@ -29,7 +28,7 @@ pub enum CodeError {
     Count,
     /// Shards of different lengths, or a length that is not a whole number of symbols.
     Length,
-    /// A working buffer shorter than the threshold.
+    /// A working buffer shorter than the threshold, or a room shorter than [`COMPARED`].
     Buffer,
     /// A symbol that is not an element of the field: in [`Field::Gf2048`], two bytes that hold
     /// 2,048 or more.
@@ -40,10 +39,12 @@ pub enum CodeError {
     /// A change that does not fit the shards: a place outside them, a symbol that no longer holds
     /// what the change says was there, or a new value that is not an element of the field.
     Changes,
-    /// The system gave no memory for a shard to return, for a search or for a list of changes.
+    /// The system gave no memory for a shard to return, for a search, for a list of changes or,
+    /// with the `protect` feature, for the bytes [`Sources::agrees`] compares.
     Memory,
-    /// The lengths, field or roots of a [`crate::CyclicCode`] make no code: no data or no parity,
-    /// a field in which x is no generator, or a word longer than the order of its roots.
+    /// The lengths, field or roots of a cyclic code ([`crate::CyclicWords`]) make no code: no data
+    /// or no parity, a field in which x is no generator, or a word longer than the order of its
+    /// roots.
     Shape,
 }
 
@@ -230,27 +231,73 @@ impl Sources<'_> {
         Ok(())
     }
 
-    /// Whether `shard` is what [`Sources::build`] would write for `target`, checked without a buffer for
-    /// the expected bytes. Fails as [`Sources::build`] does.
+    /// Whether `shard` is what [`Sources::build`] would write for `target`, made [`COMPARED`]
+    /// bytes at a time. Fails as [`Sources::build`] does, then, with the `protect` feature, with
+    /// [`CodeError::Memory`] when the system gives no page for those bytes;
+    /// [`Sources::agrees_in`] takes them from the caller instead.
     pub fn agrees(&self, target: u16, stripes: &[&[u8]], shard: &[u8]) -> Result<bool, CodeError> {
-        /// Bytes compared at a time: a whole number of symbols of either field.
-        const STEP: usize = 256;
+        let recipe = self.comparable(target, stripes, shard)?;
+        // The expected bytes follow from the data: with `protect` in pages of their own, without
+        // it on the stack; wiped when the call returns either way.
+        #[cfg(feature = "protect")]
+        let mut room = crate::buffer::Buffer::zeros(COMPARED).ok_or(CodeError::Memory)?;
+        #[cfg(not(feature = "protect"))]
+        let mut room = Zeroizing::new([0_u8; COMPARED]);
+        self.compare(&recipe, stripes, shard, room.as_mut_slice())
+    }
+
+    /// [`Sources::agrees`] with the expected bytes made in `room`, at least [`COMPARED`] bytes,
+    /// which a caller comparing many stretches keeps for all of them and wipes, since they follow
+    /// from the data. Fails as [`Sources::build`] does, and with [`CodeError::Buffer`] for a
+    /// shorter room after the counts and lengths.
+    pub fn agrees_in(
+        &self,
+        target: u16,
+        stripes: &[&[u8]],
+        shard: &[u8],
+        room: &mut [u8],
+    ) -> Result<bool, CodeError> {
+        self.geometry(stripes, shard.len())?;
+        let room = room.get_mut(..COMPARED).ok_or(CodeError::Buffer)?;
+        let recipe = self.comparable(target, stripes, shard)?;
+        self.compare(&recipe, stripes, shard, room)
+    }
+
+    /// What [`Sources::agrees`] refuses, before any memory is asked for: the recipe of `target`.
+    fn comparable(
+        &self,
+        target: u16,
+        stripes: &[&[u8]],
+        shard: &[u8],
+    ) -> Result<Recipe, CodeError> {
         self.geometry(stripes, shard.len())?;
         let recipe = self.recipe(target)?;
         self.symbols(stripes)?;
-        if !self.field.canonical(shard) {
-            return Err(CodeError::Symbol);
+        if self.field.canonical(shard) {
+            Ok(recipe)
+        } else {
+            Err(CodeError::Symbol)
         }
-        // The expected bytes follow from the data: wiped when the call returns.
-        let mut expected = Zeroizing::new([0_u8; STEP]);
+    }
+
+    /// Compares `shard` with what `recipe` makes, a stretch of `room`, at least [`COMPARED`]
+    /// bytes, at a time.
+    fn compare(
+        &self,
+        recipe: &Recipe,
+        stripes: &[&[u8]],
+        shard: &[u8],
+        room: &mut [u8],
+    ) -> Result<bool, CodeError> {
+        const STEP: usize = COMPARED;
         for (number, given) in shard.chunks(STEP).enumerate() {
             let range = number * STEP..number * STEP + given.len();
-            let expected = expected.get_mut(..given.len()).ok_or(CodeError::Length)?;
+            let expected = room.get_mut(..given.len()).ok_or(CodeError::Length)?;
             expected.fill(0);
             let sources = self.indexes.iter().zip(self.weights).zip(stripes);
             for (position, ((&index, &weight), stripe)) in sources.enumerate() {
                 let stripe = stripe.get(range.clone()).ok_or(CodeError::Length)?;
-                let coefficient = self.coefficient(&recipe, position, index, weight);
+                let coefficient = self.coefficient(recipe, position, index, weight);
                 self.field.add_scaled(expected, stripe, coefficient);
             }
             // Every byte of the stretch is looked at, whichever differs.
@@ -263,5 +310,36 @@ impl Sources<'_> {
             }
         }
         Ok(true)
+    }
+}
+
+/// Bytes [`Sources::agrees`] compares at a time, and the least room [`Sources::agrees_in`] takes:
+/// a whole number of symbols of every field.
+pub const COMPARED: usize = 256;
+
+/// The one length of shards whose lengths are `lengths`, a whole number of symbols of `field`;
+/// [`CodeError::Length`] otherwise.
+pub(crate) fn one_length(
+    field: Field,
+    mut lengths: impl Iterator<Item = usize>,
+) -> Result<usize, CodeError> {
+    let length = lengths.next().unwrap_or(0);
+    let whole = length.is_multiple_of(field.symbol_bytes());
+    if !whole || lengths.any(|other| other != length) {
+        return Err(CodeError::Length);
+    }
+    Ok(length)
+}
+
+/// Whether every symbol of `shards` is an element of `field`, [`CodeError::Symbol`] if not. Every
+/// shard is looked at to its end, wherever the first wrong symbol lies.
+pub(crate) fn in_field<'a>(
+    field: Field,
+    shards: impl Iterator<Item = &'a [u8]>,
+) -> Result<(), CodeError> {
+    if shards.fold(true, |all, bytes| all & field.canonical(bytes)) {
+        Ok(())
+    } else {
+        Err(CodeError::Symbol)
     }
 }

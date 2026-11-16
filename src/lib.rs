@@ -14,13 +14,14 @@ mod buffer;
 mod code;
 #[cfg(feature = "alloc")]
 mod correct;
-#[cfg(feature = "alloc")]
 mod cyclic;
 mod field;
 mod file;
+mod list;
+mod recurrence;
 mod self_test;
 
-pub use code::{Code, CodeError, Sources};
+pub use code::{COMPARED, Code, CodeError, Sources};
 pub use field::{Binary, Field, FieldError};
 pub use file::{
     Block, Condition, DataDigest, FileError, Frame, Header, Length, SetFacts, ShardFile, Survey,
@@ -36,6 +37,7 @@ pub use code::Redundancy;
 pub use correct::{Change, ChangeKind, Changes, ChangesIter, Correction, Mark, Plan};
 #[cfg(feature = "alloc")]
 pub use cyclic::CyclicCode;
+pub use cyclic::CyclicWords;
 #[cfg(feature = "alloc")]
 pub use file::{
     Coverage, DigestCheck, Dispute, FileSet, Member, Outvoted, Pile, Rebuilt, SetError, Stretch,

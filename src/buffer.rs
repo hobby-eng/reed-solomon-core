@@ -4,8 +4,11 @@
 
 #[cfg(not(feature = "protect"))]
 mod heap;
+mod numbers;
 #[cfg(feature = "protect")]
 mod pages;
+
+pub(crate) use numbers::Numbers;
 
 #[cfg(not(feature = "protect"))]
 use heap::Store;

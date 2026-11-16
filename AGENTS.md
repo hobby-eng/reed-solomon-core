@@ -16,6 +16,8 @@ Fast gates (CORE-43):
 - `cargo clippy --no-default-features --target thumbv7em-none-eabihf -- -D warnings`, and with
   `--features alloc`: a target without an operating system (`rustup target add` it first)
 - `cargo test`, and `cargo test --no-default-features --features alloc`
+- `cargo test --no-default-features --lib`: the unit tests and the self-test without an allocator
+- `cargo doc --no-deps`, and with `--no-default-features`, both with `RUSTDOCFLAGS="-D warnings"`
 - `cargo fmt --check --manifest-path fuzz/Cargo.toml` and `cargo clippy --manifest-path
   fuzz/Cargo.toml --all-targets -- -D warnings`: the fuzz targets
 
@@ -33,7 +35,9 @@ start from; and the proof that each field is one checks its largest fields, `car
 Layout: `src/buffer*` the memory every result and working buffer of data lies in, protected
 pages or the allocator's; `src/field*` the three fields and the word-wide scaling kernel;
 `src/code*` the code, its sources and the whole-shard helpers; `src/correct*` the decoder, the correction and the plan of
-changes for marked gaps; `src/file*` the shard file, its header, checksum and reading, and sets of
+changes for marked gaps; `src/cyclic*` the cyclic code in the caller's memory (`words.rs`) and in
+its own (`owned.rs`), with the search of one word (`decode.rs`); `src/recurrence.rs`
+Berlekamp–Massey for both codes; `src/file*` the shard file, its header, checksum and reading, and sets of
 files (`pile`, `set`, `writing`), with the vote that names the files that differ from the rest
 (`set/vote`); `tests/suite/` the tests against an independent implementation, over every choice
 of shards, of shard files written apart and damaged, and of sets put together from their files.

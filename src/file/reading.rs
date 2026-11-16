@@ -77,7 +77,7 @@ pub struct Survey {
 }
 
 impl Survey {
-    /// Whether the file is exactly what [`Header::file`] writes for its header and the bytes of
+    /// Whether the file is exactly what [`Header::file_into`] writes for its header and the bytes of
     /// its blocks: every piece intact and the length exact.
     #[must_use]
     pub fn whole(&self) -> bool {

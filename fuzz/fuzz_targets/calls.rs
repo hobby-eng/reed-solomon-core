@@ -1,7 +1,8 @@
 //! Every public call that takes numbers, lengths or bytes from its caller, given any of them: a
-//! field of any degree and polynomial, a code of any threshold with its sources, the facts of a
-//! set and the header of any shard, with a file written from them. Nothing panics, and a file
-//! that is written reads back as the header that wrote it.
+//! field of any degree and polynomial, a code of any threshold with its sources, the cyclic code in
+//! memory the caller gives, the facts of a set and the header of any shard, with a file written
+//! from them. Nothing panics, a refusal leaves the outputs as they were, a word put right is a word
+//! of the code, and a file that is written reads back as the header that wrote it.
 #![no_main]
 #![allow(
     clippy::unwrap_used,
@@ -11,7 +12,7 @@
 )]
 
 use libfuzzer_sys::fuzz_target;
-use reed_solomon_core::{Code, Field, Header, SetFacts, ShardFile};
+use reed_solomon_core::{COMPARED, Code, CyclicWords, Field, Header, SetFacts, ShardFile};
 
 fuzz_target!(|bytes: &[u8]| {
     let mut input = bytes.iter().copied();
@@ -42,7 +43,15 @@ fuzz_target!(|bytes: &[u8]| {
         if let Ok(sources) = code.sources(&numbers, &mut weights) {
             let mut out = vec![0; next() % 17];
             let _ = sources.build(target, &stripes, &mut out);
-            let _ = sources.agrees(target, &stripes, &out);
+            let agrees = sources.agrees(target, &stripes, &out);
+            // In a room of any length: a short one is refused, a long one answers as `agrees`.
+            let mut room = vec![0xEE; next() % 300];
+            let answer = sources.agrees_in(target, &stripes, &out, &mut room);
+            assert!(if room.len() < COMPARED {
+                answer.is_err()
+            } else {
+                answer == agrees
+            });
         }
         let shards: Vec<(u16, &[u8])> = numbers
             .iter()
@@ -53,6 +62,46 @@ fuzz_target!(|bytes: &[u8]| {
         let _ = code.redundancy(&shards);
         let _ = code.encode(&stripes, &[target]);
         let _ = code.correction_memory(next());
+    }
+
+    // The cyclic code over memory the caller gives, with any shape, lengths, places and bytes.
+    let mut generator = vec![0; next() % 12];
+    let (data, parity) = (next() % 10, next() % 10);
+    let (first, step) = ((next() << 8 | next()) as u32, (next() << 8 | next()) as u32);
+    if let Ok(words) = CyclicWords::new(field, data, parity, first, step, &mut generator) {
+        let shards: Vec<Vec<u8>> = (0..next() % 20).map(|_| list(&mut next, 16)).collect();
+        let shards: Vec<&[u8]> = shards.iter().map(Vec::as_slice).collect();
+        let mut outs: Vec<Vec<u8>> = (0..next() % 12).map(|_| vec![0xEE; next() % 17]).collect();
+        let mut buffers: Vec<&mut [u8]> = outs.iter_mut().map(Vec::as_mut_slice).collect();
+        let mut remainder = vec![0; next() % 12];
+        if words.encode(&shards, &mut buffers, &mut remainder).is_err() {
+            assert!(outs.iter().flatten().all(|&byte| byte == 0xEE));
+        }
+        let mut room = vec![0xEE; next() % 64];
+        if words.agrees(&shards, &mut room).is_ok() {
+            assert!(room.iter().all(|&byte| byte == 0));
+        }
+        let mut word: Vec<u16> = (0..next() % 20)
+            .map(|_| (next() << 8 | next()) as u16)
+            .collect();
+        let erased: Vec<usize> = (0..next() % 6).map(|_| next() % 24).collect();
+        let mut room = vec![0xEEEE; next() % (CyclicWords::room(9) + 2)];
+        let before = word.clone();
+        match words.correct_word(&mut word, &erased, &mut room) {
+            Ok(written) => {
+                assert!(room.iter().all(|&element| element == 0));
+                assert!(written.is_some() || word == before);
+                // What it leaves is a word of the code: shards of one symbol each agree.
+                let width = field.symbol_bytes();
+                let one = |&symbol: &u16| symbol.to_be_bytes()[2 - width..].to_vec();
+                let shards: Vec<Vec<u8>> = word.iter().map(one).collect();
+                let shards: Vec<&[u8]> = shards.iter().map(Vec::as_slice).collect();
+                let mut room = vec![0; parity * width];
+                let agrees = words.agrees(&shards, &mut room);
+                assert!(written.is_none() || agrees == Ok(true));
+            }
+            Err(_) => assert_eq!(word, before),
+        }
     }
 
     // The facts of a set with any numbers, and the file of any shard written from them.

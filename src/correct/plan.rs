@@ -4,7 +4,7 @@
 //! is fixed whenever `2e + s ≤ m − k`.
 
 use super::changes::Changes;
-use super::{Decoder, NoMemory, roomy, stripe_bytes};
+use super::{Decoder, Lists, NoMemory, roomy, stripe_bytes};
 use crate::code::{Code, CodeError};
 use crate::field::Field;
 use alloc::vec::Vec;
@@ -212,11 +212,11 @@ pub(crate) fn value(bytes: &[u8]) -> u16 {
 }
 
 impl Decoder {
-    /// Finds the wrong symbols of the column whose syndromes are in `self.column`, with the
-    /// symbols of the shards in `self.erased` marked, and leaves in `self.errors` first the wrong
+    /// Finds the wrong symbols of the column whose syndromes are in `lists.column`, with the
+    /// symbols of the shards in `self.erased` marked, and leaves in `lists.errors` first the wrong
     /// symbols found, then the marked ones, each with its error. False when the column cannot be
     /// put right.
-    fn locate_marked(&mut self) -> bool {
+    fn locate_marked(&mut self, lists: &mut Lists<'_>) -> bool {
         let field = self.field;
         let marked = self.erased.len();
         if marked > self.spare {
@@ -237,19 +237,19 @@ impl Decoder {
             self.erasure.push(below);
         }
         // The syndromes with the marked symbols taken out.
-        self.sequence.clear();
+        lists.sequence.clear();
         for j in 0..self.spare - marked {
-            let terms = self.erasure.iter().zip(self.column.iter().skip(j));
+            let terms = self.erasure.iter().zip(lists.column.iter().skip(j));
             let sum = terms.fold(0, |sum, (&g, &s)| sum ^ field.multiply(g, s));
-            self.sequence.push(sum);
+            lists.sequence.push(sum);
         }
-        let length = self.recurrence(true);
-        self.errors.clear();
+        let length = self.recurrence(lists, true);
+        lists.errors.clear();
         if 2 * length > self.spare - marked {
             return false;
         }
         // The roots of X^L · C(1/X) among the shards not marked, as in `locate`.
-        let connection = self.connection.get(..=length).unwrap_or_default();
+        let connection = lists.connection.get(..=length).unwrap_or_default();
         for (position, &point) in self.points.iter().enumerate() {
             if self.erased.contains(&position) {
                 continue;
@@ -258,15 +258,16 @@ impl Decoder {
                 .iter()
                 .fold(0, |value, &c| field.multiply(value, point) ^ c);
             if value == 0 {
-                self.errors.push((position, 0));
+                lists.errors.push(position, 0);
             }
         }
-        if self.errors.len() != length {
+        if lists.errors.len() != length {
             return false;
         }
-        self.errors
-            .extend(self.erased.iter().map(|&position| (position, 0)));
-        self.values(length)
+        for &position in &self.erased {
+            lists.errors.push(position, 0);
+        }
+        self.values(lists, length)
     }
 
     /// Goes through the shards stripe by stripe and finds, for every column that disagrees or has
@@ -283,6 +284,8 @@ impl Decoder {
         let stripe = stripe_bytes(self.field, self.spare);
         let mut syndromes = core::mem::take(&mut self.syndromes);
         let mut factors = core::mem::take(&mut self.factors);
+        let mut room = core::mem::take(&mut self.room);
+        let mut lists = Lists::cut(&mut room, self.spare, self.most);
         let mut marks = marks.iter().peekable();
         let mut unresolved = 0;
         let mut start = 0;
@@ -306,17 +309,18 @@ impl Decoder {
                     }
                 }
                 let marked = over || !self.erased.is_empty();
-                let disagrees = (differ || marked) && self.read_column(&syndromes, size, offset);
+                let disagrees =
+                    (differ || marked) && self.read_column(&mut lists, &syndromes, size, offset);
                 if !disagrees && !marked {
                     continue;
                 }
                 let found = if over {
                     None
                 } else if marked {
-                    self.locate_marked()
-                        .then(|| self.errors.len() - self.erased.len())
+                    self.locate_marked(&mut lists)
+                        .then(|| lists.errors.len() - self.erased.len())
                 } else {
-                    self.locate().then_some(self.errors.len())
+                    self.locate(&mut lists).then_some(lists.errors.len())
                 };
                 let Some(found) = found else {
                     unresolved += 1;
@@ -324,11 +328,11 @@ impl Decoder {
                 };
                 // The symbols found and the marked ones each come in the order of the shards:
                 // the two runs are merged, so that the whole list is in that order.
-                let (found, marked) = self.errors.split_at_checked(found).unwrap_or_default();
+                let (found, marked) = lists.errors.split(found);
                 let (mut found, mut marked) = (found.iter().peekable(), marked.iter().peekable());
                 loop {
                     let first = match (found.peek(), marked.peek()) {
-                        (Some(replaced), Some(filled)) => replaced.0 < filled.0,
+                        (Some(replaced), Some(filled)) => replaced[0] < filled[0],
                         (Some(_), None) => true,
                         (None, Some(_)) => false,
                         (None, None) => break,
@@ -337,9 +341,10 @@ impl Decoder {
                         true => (found.next(), ChangeKind::Replaced),
                         false => (marked.next(), ChangeKind::Filled),
                     };
-                    let Some(&(position, error)) = next else {
+                    let Some(&[position, error]) = next else {
                         break;
                     };
+                    let position = usize::from(position);
                     let begin = start + offset;
                     let bytes = shards
                         .get(position)
@@ -359,6 +364,7 @@ impl Decoder {
         }
         self.syndromes = syndromes;
         self.factors = factors;
+        self.room = room;
         Ok(unresolved)
     }
 }

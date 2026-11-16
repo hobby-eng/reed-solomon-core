@@ -8,6 +8,7 @@ use crate::buffer::Buffer;
 use crate::code::Code;
 use crate::correct::Finder;
 use alloc::vec::Vec;
+use zeroize::Zeroizing;
 
 /// A file that differs from the word its set establishes, in blocks that it holds with a
 /// checksum that holds.
@@ -222,7 +223,7 @@ struct Poll<'s, 'a> {
     voters: Vec<u16>,
     /// The positions, among the holders of the block at hand, of those that differ, in rising
     /// order.
-    wrong: Vec<usize>,
+    wrong: Zeroizing<Vec<usize>>,
     /// The holders a block of a shard in dispute is made from: their indexes, weights and bytes.
     lowest: Vec<u16>,
     weights: Vec<u16>,
@@ -231,7 +232,7 @@ struct Poll<'s, 'a> {
     made: Buffer,
     /// The files of shards in dispute that differ from it in the block at hand: the shard's
     /// place among the shards, and the file's number among its files.
-    differing: Vec<(usize, usize)>,
+    differing: Zeroizing<Vec<(usize, usize)>>,
     /// Per shard, where the marks of its files begin.
     firsts: Vec<usize>,
     /// Per file, in the order of the shards and of their files, the blocks it was outvoted in.
@@ -246,7 +247,7 @@ impl<'s, 'a> Poll<'s, 'a> {
     fn new(set: &'s FileSet<'a>) -> Result<Self, SetError> {
         let shards = &set.shards;
         let longest = u64::from(set.facts.block_len()).min(set.facts.shard_len());
-        let (mut voters, mut wrong) = (Vec::new(), Vec::new());
+        let (mut voters, mut wrong) = (Vec::new(), Zeroizing::new(Vec::new()));
         let (mut firsts, mut marks) = (Vec::new(), Vec::new());
         room(&mut voters, shards.len())?;
         room(&mut wrong, shards.len() / 2)?;
@@ -268,7 +269,7 @@ impl<'s, 'a> Poll<'s, 'a> {
             weights: Vec::new(),
             stripes: Vec::new(),
             made: Buffer::default(),
-            differing: Vec::new(),
+            differing: Zeroizing::new(Vec::new()),
             firsts,
             marks,
             open: Bits::default(),
@@ -312,7 +313,7 @@ impl<'s, 'a> Poll<'s, 'a> {
             core::mem::take(&mut self.wrong),
             core::mem::take(&mut self.differing),
         );
-        for &position in &wrong {
+        for &position in wrong.iter() {
             let index = holders.get(position).map(|&(index, _)| index);
             let found = index.and_then(|index| self.shard(index));
             if let Some((at, shard)) = found {
@@ -321,7 +322,7 @@ impl<'s, 'a> Poll<'s, 'a> {
                 }
             }
         }
-        for &(at, slot) in &differing {
+        for &(at, slot) in differing.iter() {
             self.mark(at, slot, number)?;
         }
         (self.wrong, self.differing) = (wrong, differing);

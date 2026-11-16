@@ -48,6 +48,14 @@ jobs:
         run: cargo test --locked
       - name: Run the tests, buffers in the allocator's memory
         run: cargo test --locked --no-default-features --features alloc
+      - name: Run the unit tests and the self-test without an allocator
+        run: cargo test --locked --no-default-features --lib
+      - name: Check the documentation with and without an allocator
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo doc --locked --no-deps
+          cargo doc --locked --no-deps --no-default-features
 
   # The tests on each other system the crate runs on natively: the protected pages are made by
   # other calls on each of them.

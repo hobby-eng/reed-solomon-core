@@ -77,6 +77,7 @@ A set is written from `k` data shards of equal length. The first `k` shards of t
 | Tell which files differ from the rest         | `FileSet::vote`, then `FileSet::without`                        | spare files beyond `k`             |
 | Add check symbols after data, as QR codes do  | `CyclicCode::encode`                                            | the data                           |
 | Put such words right, with marked gaps        | `CyclicCode::plan`, then `CyclicCode::apply`                    | every shard of the word            |
+| Do the same without an allocator              | `CyclicWords::encode`, `agrees`, `correct_word`                 | the caller's own buffers           |
 
 Correction finds wrong symbols without being told where they are. With `m` shards at hand it puts right up to `(m − k) / 2` wrong symbols at every position of the shards; shards that are missing are simply not given. In short, a set of `n` shards survives `e` wrong and `s` missing shards when `2e + s ≤ n − k`. Either every position is corrected or nothing is changed.
 
@@ -87,7 +88,7 @@ A reader often knows that one symbol is unreadable, such as a smudged word on a 
 The crate makes Reed–Solomon codes in two ways, and a program chooses one by its type; nothing is guessed from the symbols. Both put a word right while `2e + s ≤` the number of check symbols, take marks of unreadable symbols, and give a plan of every change before anything is written. Their check symbols differ, so a word made one way is checked only the same way.
 
 - **`Code`, by points.** Shard `i` is the value at point `i` of one polynomial, and the data shards are the values at the first `k` points. Any `k` shards rebuild every other one, a lost shard can be made again, and a set can be given more shards later, up to the size of the field, with the shards already handed out unchanged. Choose it to spread data over several carriers (files, photos, places) and rebuild it from whichever are left. Shard files use it.
-- **`CyclicCode`, by remainder.** The data stays as it is, and the check symbols after it are the remainder of the data divided by a generator polynomial, as QR codes, CDs and printed repair cards compute them. A word has a fixed length, at most the order of the code's roots. Choose it to add check symbols to data that stays where it is, and whenever a format fixes the code: a QR code is `CyclicCode::new(Field::Gf256, data, check, 0, 1)` with its numbers of data and check codewords, and the repair words of MHFE-REPAIR-1 are `CyclicCode::new(Field::Gf2048, words, repair, 1, 1)` with the numbers of a card's words and of its repair words.
+- **`CyclicCode`, by remainder.** The data stays as it is, and the check symbols after it are the remainder of the data divided by a generator polynomial, as QR codes, CDs and printed repair cards compute them. A word has a fixed length, at most the order of the code's roots. A shard lost whole is named by its place and written anew, at the cost of one check symbol, as a mark costs. `CyclicWords` is the same code over memory the caller gives, for a program without an allocator. Choose it to add check symbols to data that stays where it is, and whenever a format fixes the code: a QR code is `CyclicCode::new(Field::Gf256, data, check, 0, 1)` with its numbers of data and check codewords, and the repair words of MHFE-REPAIR-1 are `CyclicCode::new(Field::Gf2048, words, repair, 1, 1)` with the numbers of a card's words and of its repair words.
 
 ```rust
 use reed_solomon_core::{CyclicCode, Field, Mark, Plan};
@@ -109,7 +110,7 @@ read.extend(repair.iter().map(|word| [word[0], word[1]]));
 read[2] = [0, 0];
 read[10] = 0x7FF_u16.to_be_bytes();
 let views: Vec<&[u8]> = read.iter().map(|word| word.as_slice()).collect();
-let Plan::Changes(changes) = code.plan(&views, &[Mark { shard: 2, symbol: 0 }])? else {
+let Plan::Changes(changes) = code.plan(&views, &[], &[Mark { shard: 2, symbol: 0 }])? else {
     return Err("the card is within 2e + s ≤ 4".into());
 };
 let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(|word| word.as_mut_slice()).collect();
@@ -236,7 +237,7 @@ Data can be a secret. The crate wipes every buffer it filled with data when it l
 ## Limits
 
 - Shards of one set have one length, a whole number of symbols.
-- Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards, and `CyclicCode::correct` for at most 4 MiB of syndromes and a few elements per shard; with `protect` the system maps whole pages for the largest part. A plan of either code holds every change it lists.
+- Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards, and `CyclicCode::correct` for at most 4 MiB of syndromes and a few elements per shard, while `CyclicWords` works in the room the caller gives; with `protect` the system maps whole pages for the syndromes and for the room of a search's short lists. A plan of either code holds every change it lists.
 - A file is read through the bytes a program gives: one larger than memory is given as a mapping of it, which must not change from `Pile::new` until the last call on its set returns, and the calls that end in `_into` write into mappings as well. Where a system has no mappings, as in a browser, the files and the data have to fit in memory. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
 - A rebuild compares the SHA-256 only when the files state one; files written without it rebuild with nothing compared, and with exactly `k` files no shard is compared either. Making one lost file again compares no digest.
 - The vote names the files that differ from what most shards share, within a stated bound: a wrong file takes two spare files in every block it is wrong in. It does not say that the files left hold the data once written; a digest the program trusts does.
@@ -267,11 +268,11 @@ assert_eq!(code.correct(&mut given)?, Correction::Corrected(vec![0, 0, 1, 0, 0])
 assert_eq!(*set[2], *b"ijkl");
 ```
 
-The features: `protect`, on by default, keeps the crate's buffers in protected pages and brings the standard library; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system; without either the crate allocates nothing, and `Code::sources`, `Sources::build` and `Sources::agrees` work on buffers the caller provides.
+The features: `protect`, on by default, keeps the crate's buffers in protected pages and brings the standard library; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system; without either the crate allocates nothing, and `Code::sources`, `Sources::build`, `Sources::agrees_in`, `Header::file_into` and the calls of `CyclicWords` work on buffers the caller provides; `Sources::agrees` makes its own room, a buffer with `protect`.
 
 ## Self-test
 
-`self_test()` checks the build against answers from outside the crate: published parity bytes, shards computed by hand in each field, the bytes of an independent implementation, two words whose errors must be found, a card with marked gaps whose plan must put it right, a shard file whose checksums were computed apart, a vote among five files whose answer was computed apart, the published SHA-256 of "abc", and files that state a digest their data does not have. A program runs it at start and goes on only when `passed()` is true.
+`self_test()` checks the build against answers from outside the crate: published parity bytes, shards computed by hand in each field, the bytes of an independent implementation, two words whose errors must be found, a card with marked gaps whose plan must put it right, a word of the cyclic code put right in place, a shard file whose checksums were computed apart, a vote among five files whose answer was computed apart, the published SHA-256 of "abc", and files that state a digest their data does not have. A program runs it at start and goes on only when `passed()` is true.
 
 ## License
 

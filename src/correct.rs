@@ -4,13 +4,17 @@
 //! never branches on shard bytes or indexes a table by them; search buffers are wiped on drop.
 
 mod changes;
+mod errors;
 mod plan;
 
-use crate::buffer::Buffer;
+use crate::buffer::{Buffer, Numbers};
 use crate::code::{Code, CodeError};
 use crate::field::Field;
+use crate::list::List;
+use crate::recurrence::berlekamp_massey;
 use alloc::vec::Vec;
 use core::ops::Deref;
+use errors::Errors;
 use zeroize::Zeroize;
 
 pub use changes::{Changes, ChangesIter};
@@ -82,10 +86,10 @@ impl Code {
     }
 
     /// An upper bound, in bytes, of the memory [`Code::correct`] asks for with `shards` shards,
-    /// whatever their length: the syndromes of one stripe and a few elements per shard and per
-    /// spare shard. With the `protect` feature the system rounds the syndromes up to whole pages.
-    /// With exactly `threshold` shards only their indexes are held. Zero for a number of shards
-    /// `correct` refuses at once: fewer than the threshold, or more than the field has indexes.
+    /// whatever their length: the syndromes of a stripe and a few elements per shard and spare
+    /// shard; with `protect` its two buffers, the syndromes and the search's room, take whole
+    /// pages. With exactly `threshold` shards only their indexes are held. Zero for a count that
+    /// `correct` refuses at once: below the threshold, or above the indexes the field has.
     #[must_use]
     pub fn correction_memory(&self, shards: usize) -> usize {
         if shards < self.threshold() || shards > self.field().order() {
@@ -109,32 +113,86 @@ struct Decoder {
     weights: Vec<u16>,
     /// The number of syndromes: the shards beyond the threshold.
     spare: usize,
-    /// The connection polynomial of the recurrence and Berlekamp–Massey's two copies of it.
-    connection: Vec<u16>,
-    previous: Vec<u16>,
-    saved: Vec<u16>,
-    /// The syndromes of the column at hand.
-    column: Vec<u16>,
-    /// The wrong symbols of the column at hand: the shard's position and the error to remove.
-    /// Symbols found by the search come first, marked ones after them. There is room for half
-    /// the spare shards for a search alone, for all of them when symbols may be marked.
-    errors: Vec<(usize, u16)>,
+    /// The most wrong symbols a column holds: half the spare shards for a search alone, all of
+    /// them when symbols may be marked.
+    most: usize,
+    /// The room of the short lists of a search, one buffer that [`Lists::cut`] cuts each pass.
+    room: Numbers,
     /// With marks only: the positions of the shards whose symbol is marked in the column at
-    /// hand, `G(X) = Π (X − x)` over their points, lowest coefficient first, and the syndromes
-    /// with the marked symbols taken out, `T_j = Σ_i g_i · S_(j+i)`.
+    /// hand, and `G(X) = Π (X − x)` over their points, lowest coefficient first.
     erased: Vec<usize>,
     erasure: Vec<u16>,
-    sequence: Vec<u16>,
-    /// Π (z − X_e) over the wrong symbols' points, lowest coefficient first, and the running
-    /// powers X_e^j: the working memory of `values`.
-    product: Vec<u16>,
-    powers: Vec<u16>,
     /// The syndromes of the stripe at hand, one after another, and per shard the running factor
     /// `u_i · x_i^j` of the syndrome being summed.
     syndromes: Buffer,
     factors: Vec<u16>,
     /// Wrong symbols found per shard, in the order the shards were given.
     changed: Vec<usize>,
+}
+
+/// The short lists of one search, cut from a decoder's room: they follow from the data, and for a
+/// marked symbol the error is its value, so they lie in the room's protected pages.
+struct Lists<'w> {
+    /// The connection polynomial of the recurrence and Berlekamp–Massey's two copies of it.
+    connection: List<'w>,
+    previous: List<'w>,
+    saved: List<'w>,
+    /// The syndromes of the column at hand.
+    column: List<'w>,
+    /// The wrong symbols of the column at hand: the shard's position and the error to remove.
+    /// Symbols found by the search come first, marked ones after them.
+    errors: Errors<'w>,
+    /// With marks only: the syndromes with the marked symbols taken out, `T_j = Σ g_i · S_(j+i)`.
+    sequence: List<'w>,
+    /// Π (z − X_e) over the wrong symbols' points, lowest coefficient first, and the running
+    /// powers X_e^j: the working memory of `values`.
+    product: List<'w>,
+    powers: List<'w>,
+    /// For a [`Finder`]: Π (1 − X·z) over the points of the shards found, lowest coefficient first.
+    fit: List<'w>,
+}
+
+impl<'w> Lists<'w> {
+    /// Numbers of room for `spare` syndromes and `most` wrong symbols a column; with more than
+    /// half the spare shards, symbols may be marked, and the sequence takes `spare` more.
+    const fn room(spare: usize, most: usize) -> usize {
+        let sequence = if most > Decoder::most_errors(spare) {
+            spare
+        } else {
+            0
+        };
+        3 * (spare + 1) + spare + 2 * most + sequence + (most + 1) + most + (most + 1)
+    }
+
+    /// The lists cut from `room`, which holds [`Lists::room`] numbers: the recurrences and the
+    /// column at their full length, the others empty.
+    fn cut(room: &'w mut [u16], spare: usize, most: usize) -> Self {
+        let sequence = if most > Decoder::most_errors(spare) {
+            spare
+        } else {
+            0
+        };
+        let mut rest = room;
+        let mut next = |room: usize, len: usize| {
+            let parts = core::mem::take(&mut rest).split_at_mut_checked(room);
+            let (slots, after) = parts.unwrap_or_default();
+            rest = after;
+            let mut list = List::new(slots);
+            list.resize(len, 0);
+            list
+        };
+        Self {
+            connection: next(spare + 1, spare + 1),
+            previous: next(spare + 1, spare + 1),
+            saved: next(spare + 1, spare + 1),
+            column: next(spare, spare),
+            errors: Errors::new(next(2 * most, 0)),
+            sequence: next(sequence, 0),
+            product: next(most + 1, 0),
+            powers: next(most, 0),
+            fit: next(most + 1, 0),
+        }
+    }
 }
 
 impl Decoder {
@@ -173,16 +231,10 @@ impl Decoder {
             points,
             weights,
             spare,
-            connection: zeros(spare + 1)?,
-            previous: zeros(spare + 1)?,
-            saved: zeros(spare + 1)?,
-            column: zeros(spare)?,
-            errors: roomy(most)?,
+            most,
+            room: Numbers::zeros(Lists::room(spare, most)).ok_or(NoMemory)?,
             erased: roomy(if marked { spare } else { 0 })?,
             erasure: roomy(if marked { spare + 1 } else { 0 })?,
-            sequence: roomy(if marked { spare } else { 0 })?,
-            product: roomy(most + 1)?,
-            powers: roomy(most)?,
             syndromes: Buffer::zeros(spare * stripe_bytes(field, spare).min(length))
                 .ok_or(NoMemory)?,
             factors: zeros(shards)?,
@@ -198,16 +250,11 @@ impl Decoder {
     /// An upper bound of the bytes this decoder allocates for `shards` shards, of which `spare`
     /// (at least one) are beyond the threshold; its two passes allocate nothing more.
     const fn memory(field: Field, shards: usize, spare: usize) -> usize {
-        let element = size_of::<u16>();
         // Points, weights and the factors of a stripe; the count of changes.
-        let per_shard = 3 * element + size_of::<usize>();
-        // The recurrence and its two copies, and the column's syndromes.
-        let per_spare = 3 * (spare + 1) * element + spare * element;
-        let per_error = size_of::<(usize, u16)>() + 2 * element;
-        shards * per_shard
-            + per_spare
-            + (Self::most_errors(spare) + 1) * per_error
-            + spare * stripe_bytes(field, spare)
+        let per_shard = 3 * size_of::<u16>() + size_of::<usize>();
+        // The short lists of a search, all in one room.
+        let lists = Numbers::bytes(Lists::room(spare, Self::most_errors(spare)));
+        shards * per_shard + lists + spare * stripe_bytes(field, spare)
     }
 
     /// Goes through the shards stripe by stripe and finds the wrong symbols of every column:
@@ -220,20 +267,22 @@ impl Decoder {
         // the rest of it while they are read; they come back for the next pass.
         let mut syndromes = core::mem::take(&mut self.syndromes);
         let mut factors = core::mem::take(&mut self.factors);
+        let mut room = core::mem::take(&mut self.room);
+        let mut lists = Lists::cut(&mut room, self.spare, self.most);
         let mut unresolved = 0;
         let mut start = 0;
         while start < length {
             let size = stripe.min(length - start);
             if self.fill_syndromes(shards, start, size, &mut factors, &mut syndromes) {
                 for offset in (0..size).step_by(symbol) {
-                    if !self.read_column(&syndromes, size, offset) {
+                    if !self.read_column(&mut lists, &syndromes, size, offset) {
                         continue;
                     }
-                    if !self.locate() {
+                    if !self.locate(&mut lists) {
                         unresolved += 1;
                         continue;
                     }
-                    for &(position, error) in &self.errors {
+                    for (position, error) in lists.errors.iter() {
                         if apply {
                             remove(shards, position, start + offset, symbol, error);
                         } else if let Some(count) = self.changed.get_mut(position) {
@@ -246,6 +295,7 @@ impl Decoder {
         }
         self.syndromes = syndromes;
         self.factors = factors;
+        self.room = room;
         unresolved
     }
 
@@ -280,10 +330,16 @@ impl Decoder {
 
     /// Reads the syndromes of the column at byte `offset` of a stripe of `size` bytes; false when
     /// all are zero, which is a column whose symbols agree.
-    fn read_column(&mut self, syndromes: &[u8], size: usize, offset: usize) -> bool {
+    fn read_column(
+        &self,
+        lists: &mut Lists<'_>,
+        syndromes: &[u8],
+        size: usize,
+        offset: usize,
+    ) -> bool {
         let symbol = self.field.symbol_bytes();
         let mut any = false;
-        for (value, syndrome) in self.column.iter_mut().zip(syndromes.chunks(size)) {
+        for (value, syndrome) in lists.column.iter_mut().zip(syndromes.chunks(size)) {
             let bytes = syndrome.get(offset..offset + symbol).unwrap_or_default();
             *value = bytes
                 .iter()
@@ -293,69 +349,73 @@ impl Decoder {
         any
     }
 
-    /// Finds the wrong symbols of the column whose syndromes are in `self.column` and leaves
-    /// them in `self.errors`; false when they cannot be found.
-    fn locate(&mut self) -> bool {
-        let length = self.recurrence(false);
-        self.errors.clear();
+    /// Finds the wrong symbols of the column whose syndromes are in `lists.column` and leaves
+    /// them in `lists.errors`; false when they cannot be found.
+    fn locate(&self, lists: &mut Lists<'_>) -> bool {
+        let length = self.recurrence(lists, false);
+        lists.errors.clear();
         if 2 * length > self.spare {
             return false;
         }
         // The characteristic polynomial X^L · C(1/X) = c_0·X^L + c_1·X^(L-1) + … + c_L has the
         // points of the wrong symbols as its roots; a zero c_L is the root 0, the point of shard 0.
         let field = self.field;
-        let connection = self.connection.get(..=length).unwrap_or_default();
+        let connection = lists.connection.get(..=length).unwrap_or_default();
         for (position, &point) in self.points.iter().enumerate() {
             let value = connection
                 .iter()
                 .fold(0, |value, &c| field.multiply(value, point) ^ c);
             if value == 0 {
-                self.errors.push((position, 0));
+                lists.errors.push(position, 0);
             }
         }
         // Exactly L different roots among the shards present, or the recurrence is not that of
         // L wrong symbols.
-        self.errors.len() == length && self.values(length)
+        lists.errors.len() == length && self.values(lists, length)
     }
 
     /// The shortest recurrence that the syndromes obey, or with `marked` the syndromes with the
-    /// marked symbols taken out: left in `self.connection`, its length returned.
-    fn recurrence(&mut self, marked: bool) -> usize {
-        let sequence: &[u16] = if marked { &self.sequence } else { &self.column };
+    /// marked symbols taken out: left in `lists.connection`, its length returned.
+    fn recurrence(&self, lists: &mut Lists<'_>, marked: bool) -> usize {
+        let sequence: &[u16] = if marked {
+            &lists.sequence
+        } else {
+            &lists.column
+        };
         berlekamp_massey(
             self.field,
             sequence,
-            &mut self.connection,
-            &mut self.previous,
-            &mut self.saved,
+            &mut lists.connection,
+            &mut lists.previous,
+            &mut lists.saved,
         )
     }
 
     /// The error value of each wrong symbol, from the first syndromes, then a check of every syndrome
     /// against it; false when they don't fit. Each value takes one synthetic division, so memory grows
     /// with the number of errors and no matrix is built. Marked symbols may turn out to be right.
-    fn values(&mut self, found: usize) -> bool {
+    fn values(&self, lists: &mut Lists<'_>, found: usize) -> bool {
         let field = self.field;
-        let count = self.errors.len();
-        self.product.clear();
-        self.product.push(1);
-        for &(position, _) in &self.errors {
+        let count = lists.errors.len();
+        lists.product.clear();
+        lists.product.push(1);
+        for (position, _) in lists.errors.iter() {
             let point = self.points.get(position).copied().unwrap_or(0);
             // Times (z − X): each coefficient becomes the one below it plus X times itself.
             let mut below = 0;
-            for coefficient in &mut self.product {
+            for coefficient in &mut lists.product {
                 let old = *coefficient;
                 *coefficient = below ^ field.multiply(point, old);
                 below = old;
             }
-            self.product.push(below);
+            lists.product.push(below);
         }
-        for (position, value) in &mut self.errors {
-            let point = self.points.get(*position).copied().unwrap_or(0);
+        for (position, value) in lists.errors.iter_mut() {
+            let point = self.points.get(position).copied().unwrap_or(0);
             // q_e from its highest coefficient down, with Σ S_j · q_{e,j} and q_e(X_e) on the way.
             let (mut quotient, mut sum, mut at_point) = (0, 0, 0);
-            let syndromes = self.column.iter().take(count).rev();
-            for (&coefficient, &syndrome) in self.product.iter().skip(1).rev().zip(syndromes) {
+            let syndromes = lists.column.iter().take(count).rev();
+            for (&coefficient, &syndrome) in lists.product.iter().skip(1).rev().zip(syndromes) {
                 quotient = coefficient ^ field.multiply(point, quotient);
                 sum ^= field.multiply(syndrome, quotient);
                 at_point = field.multiply(at_point, point) ^ quotient;
@@ -364,11 +424,11 @@ impl Decoder {
             *value = field.multiply(sum, field.inverse(at_point).unwrap_or(0));
         }
         // Every syndrome, the first ones included, must be the power sum of the solution.
-        self.powers.clear();
-        self.powers.resize(count, 1);
-        for &syndrome in &self.column {
+        lists.powers.clear();
+        lists.powers.resize(count, 1);
+        for &syndrome in &lists.column {
             let mut sum = 0;
-            for (power, &(position, value)) in self.powers.iter_mut().zip(&self.errors) {
+            for (power, (position, value)) in lists.powers.iter_mut().zip(lists.errors.iter()) {
                 sum ^= field.multiply(*power, value);
                 let point = self.points.get(position).copied().unwrap_or(0);
                 *power = field.multiply(*power, point);
@@ -377,8 +437,8 @@ impl Decoder {
                 return false;
             }
         }
-        for (at, (position, value)) in self.errors.iter_mut().enumerate() {
-            let weight = self.weights.get(*position).copied().unwrap_or(0);
+        for (at, (position, value)) in lists.errors.iter_mut().enumerate() {
+            let weight = self.weights.get(position).copied().unwrap_or(0);
             *value = field.multiply(*value, field.inverse(weight).unwrap_or(0));
             if *value == 0 && at < found {
                 return false;
@@ -389,18 +449,9 @@ impl Decoder {
 }
 
 impl Drop for Decoder {
-    /// The syndromes, the recurrences and the errors follow from the data, and for a marked
-    /// symbol the error is its value: all of them are wiped, the stripe's syndromes by their
-    /// buffer. The points, the weights and the factors follow from the shard numbers alone.
+    /// The short lists of a search lie in the room and the stripe's syndromes in their buffer,
+    /// which wipe themselves; the counts of changes follow from the data and are wiped here.
     fn drop(&mut self) {
-        self.column.zeroize();
-        self.connection.zeroize();
-        self.previous.zeroize();
-        self.saved.zeroize();
-        self.errors.zeroize();
-        self.sequence.zeroize();
-        self.product.zeroize();
-        self.powers.zeroize();
         self.changed.zeroize();
     }
 }
@@ -424,9 +475,13 @@ pub(crate) struct Finder {
     decoder: Decoder,
     /// The positions of the shards found to differ in the block at hand.
     found: Vec<usize>,
-    /// Π (1 − X·z) over their points, lowest coefficient first: the recurrence that the
-    /// syndromes of a column obey when its wrong symbols are all theirs.
-    fit: Vec<u16>,
+}
+
+impl Drop for Finder {
+    /// Which shards differ follows from the data.
+    fn drop(&mut self) {
+        self.found.zeroize();
+    }
 }
 
 impl Finder {
@@ -444,7 +499,6 @@ impl Finder {
         Ok(Self {
             decoder: Decoder::new(field, own, spare, length)?,
             found: roomy(most)?,
-            fit: roomy(most + 1)?,
         })
     }
 
@@ -472,9 +526,10 @@ impl Finder {
         let length = shards.first().map_or(0, |(_, bytes)| bytes.len());
         let mut syndromes = core::mem::take(&mut self.decoder.syndromes);
         let mut factors = core::mem::take(&mut self.decoder.factors);
+        let mut room = core::mem::take(&mut self.decoder.room);
+        let mut lists = Lists::cut(&mut room, self.decoder.spare, self.decoder.most);
         self.found.clear();
-        self.fit.clear();
-        self.fit.push(1);
+        lists.fit.push(1);
         let mut look = Look {
             settled: true,
             columns: 0,
@@ -488,7 +543,10 @@ impl Finder {
                     .fill_syndromes(shards, start, size, &mut factors, &mut syndromes);
             if differ {
                 for offset in (0..size).step_by(symbol) {
-                    if !self.decoder.read_column(&syndromes, size, offset) {
+                    if !self
+                        .decoder
+                        .read_column(&mut lists, &syndromes, size, offset)
+                    {
                         continue;
                     }
                     // One spare shard shows that the shards differ and cannot say which.
@@ -497,11 +555,11 @@ impl Finder {
                         break 'block;
                     }
                     look.columns += 1;
-                    if self.fits() {
+                    if self.fits(&lists) {
                         continue;
                     }
                     look.searches += 1;
-                    if !self.decoder.locate() || !self.admit() {
+                    if !self.decoder.locate(&mut lists) || !self.admit(&mut lists) {
                         look.settled = false;
                         break 'block;
                     }
@@ -511,28 +569,29 @@ impl Finder {
         }
         self.decoder.syndromes = syndromes;
         self.decoder.factors = factors;
+        self.decoder.room = room;
         look
     }
 
     /// Whether the syndromes of the column at hand obey the recurrence of the shards found so
     /// far, `Σ c_i · s_{n−i} = 0` from the first syndrome it reaches to the last: then they are
     /// the power sums of wrong symbols of those shards alone.
-    fn fits(&self) -> bool {
+    fn fits(&self, lists: &Lists<'_>) -> bool {
         let field = self.decoder.field;
-        let column = &self.decoder.column;
+        let column = &lists.column;
         (self.found.len()..column.len()).all(|n| {
             let earlier = column.iter().take(n + 1).rev();
-            let sum = self.fit.iter().zip(earlier);
+            let sum = lists.fit.iter().zip(earlier);
             sum.fold(0, |sum, (&c, &s)| sum ^ field.multiply(c, s)) == 0
         })
     }
 
     /// Takes the shards of the wrong symbols just found into the shards found; false when that
     /// makes more of them than the spare shards can outvote.
-    fn admit(&mut self) -> bool {
+    fn admit(&mut self, lists: &mut Lists<'_>) -> bool {
         let field = self.decoder.field;
         let most = Decoder::most_errors(self.decoder.spare);
-        for &(position, _) in &self.decoder.errors {
+        for (position, _) in lists.errors.iter() {
             if self.found.contains(&position) {
                 continue;
             }
@@ -542,9 +601,9 @@ impl Finder {
             self.found.push(position);
             let point = self.decoder.points.get(position).copied().unwrap_or(0);
             // Times (1 − X·z): each coefficient takes X times the one below it.
-            self.fit.push(0);
+            lists.fit.push(0);
             let mut below = 0;
-            for coefficient in &mut self.fit {
+            for coefficient in &mut lists.fit {
                 let old = *coefficient;
                 *coefficient = old ^ field.multiply(point, below);
                 below = old;
@@ -595,51 +654,6 @@ pub(crate) const fn stripe_bytes(field: Field, spare: usize) -> usize {
     (if symbols == 0 { 1 } else { symbols }) * symbol
 }
 
-/// Berlekamp–Massey: the shortest recurrence `Σ_{i=0..=L} c_i · s_{n−i} = 0` (c_0 = 1) that
-/// `sequence` obeys. Leaves its polynomial in `connection` and returns `L`. `previous` and `saved`
-/// are working room as long as `connection`, which is longer than `sequence`.
-pub(crate) fn berlekamp_massey(
-    field: Field,
-    sequence: &[u16],
-    connection: &mut [u16],
-    previous: &mut [u16],
-    saved: &mut [u16],
-) -> usize {
-    connection.fill(0);
-    previous.fill(0);
-    if let (Some(c), Some(b)) = (connection.first_mut(), previous.first_mut()) {
-        (*c, *b) = (1, 1);
-    }
-    let (mut length, mut shift, mut last) = (0, 1, 1);
-    for (n, &syndrome) in sequence.iter().enumerate() {
-        // The difference between the syndrome and what the recurrence so far predicts.
-        let taps = connection.iter().skip(1).take(length);
-        let earlier = sequence.iter().take(n).rev();
-        let discrepancy = taps
-            .zip(earlier)
-            .fold(syndrome, |sum, (&c, &s)| sum ^ field.multiply(c, s));
-        if discrepancy == 0 {
-            shift += 1;
-            continue;
-        }
-        let scale = field.multiply(discrepancy, field.inverse(last).unwrap_or(0));
-        let grows = 2 * length <= n;
-        if grows {
-            saved.copy_from_slice(connection);
-        }
-        for (c, &b) in connection.iter_mut().skip(shift).zip(previous.iter()) {
-            *c ^= field.multiply(scale, b);
-        }
-        if grows {
-            previous.copy_from_slice(saved);
-            (length, last, shift) = (n + 1 - length, discrepancy, 1);
-        } else {
-            shift += 1;
-        }
-    }
-    length
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -672,20 +686,13 @@ mod tests {
         );
     }
 
-    /// Every byte a decoder holds, counted by the capacities of its buffers. The two passes of
-    /// `Code::correct` allocate nothing besides.
+    /// Every byte a decoder holds, counted by the capacities and rooms of its buffers. The two
+    /// passes of `Code::correct` allocate nothing besides.
     fn held(decoder: &Decoder) -> usize {
-        let elements = decoder.points.capacity()
-            + decoder.weights.capacity()
-            + decoder.connection.capacity()
-            + decoder.previous.capacity()
-            + decoder.saved.capacity()
-            + decoder.column.capacity()
-            + decoder.product.capacity()
-            + decoder.powers.capacity()
-            + decoder.factors.capacity();
+        let elements =
+            decoder.points.capacity() + decoder.weights.capacity() + decoder.factors.capacity();
         elements * size_of::<u16>()
-            + decoder.errors.capacity() * size_of::<(usize, u16)>()
+            + Numbers::bytes(decoder.room.len())
             + decoder.syndromes.len()
             + decoder.changed.capacity() * size_of::<usize>()
     }

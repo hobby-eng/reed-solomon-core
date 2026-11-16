@@ -6,6 +6,7 @@ use super::facts::{SetFacts, sha256};
 use super::header::Header;
 use super::set::{BySlot, Files, Output, Sizes, fill};
 use crate::buffer::Buffer;
+use crate::code::COMPARED;
 use alloc::vec::Vec;
 
 /// Room for `more` further items in `list`, or the refusal of the memory.
@@ -141,8 +142,10 @@ impl SetFacts {
             .transpose()
             .map_err(|_| FileError::Index)?;
         let mut scratch = Buffer::zeros(sizes.block.min(sizes.shard)).ok_or(FileError::Memory)?;
+        let mut compare = Buffer::zeros(COMPARED).ok_or(FileError::Memory)?;
         let mut out = Output {
             scratch: &mut scratch,
+            compare: &mut compare,
             sink: &mut sink,
         };
         for number in 0..self.blocks() {

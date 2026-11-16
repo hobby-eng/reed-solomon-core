@@ -12,7 +12,7 @@ publish = false
 default = ["protect"]
 # Owned results: whole-shard helpers, error correction and the writing of shard files. Without it
 # the crate allocates nothing and works on the caller's buffers.
-alloc = ["zeroize/alloc"]
+alloc = ["zeroize/alloc", "dep:bytemuck"]
 # The owned results and the working buffers of bytes that follow from data lie in pages of their
 # own, between guard pages, which the system is asked to lock and to keep out of core dumps and
 # child processes. Without it they lie in the allocator's memory, and are wiped all the same.
@@ -29,6 +29,9 @@ zeroize = { version = "=1.9.1", default-features = false }
 # Pages for data that may be a secret, and the isolation of the process that holds it. Not on
 # crates.io yet: pinned to a commit of its repository.
 secret-protection-core = { version = "=0.1.0", git = "https://github.com/hobby-eng/secret-protection-core", rev = "fb2a6d345caf8eb58097f013f12e43985402150f", optional = true }
+# The bytes of a buffer seen as the numbers of two bytes the decoders keep, so that their lists lie
+# in the same pages as the data, without unsafe code of this crate's own.
+bytemuck = { version = "=1.25.2", optional = true }
 
 [dev-dependencies]
 # An independent Reed–Solomon implementation: the expected bytes of the oracle tests, in both fields.

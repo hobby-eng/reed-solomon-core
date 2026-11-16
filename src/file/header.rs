@@ -196,7 +196,7 @@ impl Header {
     }
 
     /// The shard file for `shard` written into `out`, exactly [`SetFacts::file_len`] bytes long,
-    /// as [`Header::file`] makes it, without an allocator: `out` can be a mapping of a file.
+    /// as `Header::file` makes it, without an allocator: `out` can be a mapping of a file.
     /// Fails with [`FileError::Output`] for an output of another length, then with
     /// [`FileError::Shard`] for a shard of another length; `out` is then as it was.
     pub fn file_into(&self, shard: &[u8], out: &mut [u8]) -> Result<(), FileError> {

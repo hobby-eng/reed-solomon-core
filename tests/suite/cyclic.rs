@@ -9,7 +9,7 @@ use reed_solomon_core::{ChangeKind, CodeError, Correction, CyclicCode, Field, Ma
 
 /// The containers of MHFE-REPAIR-1, as numbers of the BIP39 English list, and their repair
 /// words for k = 2, 4, 6 and 8.
-const MHFE: [(&[u16], [&[u16]; 4]); 4] = [
+pub(crate) const MHFE: [(&[u16], [&[u16]; 4]); 4] = [
     // zero-12
     (
         &[
@@ -62,10 +62,8 @@ const MHFE: [(&[u16], [&[u16]; 4]); 4] = [
         ],
     ),
 ];
-/// The repairs of MHFE-REPAIR-1: the case, k, the word as damaged, the unreadable positions (from
-/// 0), the replaced positions, the filled ones.
-/// The case, k, the damaged word, its unreadable, replaced and filled places.
-type Repair = (
+/// The case, k, the damaged word, its unreadable, replaced and filled places, from 0.
+pub(crate) type Repair = (
     usize,
     usize,
     &'static [u16],
@@ -73,7 +71,8 @@ type Repair = (
     &'static [usize],
     &'static [usize],
 );
-const MHFE_REPAIRS: [Repair; 3] = [
+/// The repairs of MHFE-REPAIR-1.
+pub(crate) const MHFE_REPAIRS: [Repair; 3] = [
     // two-erasures
     (
         0,
@@ -116,7 +115,7 @@ const MHFE_REPAIRS: [Repair; 3] = [
 ];
 
 /// Each word as a shard of one symbol, high byte first in a field of two bytes.
-fn shards(field: Field, words: &[u16]) -> Vec<Vec<u8>> {
+pub(crate) fn shards(field: Field, words: &[u16]) -> Vec<Vec<u8>> {
     let width = field.symbol_bytes();
     words
         .iter()
@@ -124,12 +123,12 @@ fn shards(field: Field, words: &[u16]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn views(shards: &[Vec<u8>]) -> Vec<&[u8]> {
+pub(crate) fn views(shards: &[Vec<u8>]) -> Vec<&[u8]> {
     shards.iter().map(Vec::as_slice).collect()
 }
 
 /// The words of `code` for these data words: the data, then its parity.
-fn word(code: &CyclicCode, data: &[u16]) -> Vec<u16> {
+pub(crate) fn word(code: &CyclicCode, data: &[u16]) -> Vec<u16> {
     let given = shards(code.field(), data);
     let parity = code.encode(&views(&given)).unwrap();
     let width = code.field().symbol_bytes();
@@ -153,7 +152,7 @@ fn planned(code: &CyclicCode, read: &[u16], marks: &[usize]) -> Option<(Vec<u16>
         .iter()
         .map(|&shard| Mark { shard, symbol: 0 })
         .collect();
-    let Plan::Changes(changes) = code.plan(&views(&held), &marks).unwrap() else {
+    let Plan::Changes(changes) = code.plan(&views(&held), &[], &marks).unwrap() else {
         return None;
     };
     let kinds = changes
@@ -253,7 +252,7 @@ fn other_roots_in_the_field_of_words_put_a_word_right_and_give_up_beyond() {
     }
     let held = shards(Field::Gf2048, &three);
     assert_eq!(
-        code.plan(&views(&held), &[]),
+        code.plan(&views(&held), &[], &[]),
         Ok(Plan::Unresolved { columns: 1 })
     );
 }
@@ -272,7 +271,7 @@ fn a_byte_word_with_two_wrong_bytes_is_corrected_in_place() {
     let mut counts = vec![0; 10];
     (counts[0], counts[9]) = (1, 1);
     assert_eq!(
-        code.correct(&mut buffers),
+        code.correct(&mut buffers, &[]),
         Ok(Correction::Corrected(counts))
     );
     assert_eq!(read, shards(Field::Gf256, &whole));
@@ -337,7 +336,7 @@ fn long_shards_are_words_side_by_side() {
         assert!(!code.agrees(&views(&read)).unwrap());
         let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(Vec::as_mut_slice).collect();
         assert!(matches!(
-            code.correct(&mut buffers),
+            code.correct(&mut buffers, &[]),
             Ok(Correction::Corrected(_))
         ));
         assert_eq!(read, whole, "{field:?}");
@@ -404,7 +403,10 @@ fn refusals_come_in_their_order_and_change_nothing() {
     let code = CyclicCode::new(Field::Gf2048, 3, 2, 1, 1).unwrap();
     let whole = shards(Field::Gf2048, &word(&code, &[1, 2, 3]));
     assert_eq!(code.encode(&views(&whole[..2])), Err(CodeError::Count));
-    assert_eq!(code.plan(&views(&whole[..4]), &[]), Err(CodeError::Count));
+    assert_eq!(
+        code.plan(&views(&whole[..4]), &[], &[]),
+        Err(CodeError::Count)
+    );
     let mut short = whole.clone();
     short[2].pop();
     assert_eq!(code.agrees(&views(&short)), Err(CodeError::Length));
@@ -414,6 +416,7 @@ fn refusals_come_in_their_order_and_change_nothing() {
     assert_eq!(
         code.plan(
             &views(&wide),
+            &[],
             &[Mark {
                 shard: 5,
                 symbol: 0
@@ -424,6 +427,7 @@ fn refusals_come_in_their_order_and_change_nothing() {
     assert_eq!(
         code.plan(
             &views(&wide),
+            &[],
             &[Mark {
                 shard: 0,
                 symbol: 1
@@ -431,12 +435,12 @@ fn refusals_come_in_their_order_and_change_nothing() {
         ),
         Err(CodeError::Mark)
     );
-    assert_eq!(code.plan(&views(&wide), &[]), Err(CodeError::Symbol));
+    assert_eq!(code.plan(&views(&wide), &[], &[]), Err(CodeError::Symbol));
     assert_eq!(code.encode(&views(&wide[..3])), Err(CodeError::Symbol));
     // A change that no longer fits leaves every shard as it was.
     let mut read = whole.clone();
     read[0][1] ^= 1;
-    let Plan::Changes(changes) = code.plan(&views(&read), &[]).unwrap() else {
+    let Plan::Changes(changes) = code.plan(&views(&read), &[], &[]).unwrap() else {
         panic!("one wrong word is within the bound");
     };
     read[0][1] ^= 2;
@@ -458,13 +462,13 @@ fn a_word_left_with_a_syndrome_is_not_put_right() {
     read[7][0] ^= 0x04;
     assert!(!code.agrees(&views(&read)).unwrap());
     assert!(matches!(
-        code.plan(&views(&read), &[]),
+        code.plan(&views(&read), &[], &[]),
         Ok(Plan::Unresolved { columns: 1 })
     ));
     let before = read.clone();
     let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(Vec::as_mut_slice).collect();
     assert_eq!(
-        code.correct(&mut buffers),
+        code.correct(&mut buffers, &[]),
         Ok(Correction::Unresolved { columns: 1 })
     );
     assert_eq!(read, before);
@@ -512,7 +516,7 @@ fn words_in_several_stripes_are_put_right_across_their_borders() {
     late[3][columns - 1] ^= 1;
     assert!(code.agrees(&views(&whole)).unwrap());
     assert!(!code.agrees(&views(&late)).unwrap());
-    let Plan::Changes(changes) = code.plan(&views(&read), &marks).unwrap() else {
+    let Plan::Changes(changes) = code.plan(&views(&read), &[], &marks).unwrap() else {
         panic!("every word is within the bound");
     };
     let mut found: Vec<(usize, usize, ChangeKind)> = changes
@@ -543,8 +547,82 @@ fn words_in_several_stripes_are_put_right_across_their_borders() {
     }
     let mut buffers: Vec<&mut [u8]> = damaged.iter_mut().map(Vec::as_mut_slice).collect();
     assert_eq!(
-        code.correct(&mut buffers),
+        code.correct(&mut buffers, &[]),
         Ok(Correction::Corrected(vec![1, 1, 1, 1]))
     );
     assert_eq!(damaged, whole);
+}
+
+/// Whole shards named lost are written anew whatever they hold, symbols outside the field too,
+/// with one wrong symbol in some words: 2e + s ≤ parity. More lost shards than parity change
+/// nothing.
+#[test]
+fn shards_named_lost_are_written_anew_whatever_they_hold() {
+    let field = Field::Gf2048;
+    let code = CyclicCode::new(field, 6, 4, 1, 1).unwrap();
+    let columns = 50;
+    let given: Vec<Vec<u8>> = (0..6)
+        .map(|i| crate::support::symbols(field, bytes(i + 60, 2 * columns)))
+        .collect();
+    let made = code.encode(&views(&given)).unwrap();
+    let whole: Vec<Vec<u8>> = given
+        .iter()
+        .cloned()
+        .chain(made.iter().map(|shard| shard.to_vec()))
+        .collect();
+    let mut read = whole.clone();
+    read[2].fill(0xFF);
+    read[7].fill(0xFF);
+    // One wrong symbol in every third word, in shards 0, 4 and 9 by turns: 2 · 1 + 2 ≤ 4.
+    let mut counts = vec![0; 10];
+    (counts[2], counts[7]) = (columns, columns);
+    for column in (0..columns).step_by(3) {
+        let place = [0, 4, 9][column / 3 % 3];
+        read[place][2 * column + 1] ^= 1;
+        counts[place] += 1;
+    }
+    let before = read.clone();
+    // Each place counts once, in any order, and a mark on a lost shard adds nothing.
+    let plan = code.plan(&views(&read), &[2, 7], &[]).unwrap();
+    let mark = Mark {
+        shard: 2,
+        symbol: 0,
+    };
+    let again = code.plan(&views(&read), &[7, 2, 7], &[mark]);
+    assert_eq!(again.as_ref(), Ok(&plan));
+    let Plan::Changes(changes) = plan else {
+        panic!("every word is within the bound");
+    };
+    assert_eq!(changes.len(), counts.iter().sum::<usize>());
+    for change in &changes {
+        let lost = [2, 7].contains(&change.shard);
+        assert_eq!(change.kind == ChangeKind::Filled, lost);
+    }
+    let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(Vec::as_mut_slice).collect();
+    code.apply(&mut buffers, &changes).unwrap();
+    assert_eq!(read, whole);
+    let mut read = before.clone();
+    let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(Vec::as_mut_slice).collect();
+    assert_eq!(
+        code.correct(&mut buffers, &[7, 2]),
+        Ok(Correction::Corrected(counts))
+    );
+    assert_eq!(read, whole);
+    // A place outside the word, and five lost shards for four check shards.
+    let mut read = before.clone();
+    let mut buffers: Vec<&mut [u8]> = read.iter_mut().map(Vec::as_mut_slice).collect();
+    assert_eq!(code.correct(&mut buffers, &[2, 10]), Err(CodeError::Mark));
+    let five = [0, 1, 2, 3, 7];
+    assert_eq!(
+        code.correct(&mut buffers, &five),
+        Ok(Correction::Unresolved { columns })
+    );
+    assert_eq!(read, before);
+    assert_eq!(
+        code.plan(&views(&read), &five, &[]),
+        Ok(Plan::Unresolved { columns })
+    );
+    // A lost shard still has the length of the others: it is written in place.
+    read[2].truncate(2 * columns - 2);
+    assert_eq!(code.plan(&views(&read), &[2], &[]), Err(CodeError::Length));
 }

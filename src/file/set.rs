@@ -11,7 +11,7 @@ use super::facts::{SetFacts, sha256};
 use super::header::Header;
 use super::reading::{ShardFile, Survey};
 use crate::buffer::Buffer;
-use crate::code::{CodeError, Sources};
+use crate::code::{COMPARED, CodeError, Sources};
 use alloc::vec::Vec;
 use core::fmt;
 use shards::{Full, Gathered, Shard, Sweep, gather, keep, room};
@@ -654,8 +654,10 @@ impl<'a> FileSet<'a> {
         };
         // One block made at a time, in a `Buffer`, before it is handed over.
         let mut scratch = Buffer::zeros(sizes.block.min(sizes.shard)).ok_or(SetError::Memory)?;
+        let mut compare = Buffer::zeros(COMPARED).ok_or(SetError::Memory)?;
         let mut out = Output {
             scratch: &mut scratch,
+            compare: &mut compare,
             sink,
         };
         let (mut stripes, mut lowest, mut weights) = (Vec::new(), Vec::new(), Vec::new());
@@ -705,6 +707,8 @@ impl<'a> FileSet<'a> {
 /// Where `fill` makes a block that no file holds, and where it hands every block over.
 pub(super) struct Output<'o> {
     pub(super) scratch: &'o mut [u8],
+    /// Room for the expected bytes of a block compared, for every block alike.
+    pub(super) compare: &'o mut [u8],
     pub(super) sink: &'o mut dyn Sink,
 }
 
@@ -729,7 +733,7 @@ pub(super) fn fill<'a>(
     // Blocks compared and blocks made: each costs the same.
     let mut worked = spare.len();
     for &(index, bytes) in spare {
-        if !sources.agrees(index, stripes, bytes)? {
+        if !sources.agrees_in(index, stripes, bytes, out.compare)? {
             room(&mut differing, 1)?;
             differing.push(index);
         }

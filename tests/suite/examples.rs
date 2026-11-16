@@ -150,6 +150,7 @@ fn a_card_gets_its_repair_words_by_remainder_and_is_put_right()
     let views: Vec<&[u8]> = read.iter().map(|word| word.as_slice()).collect();
     let Plan::Changes(changes) = code.plan(
         &views,
+        &[],
         &[Mark {
             shard: 2,
             symbol: 0,

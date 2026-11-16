@@ -11,6 +11,7 @@
 
 mod correction;
 mod cyclic;
+mod cyclic_words;
 mod damage;
 mod digests;
 mod examples;
