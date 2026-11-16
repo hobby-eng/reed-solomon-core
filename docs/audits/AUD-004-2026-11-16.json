@@ -1,0 +1,1020 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-004",
+  "auditNumber": 4,
+  "date": "2026-11-16",
+  "title": "Remediation verification of AUD-003 and remaining AUD-002 items",
+  "reviewer": {
+    "name": "Codex (AI-assisted review)",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "snapshot": {
+    "commit": "73771bfb62327c4eec540cc64c26d35c52cbf052",
+    "commitComplete": false,
+    "workingTree": "Uncommitted working tree on main. Supplied diff and independently regenerated before/after diffs match byte for byte.",
+    "sourceFingerprint": "d9e09fe5f9b317767cdbfa07aa4894a33c44b9f2f410f22339be21e6eeab62d8",
+    "diffSha256": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f"
+  },
+  "scope": "Six AUD-003 findings, six previously partial AUD-002 findings, related strict API return types and the pin to secret-protection-core 0.1.0.",
+  "checks": {
+    "CHECK-SEC-001": {
+      "title": "Threat model and secret ownership",
+      "status": "reviewed",
+      "evidence": "Metadata-to-writer public API fixture and comparison of plan/source ownership."
+    },
+    "CHECK-SEC-002": {
+      "title": "Secret Vault, CSP, sandbox, and transport",
+      "status": "reviewed",
+      "evidence": "Per-buffer admission, stack admission and documented fork and dump policies."
+    },
+    "CHECK-SEC-003": {
+      "title": "Network egress and secret guards",
+      "status": "not-applicable",
+      "evidence": "The codec exposes no network transport or provider."
+    },
+    "CHECK-SEC-004": {
+      "title": "Randomness, encryption, and authentication",
+      "status": "reviewed",
+      "evidence": "Scope of SHA-256 validation and digest exposure in recovery errors."
+    },
+    "CHECK-SEC-005": {
+      "title": "Secret lifecycle and exceptional paths",
+      "status": "reviewed",
+      "evidence": "Existing strict objects used under memory pressure; callbacks and portable result operators."
+    },
+    "CHECK-SEC-006": {
+      "title": "Browser injection, persistence, and sensitive APIs",
+      "status": "not-applicable",
+      "evidence": "No browser storage, scripting or host UI in this crate."
+    },
+    "CHECK-SEC-007": {
+      "title": "Read-only guarantees and availability bounds",
+      "status": "reviewed",
+      "evidence": "Self-test allocation failures, early validation and empty shard batches."
+    },
+    "CHECK-FUN-001": {
+      "title": "BIP39, entropy, and seed interpretation",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-002": {
+      "title": "HD derivation and every coin/profile",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-003": {
+      "title": "BIP85, BIP38, messages, and Silent Payments",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-004": {
+      "title": "Scripts, descriptors, Miniscript, and multisig",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-005": {
+      "title": "Transactions, PSBT version context, and commitments",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-006": {
+      "title": "Recovery and backup formats",
+      "status": "reviewed",
+      "evidence": "Three Linux feature profiles exercised recovery and correction. Targeted follow-up, without a new independent field implementation."
+    },
+    "CHECK-FUN-007": {
+      "title": "Discovery, providers, proofs, and accounting",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-API-001": {
+      "title": "Actual dependency call contracts",
+      "status": "reviewed",
+      "evidence": "Public metadata capability test; checksum and both lockfiles verified against released dependency source."
+    },
+    "CHECK-API-002": {
+      "title": "Async state, cancellation, and revisions",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-API-003": {
+      "title": "Public export schema and monetary fidelity",
+      "status": "reviewed",
+      "evidence": "Position-only records, bound plan equality, strict read handles and mismatch errors."
+    },
+    "CHECK-API-004": {
+      "title": "Encoding and import/export interoperability",
+      "status": "reviewed",
+      "evidence": "In-memory reader/writer path in Linux tests and public API fixture."
+    },
+    "CHECK-BLD-001": {
+      "title": "Manifest, flags, and feature composition",
+      "status": "reviewed",
+      "evidence": "Default, alloc-only and no-default library tests; compile-fail doctest in default profile."
+    },
+    "CHECK-BLD-002": {
+      "title": "Matrix depth and runtime sampling",
+      "status": "reviewed",
+      "evidence": "Native Linux x86-64; Windows GNU and macOS ARM cross-Clippy and WebAssembly compile check."
+    },
+    "CHECK-BLD-003": {
+      "title": "Lockfiles, source provenance, and licenses",
+      "status": "reviewed",
+      "evidence": "Two registry locks and archived source bytes. No advisory-feed refresh as part of this follow-up."
+    },
+    "CHECK-BLD-004": {
+      "title": "Canonical WASM and Docker bytes",
+      "status": "not-applicable",
+      "evidence": "No canonical Docker/browser artifact is specified for this uncommitted codec snapshot."
+    },
+    "CHECK-BLD-005": {
+      "title": "Artifacts, CI, and release workflows",
+      "status": "reviewed",
+      "evidence": "Byte-for-byte frozen diff, release assembly and compiler evidence. Native cross-platform CI is outstanding."
+    },
+    "CHECK-UI-001": {
+      "title": "Real files and representative viewports",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-UI-002": {
+      "title": "Navigation, inputs, and state preservation",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-UI-003": {
+      "title": "Secret visibility, help, QR, and accessibility",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-ARC-001": {
+      "title": "Ownership, imports, and composition seams",
+      "status": "reviewed",
+      "evidence": "Returned types traced past the first strict function call."
+    },
+    "CHECK-ARC-002": {
+      "title": "Dead code, duplication, and false positives",
+      "status": "outside-targeted-recheck",
+      "evidence": "Earlier broader assessment in AUD-003; no fresh exhaustive review of this category."
+    },
+    "CHECK-ARC-003": {
+      "title": "Comments, tests, and production-path fidelity",
+      "status": "reviewed",
+      "evidence": "Published API contracts versus executable examples and refusal tests."
+    },
+    "CHECK-DOC-001": {
+      "title": "User-facing capability and safety descriptions",
+      "status": "reviewed",
+      "evidence": "README and TECHNICAL claims about guarded memory, modes and platform availability."
+    },
+    "CHECK-DOC-002": {
+      "title": "Commands, metadata, links, and legal materials",
+      "status": "outside-targeted-recheck",
+      "evidence": "Earlier broader assessment in AUD-003; no fresh exhaustive review of this category."
+    },
+    "CHECK-DOC-003": {
+      "title": "Audit records and evidence consistency",
+      "status": "reviewed",
+      "evidence": "Historic audit IDs, status entries, original report/harness bytes and this companion verified."
+    }
+  },
+  "findings": [
+    {
+      "id": "AUD-004-API001",
+      "title": "Strict file metadata accessors return portable payload writers",
+      "category": "API",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": "src/strict/files.rs:48,83,115,181; src/file/header.rs:155,186,202; src/file/writing.rs:22; AUD-004-harnesses/public-api.rs",
+      "reproduction": "Start with a strict file containing the four public bytes “demo”. Pass ordinary slices to reader.header().file_into(...) and facts.facts().files(...). Both chains compile and produce the expected file in the Linux fixture.",
+      "expected": "Reading public metadata should preserve the strict API for subsequent payload operations or require an explicitly named switch to the portable API.",
+      "observed": "header() returns &crate::Header. Its file_into takes an ordinary mutable slice and can write to a Vec. The returned crate::SetFacts similarly exposes files. The accessor itself reads only public metadata.",
+      "impact": "A caller can accidentally use ordinary destination memory or ordinary stack computation for the next operation. A new input or destination must be provided. No contents are disclosed merely by reading a header.",
+      "recommendedFix": "Return strict wrappers or a metadata-only view from ordinary getters. Provide an explicit as_portable() for callers who want the root writers. Preserve direct access to index, length and other public fields.",
+      "requiredVerification": "Compile-fail test for a Vec destination on the natural reader/header chain. Add a positive test for protected storage and for an explicit portable opt-in."
+    },
+    {
+      "id": "AUD-004-DOC001",
+      "title": "The Windows and WebAssembly refusal statement includes metadata-only calls",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": "README.md:237,296; docs/TECHNICAL.md:277,283; src/strict/codes.rs:19,88; tests/suite/strict_elsewhere.rs:10,17",
+      "reproduction": "Compare the Windows test with the platform paragraph. The test unwraps Code::new and sources successfully, then expects Unprotected from encode and build.",
+      "expected": "An application should be able to tell which steps validate public metadata and which need a protected stack.",
+      "observed": "The headline claims every strict call refuses. Pure geometry and header inspection can succeed. The payload guard refuses on Windows and WASM. Cross-compilation passed; this distinction follows directly from the implementations.",
+      "impact": "Users could incorrectly treat successful construction as proof that payload operations are supported, or skip metadata display unnecessarily.",
+      "recommendedFix": "Say that operations which process payload bytes require the admitted stack. Give Code::new and encode as examples. Align the platform paragraph and test name/comment.",
+      "requiredVerification": "Check wording against tests/suite/strict_elsewhere.rs and the platform-independent constructors. During native CI run both the metadata and refusal assertions."
+    },
+    {
+      "id": "AUD-004-DOC002",
+      "title": "Comparing correction entries does not establish complete plan equality",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": "docs/audits/README.md:61; src/correct/changes.rs:109,207,324; src/strict/codes.rs:223",
+      "reproduction": "The unit test constructs two lists with identical edits and distinct input fingerprints. Their entries agree although == returns false. The test passed in both allocating Linux profiles.",
+      "expected": "Document when the caller is comparing edits, and when it needs equality of the complete bound plans.",
+      "observed": "== reads the private binding and all used record bytes on the calling thread. get and strict::values expose positions and values but cannot compare the private binding. The audit index also says that only values reads those words.",
+      "impact": "A caller treating edit comparison as full equality could conflate plans for different inputs. A caller using ordinary == for protected plans can process word bytes on its own stack. apply still independently validates its binding.",
+      "recommendedFix": "Narrow the register sentence to location inspection. Document the extra fingerprint in the distinction between equality of edits and equality of complete plans. If callers need full protected equality, expose a helper that checks both plans and returns only a bool.",
+      "requiredVerification": "Use the existing same-edits/different-binding case for any strict equality helper. Check refusal if either plan or the required stack lacks protection."
+    }
+  ],
+  "observations": [],
+  "remediation": [
+    {
+      "id": "AUD-003-SEC001",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Removing file entries",
+      "evidence": "src/strict/files.rs:283; tests/suite/strict.rs:299,461. The remaining duplicates are resolved inside strict(). The Linux positive case kept two copies of one shard. The lock-limit child required Unprotected even for an existing set."
+    },
+    {
+      "id": "AUD-003-SEC002",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Lazy checks on a file",
+      "evidence": "src/strict/files.rs:102,125,131,146,160; tests/suite/strict.rs:164,463. Both direct reads and pile entries carry strict::ShardFile. Each block or survey operation admits its own stack. Public-input positive cases and refusal on a previously parsed view passed. The header capability in AUD-004-API001 requires the caller to supply a new payload."
+    },
+    {
+      "id": "AUD-003-SEC003",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Location-only correction access",
+      "evidence": "src/correct/changes.rs:59,103,165,247; src/strict/codes.rs:223. The iterator calls get. The release Linux x86-64 instructions read two eight-byte position fields at 0 and 8 and the kind byte at 20. The value words occupy 16–19. The debug IR independently shows the same ranges."
+    },
+    {
+      "id": "AUD-003-SEC004",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Digest mismatch in rebuild errors",
+      "evidence": "src/strict/files.rs:241,252,289; src/file/set.rs:167; tests/suite/strict.rs:175. Both strict recovery variants convert Digest to DigestDiffers { stated } inside the admitted closure. The public error contains only the header digest. Both mismatches and clearing the supplied output passed on Linux."
+    },
+    {
+      "id": "AUD-003-DOC001",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Buffers in the strict example",
+      "evidence": "README.md:245,257,274; tests/suite/examples.rs:183,195,220; docs/TECHNICAL.md:289. The constructor helper checks Held::guarded before input or callback output receives a byte. The executable example and the Linux lock-limit test passed. Apple process dump policy remains an application check."
+    },
+    {
+      "id": "AUD-003-FUN001",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Validate before hashing",
+      "evidence": "src/file/facts.rs:111; tests/suite/files.rs:267. for_data passes a placeholder of the right shape to new() and propagates an error before calling sha256. Descriptor limits are covered by tests. The 2^61-byte input case is verified by control flow without allocating it."
+    },
+    {
+      "id": "AUD-002-SEC002",
+      "status": "open",
+      "scopeDisposition": "partly verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Type boundary at file metadata accessors",
+      "evidence": "src/strict/files.rs:48,83,115,181; src/file/header.rs:202; AUD-004-API001. Partly verified. Sealed input types and the direct compile-fail test hold, and strict file views now guard deferred CRC checks. The public header/facts accessors still offer portable payload methods in the same call chain. A separate fixture compiled and exercised two such chains."
+    },
+    {
+      "id": "AUD-002-SEC003",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Correction values and position-only results",
+      "evidence": "src/correct/changes.rs:59,66,165,207; src/strict/codes.rs:223. Position-only access leaves the values alone. Explicit strict::values admits the plan and runs the callback on the protected stack. An application can itself retain a returned value or request ordinary equality. See AUD-004-DOC002."
+    },
+    {
+      "id": "AUD-002-SEC004",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Temporary storage in strict operations",
+      "evidence": "src/strict.rs:53; src/strict/files.rs:125,241,252,283; src/correct/changes.rs:165. The outstanding duplicate, CRC, metadata and error cases are fixed within the strict implementations. Calling a portable method or comparing an explicitly returned payload is outside those implementations. Runtime confirmation covers Linux x86-64."
+    },
+    {
+      "id": "AUD-002-API004",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Startup checks under allocation refusal",
+      "evidence": "src/self_test.rs:272,281,362; src/file.rs:188,229; docs/audits/AUD-003-harnesses/allocation.rs. The allocator harness is byte-identical to AUD-003 and linked against a fresh alloc-only library. It denied every one of 161 observed self_test allocation requests separately. All returned negative status and the process exited 0. These requests originate in operations exercised by the self-test; the harness still observes allocations."
+    },
+    {
+      "id": "AUD-002-FUN001",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Empty request with a large implied file",
+      "evidence": "src/file/writing.rs:22,25,28. After validating input, files(data, &[]) returns an empty vector before narrowing file_len to usize or allocating result buffers. The previous 32-bit failure is excluded by statement order. No multi-gigabyte 32-bit fixture was executed."
+    },
+    {
+      "id": "AUD-002-DOC001",
+      "status": "verified",
+      "scopeDisposition": "verified within original scope",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "c2777f00d683034a4604d2f959f37729e63f9ad58e904e810cd2ecf22779442f",
+      "title": "Protection and process lifecycle documentation",
+      "evidence": "docs/TECHNICAL.md:265,271,273,289; src/buffer.rs:39; secret-protection-core src/stack.rs:63. The three original instructions now distinguish ordinary and locked allocation, require inspecting the isolation report, and describe the fork restriction and treatment of parent views. The separate Windows/WASM wording is tracked as AUD-004-DOC001."
+    }
+  ],
+  "limitations": [
+    "Native execution here covers Linux x86-64 only. Windows GNU and macOS ARM were cross-linted, WebAssembly was compile-checked. No native run on Windows, either Apple mobile/desktop target, Android or Linux ARM64 for this uncommitted snapshot was observed here. The separate prior AUD-002-SEC001 native acceptance requirement remains open outside Linux x86-64.",
+    "The five fuzz campaigns are retained author evidence from before the final freeze. Their logs and counts were inspected and copied. They do not identify the product fingerprint internally. They were not replayed by this audit and are not evidence of all strict stack paths.",
+    "Each Rust profile leaves the opt-in exhaustive large-field proof ignored. The SHA-256 length boundary was verified using a descriptor test and control flow. The 32-bit empty-batch ordering was reviewed statically. Neither multi-gigabyte case was allocated.",
+    "Machine-code evidence is specific to the pinned toolchain and Linux x86-64 build. It covers the metadata getter, not all optimization profiles, CPUs, compiler-created copies, registers or caller post-processing.",
+    "The Apple policy asks the caller to confirm whole-process dump policy. Fork is a caller constraint during strict work. The audit does not establish resistance to an untrusted kernel, hibernation or secrets intentionally copied by application code.",
+    "This is a remediation audit of the frozen sources. A release package, new CI run or downstream update is not part of its evidence. The manifest still sets publish = false."
+  ],
+  "procedureHashes": {
+    "FULL_AUDIT_GUIDE.md": "179fc5e27bcc9f9c0eec75b38b910f4918041e79c904840ef68efa8210d20dd2",
+    "audits/AUDIT_STANDARD.md": "c43e25bbcbdd6d22d52a38f571a759f5b688af062b980c3adecd5326efc082ec",
+    "audits/AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+    "audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+  },
+  "dependency": {
+    "archiveSha256": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+    "upstream": "373aeab120a71af8fe9caf7e1ad128d9e3479f90",
+    "matchedSourceFiles": 19,
+    "pins": {
+      "Cargo.lock": {
+        "name": "secret-protection-core",
+        "version": "0.1.0",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+        "dependencies": [
+          "landlock",
+          "libc",
+          "windows-sys",
+          "zeroize"
+        ]
+      },
+      "fuzz/Cargo.lock": {
+        "name": "secret-protection-core",
+        "version": "0.1.0",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+        "dependencies": [
+          "landlock",
+          "libc",
+          "windows-sys",
+          "zeroize"
+        ]
+      }
+    }
+  },
+  "coverage": {
+    "covered": 5891,
+    "measured": 6059,
+    "percent": 97.23,
+    "files": {
+      "src/buffer.rs": {
+        "count": 76,
+        "covered": 76,
+        "percent": 100.0
+      },
+      "src/buffer/numbers.rs": {
+        "count": 35,
+        "covered": 34,
+        "percent": 97.14285714285714
+      },
+      "src/buffer/pages.rs": {
+        "count": 30,
+        "covered": 30,
+        "percent": 100.0
+      },
+      "src/code.rs": {
+        "count": 193,
+        "covered": 181,
+        "percent": 93.78238341968913
+      },
+      "src/code/owned.rs": {
+        "count": 99,
+        "covered": 98,
+        "percent": 98.989898989899
+      },
+      "src/correct.rs": {
+        "count": 639,
+        "covered": 637,
+        "percent": 99.68701095461658
+      },
+      "src/correct/changes.rs": {
+        "count": 200,
+        "covered": 200,
+        "percent": 100.0
+      },
+      "src/correct/errors.rs": {
+        "count": 27,
+        "covered": 27,
+        "percent": 100.0
+      },
+      "src/correct/plan.rs": {
+        "count": 292,
+        "covered": 289,
+        "percent": 98.97260273972603
+      },
+      "src/cyclic.rs": {
+        "count": 10,
+        "covered": 10,
+        "percent": 100.0
+      },
+      "src/cyclic/decode.rs": {
+        "count": 237,
+        "covered": 235,
+        "percent": 99.15611814345992
+      },
+      "src/cyclic/owned.rs": {
+        "count": 297,
+        "covered": 294,
+        "percent": 98.989898989899
+      },
+      "src/cyclic/words.rs": {
+        "count": 183,
+        "covered": 182,
+        "percent": 99.4535519125683
+      },
+      "src/field.rs": {
+        "count": 230,
+        "covered": 230,
+        "percent": 100.0
+      },
+      "src/field/binary.rs": {
+        "count": 69,
+        "covered": 63,
+        "percent": 91.30434782608695
+      },
+      "src/field/gf2048.rs": {
+        "count": 70,
+        "covered": 70,
+        "percent": 100.0
+      },
+      "src/field/gf256.rs": {
+        "count": 58,
+        "covered": 58,
+        "percent": 100.0
+      },
+      "src/field/gf65536.rs": {
+        "count": 64,
+        "covered": 64,
+        "percent": 100.0
+      },
+      "src/field/lanes.rs": {
+        "count": 118,
+        "covered": 118,
+        "percent": 100.0
+      },
+      "src/field/proof.rs": {
+        "count": 120,
+        "covered": 106,
+        "percent": 88.33333333333333
+      },
+      "src/file.rs": {
+        "count": 115,
+        "covered": 106,
+        "percent": 92.17391304347827
+      },
+      "src/file/crc32c.rs": {
+        "count": 28,
+        "covered": 28,
+        "percent": 100.0
+      },
+      "src/file/facts.rs": {
+        "count": 148,
+        "covered": 148,
+        "percent": 100.0
+      },
+      "src/file/header.rs": {
+        "count": 267,
+        "covered": 264,
+        "percent": 98.87640449438202
+      },
+      "src/file/pile.rs": {
+        "count": 47,
+        "covered": 46,
+        "percent": 97.87234042553192
+      },
+      "src/file/reading.rs": {
+        "count": 141,
+        "covered": 139,
+        "percent": 98.58156028368793
+      },
+      "src/file/set.rs": {
+        "count": 458,
+        "covered": 433,
+        "percent": 94.54148471615721
+      },
+      "src/file/set/shards.rs": {
+        "count": 398,
+        "covered": 392,
+        "percent": 98.49246231155779
+      },
+      "src/file/set/sink.rs": {
+        "count": 58,
+        "covered": 58,
+        "percent": 100.0
+      },
+      "src/file/set/vote.rs": {
+        "count": 333,
+        "covered": 330,
+        "percent": 99.09909909909909
+      },
+      "src/file/writing.rs": {
+        "count": 210,
+        "covered": 208,
+        "percent": 99.04761904761905
+      },
+      "src/list.rs": {
+        "count": 52,
+        "covered": 52,
+        "percent": 100.0
+      },
+      "src/recurrence.rs": {
+        "count": 40,
+        "covered": 40,
+        "percent": 100.0
+      },
+      "src/self_test.rs": {
+        "count": 263,
+        "covered": 255,
+        "percent": 96.95817490494296
+      },
+      "src/strict.rs": {
+        "count": 126,
+        "covered": 119,
+        "percent": 94.44444444444444
+      },
+      "src/strict/codes.rs": {
+        "count": 152,
+        "covered": 128,
+        "percent": 84.21052631578947
+      },
+      "src/strict/files.rs": {
+        "count": 176,
+        "covered": 143,
+        "percent": 81.25
+      }
+    },
+    "inputManifestSha256": "3bf7c5f7baebdc21e642f9426936b98c0bda8fb8de294819e0d0aaf6a97acb44"
+  },
+  "retainedFuzzRuns": {
+    "cyclic": {
+      "iterations": 29642,
+      "seconds": 61,
+      "sha256": "569c674824018ef8c585b3d104bcd4919eef85fe51a4e064e05cc63c5df5f4ca"
+    },
+    "calls": {
+      "iterations": 81423,
+      "seconds": 61,
+      "sha256": "4d72d1f7f1014f5c4994d6562b79060162d0cfb9a40d69f7a685f093193156ed"
+    },
+    "plans": {
+      "iterations": 56392,
+      "seconds": 61,
+      "sha256": "9f803b98ce15930055e484125c1d12181270a1b0205664449fc78107b7a4a123"
+    },
+    "files": {
+      "iterations": 82412,
+      "seconds": 61,
+      "sha256": "a7a80ce3e5b503df293326545f24663534d7adbb632020a80c9db70af8266ad4"
+    },
+    "sets": {
+      "iterations": 17966,
+      "seconds": 61,
+      "sha256": "209f8bc26910b5c007d0df294a45d4512cfa067b73f93fb920675f8baab707a6"
+    }
+  },
+  "executed": {
+    "alloc-build": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "startUtc": "2026-11-16T00:31:53.178785+00:00",
+      "endUtc": "2026-11-16T00:32:02.013198+00:00",
+      "exitCode": 0,
+      "logSha256": "7b64014b0c9b8515b2770b6149b15f0656c47ca53d2e58f52f0730885ebe15f0"
+    },
+    "alloc": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "startUtc": "2026-11-16T00:31:09.085546+00:00",
+      "endUtc": "2026-11-16T00:31:47.832220+00:00",
+      "exitCode": 0,
+      "logSha256": "d34ae153eea91729a76e823d7a280ef8de3da79db9abb64cd8101296a1aff153"
+    },
+    "api-build": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--lib"
+      ],
+      "startUtc": "2026-11-16T00:33:59.651074+00:00",
+      "endUtc": "2026-11-16T00:34:01.137208+00:00",
+      "exitCode": 0,
+      "logSha256": "406df925815ab4f26fc9e6718a84ee9b242155632ca90c3d02cecebd6ce62e55"
+    },
+    "api-compile": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "<audit-dir>/AUD-004-evidence/public-api.rs",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "-o",
+        "<audit-dir>/public-api"
+      ],
+      "startUtc": "2026-11-16T00:34:01.137479+00:00",
+      "endUtc": "2026-11-16T00:34:16.627816+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "api": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "<audit-dir>/public-api"
+      ],
+      "startUtc": "2026-11-16T00:34:16.628021+00:00",
+      "endUtc": "2026-11-16T00:34:16.744952+00:00",
+      "exitCode": 0,
+      "logSha256": "fed31230b4ad9fa603aeb4f8282026c96f54b647e142b93744756b2804294ac9"
+    },
+    "bare": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features"
+      ],
+      "startUtc": "2026-11-16T00:31:47.832505+00:00",
+      "endUtc": "2026-11-16T00:31:53.178567+00:00",
+      "exitCode": 0,
+      "logSha256": "8a081b9e4c4726ed1e5eb44b0cb537b51d5a19988a8b3de536f45c18e6907027"
+    },
+    "clippy": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-16T00:32:02.942343+00:00",
+      "endUtc": "2026-11-16T00:32:13.221210+00:00",
+      "exitCode": 0,
+      "logSha256": "b83cb4baea6157d6ee6c66ab9e025aac60d9fa438fe6a0b131d63e97a9ae3e21"
+    },
+    "coverage": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "llvm-cov",
+        "--locked",
+        "--offline",
+        "--json",
+        "--summary-only",
+        "--output-path",
+        "<audit-dir>/AUD-004-evidence/coverage-llvm.json"
+      ],
+      "startUtc": "2026-11-16T00:35:19.598258+00:00",
+      "endUtc": "2026-11-16T00:49:51.016189+00:00",
+      "exitCode": 0,
+      "logSha256": "dd4f2f167db49267c827c9874fd5dee4cf92dd862ff7d45f898e2b880a06668a"
+    },
+    "default": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline"
+      ],
+      "startUtc": "2026-11-16T00:30:28.419335+00:00",
+      "endUtc": "2026-11-16T00:31:09.085240+00:00",
+      "exitCode": 0,
+      "logSha256": "e4b926072d2bd270aa27f906b93f2c94e0209f44560f8bda18f184420dfd2edf"
+    },
+    "doc": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "doc",
+        "--locked",
+        "--offline",
+        "--no-deps"
+      ],
+      "startUtc": "2026-11-16T00:32:36.469488+00:00",
+      "endUtc": "2026-11-16T00:32:36.883847+00:00",
+      "exitCode": 0,
+      "logSha256": "fbb948f566815bef79d8234c8e8c26da962355371a211c2f3cf5603a0c9fbe53"
+    },
+    "fmt": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "startUtc": "2026-11-16T00:32:02.614577+00:00",
+      "endUtc": "2026-11-16T00:32:02.942067+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "harness-compile": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "docs/audits/AUD-003-harnesses/allocation.rs",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "-o",
+        "<audit-dir>/allocation-check"
+      ],
+      "startUtc": "2026-11-16T00:32:02.013405+00:00",
+      "endUtc": "2026-11-16T00:32:02.253173+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "harness": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "<audit-dir>/allocation-check"
+      ],
+      "startUtc": "2026-11-16T00:32:02.253377+00:00",
+      "endUtc": "2026-11-16T00:32:02.614287+00:00",
+      "exitCode": 0,
+      "logSha256": "873c7a1e11ee61ae1a32341eb4b30a44ac1b31fa096b00f2fa1c8e358cc4f09a"
+    },
+    "ir": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "rustc",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--",
+        "--emit=llvm-ir"
+      ],
+      "startUtc": "2026-11-16T00:32:29.031522+00:00",
+      "endUtc": "2026-11-16T00:32:36.469210+00:00",
+      "exitCode": 0,
+      "logSha256": "f9f09cd99f4df9df6abdbdb934e5e5ac7bc2217635f266917a354a0da1b0c873"
+    },
+    "macos": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--target",
+        "aarch64-apple-darwin",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-16T00:32:22.002247+00:00",
+      "endUtc": "2026-11-16T00:32:27.138691+00:00",
+      "exitCode": 0,
+      "logSha256": "5426c13e74eb215bf9491a617e740ddb1629ca7e534719d0457c6a80f4bd23ed"
+    },
+    "release-asm": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "rustc",
+        "--release",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--",
+        "--emit=asm"
+      ],
+      "startUtc": "2026-11-16T00:35:02.600645+00:00",
+      "endUtc": "2026-11-16T00:35:19.598047+00:00",
+      "exitCode": 0,
+      "logSha256": "b5866eeeb2551749c88241e2d63c9c923c707e96ed77ae030b820c3976eb7766"
+    },
+    "strict": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--test",
+        "suite",
+        "strict::",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "startUtc": "2026-11-16T00:29:56.786844+00:00",
+      "endUtc": "2026-11-16T00:30:28.418939+00:00",
+      "exitCode": 0,
+      "logSha256": "a063a7df8f2dffb712602f26a77530e35d74a74f244d43d862cc79cb0bb2b109"
+    },
+    "wasm": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--target",
+        "wasm32-unknown-unknown"
+      ],
+      "startUtc": "2026-11-16T00:32:27.138898+00:00",
+      "endUtc": "2026-11-16T00:32:29.031312+00:00",
+      "exitCode": 0,
+      "logSha256": "1da92f0b2175e67848c946b70af86173f97b35c658d63cc3c6ba361d9c653979"
+    },
+    "windows": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "25m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--target",
+        "x86_64-pc-windows-gnu",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-16T00:32:13.221507+00:00",
+      "endUtc": "2026-11-16T00:32:22.002017+00:00",
+      "exitCode": 0,
+      "logSha256": "4e6b95854082916acf517cb4472524d4dfe406d59884e4c1196842f2d0eacf1e"
+    }
+  },
+  "normalization": {
+    "date": "2026-11-16",
+    "description": "Publication edit. Historical command arguments use <audit-dir> for the original local audit directory. The public fixture has the same bytes as the archived one.",
+    "originalReportSha256": "0538c693ec9b2168da240efc420e5fc946ef0dc33c70ca53a7286de5b333928e",
+    "originalCompanionSha256": "27125592d01befecf8719e32382676ab5c51ce0402d6d6913d292d4085bd46db",
+    "localEvidenceManifestSha256": "337f437d5b342b6c7061a0c22aac19397136e85eea71a1cb8849ef1f05e24a77",
+    "publishedFixtureSha256": "1904a957a7381af7366e6e9a997c7adc2a11032e6135874113a90e37a1a31d4e"
+  }
+}

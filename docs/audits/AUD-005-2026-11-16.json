@@ -1,0 +1,1036 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-005",
+  "auditNumber": 5,
+  "date": "2026-11-16",
+  "title": "Verification of AUD-004 and release readiness",
+  "reviewer": {
+    "name": "Codex (AI-assisted review)",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "snapshot": {
+    "commit": "73771bfb62327c4eec540cc64c26d35c52cbf052",
+    "commitComplete": false,
+    "workingTree": "Uncommitted local main; checked against the handoff bytes before and after execution.",
+    "sourceFingerprint": "0e505a6ad77422da200a9bc48ea260787a73a78b567844fd18c913359b2e4977",
+    "diffSha256": "2d41af8fdfe47f7e00fb9d3112a6438f568d580fba471c8148f052e8abf7caaa"
+  },
+  "scope": "Three AUD-004 findings, AUD-002-SEC002 and local release gates for reed-solomon-core 0.1.0.",
+  "checks": {
+    "CHECK-SEC-001": {
+      "title": "Threat model and secret ownership",
+      "status": "reviewed",
+      "evidence": "Traced strict metadata chains, scoped returned payload processing."
+    },
+    "CHECK-SEC-002": {
+      "title": "Secret Vault, CSP, sandbox, and transport",
+      "status": "reviewed",
+      "evidence": "Fresh Linux positive and refusal cases. Cross-platform limits and uncommitted source distinguished."
+    },
+    "CHECK-SEC-003": {
+      "title": "Network egress and secret guards",
+      "status": "not-applicable",
+      "evidence": "The codec exposes no network transport or provider."
+    },
+    "CHECK-SEC-004": {
+      "title": "Randomness, encryption, and authentication",
+      "status": "outside-targeted-recheck",
+      "evidence": "Outside the AUD-004 follow-up scope."
+    },
+    "CHECK-SEC-005": {
+      "title": "Secret lifecycle and exceptional paths",
+      "status": "reviewed",
+      "evidence": "Checked both inputs and destination admission; separated public metadata and application callbacks."
+    },
+    "CHECK-SEC-006": {
+      "title": "Browser injection, persistence, and sensitive APIs",
+      "status": "not-applicable",
+      "evidence": "No browser storage, scripting or host UI in this crate."
+    },
+    "CHECK-SEC-007": {
+      "title": "Read-only guarantees and availability bounds",
+      "status": "outside-targeted-recheck",
+      "evidence": "Outside the AUD-004 follow-up scope."
+    },
+    "CHECK-FUN-001": {
+      "title": "BIP39, entropy, and seed interpretation",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-002": {
+      "title": "HD derivation and every coin/profile",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-003": {
+      "title": "BIP85, BIP38, messages, and Silent Payments",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-004": {
+      "title": "Scripts, descriptors, Miniscript, and multisig",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-005": {
+      "title": "Transactions, PSBT version context, and commitments",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-006": {
+      "title": "Recovery and backup formats",
+      "status": "reviewed",
+      "evidence": "Release exhaustive field checker, Linux integration suite, and retained sanitizer fuzz logs."
+    },
+    "CHECK-FUN-007": {
+      "title": "Discovery, providers, proofs, and accounting",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-API-001": {
+      "title": "Actual dependency call contracts",
+      "status": "reviewed",
+      "evidence": "Four single-error consumer probes and a successful protected/explicit portable example."
+    },
+    "CHECK-API-002": {
+      "title": "Async state, cancellation, and revisions",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-API-003": {
+      "title": "Public export schema and monetary fidelity",
+      "status": "reviewed",
+      "evidence": "Verified types of file, header, set and code accessors plus the stated limits on plan equality."
+    },
+    "CHECK-API-004": {
+      "title": "Encoding and import/export interoperability",
+      "status": "reviewed",
+      "evidence": "Examined strict/deferred file operations and format-v1 publication declaration."
+    },
+    "CHECK-BLD-001": {
+      "title": "Manifest, flags, and feature composition",
+      "status": "reviewed",
+      "evidence": "Manifest, pinned lockfiles, author feature tests and local default build."
+    },
+    "CHECK-BLD-002": {
+      "title": "Matrix depth and runtime sampling",
+      "status": "reviewed",
+      "evidence": "Linux native checks available, other native CI pending; scoped distinction from cross-target lint."
+    },
+    "CHECK-BLD-003": {
+      "title": "Lockfiles, source provenance, and licenses",
+      "status": "reviewed",
+      "evidence": "Both lockfiles and registry package SHA-256; local advisory snapshot and previous source verification."
+    },
+    "CHECK-BLD-004": {
+      "title": "Canonical WASM and Docker bytes",
+      "status": "not-applicable",
+      "evidence": "No canonical Docker/browser artifact is specified for this uncommitted codec snapshot."
+    },
+    "CHECK-BLD-005": {
+      "title": "Artifacts, CI, and release workflows",
+      "status": "reviewed",
+      "evidence": "Working tree, archive file list, dry run rejection, release-only ignored test and source fingerprint."
+    },
+    "CHECK-UI-001": {
+      "title": "Real files and representative viewports",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-UI-002": {
+      "title": "Navigation, inputs, and state preservation",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-UI-003": {
+      "title": "Secret visibility, help, QR, and accessibility",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-ARC-001": {
+      "title": "Ownership, imports, and composition seams",
+      "status": "reviewed",
+      "evidence": "Type boundaries on nested metadata operations and portable opt-in."
+    },
+    "CHECK-ARC-002": {
+      "title": "Dead code, duplication, and false positives",
+      "status": "outside-targeted-recheck",
+      "evidence": "Outside the AUD-004 follow-up scope."
+    },
+    "CHECK-ARC-003": {
+      "title": "Comments, tests, and production-path fidelity",
+      "status": "reviewed",
+      "evidence": "Doctest diagnostic isolation and real normal entry points, on final source."
+    },
+    "CHECK-DOC-001": {
+      "title": "User-facing capability and safety descriptions",
+      "status": "reviewed",
+      "evidence": "Windows and WebAssembly behavior, full equality vs equal edits."
+    },
+    "CHECK-DOC-002": {
+      "title": "Commands, metadata, links, and legal materials",
+      "status": "reviewed",
+      "evidence": "Publication flag, draft status, coverage record and public links."
+    },
+    "CHECK-DOC-003": {
+      "title": "Audit records and evidence consistency",
+      "status": "reviewed",
+      "evidence": "Checked historical JSON for local paths, ignored evidence and proposed publication edit."
+    }
+  },
+  "findings": [
+    {
+      "id": "AUD-005-DOC001",
+      "title": "Historical audit JSON includes the local account name",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": "docs/audits/AUD-004-2026-11-16.json:693",
+      "reproduction": "Inspect the executed command arguments before shipping the audit record.",
+      "expected": "Public reports anonymize home-directory paths.",
+      "observed": "Ten command arguments contain the absolute local home path. Cargo lists this JSON among the files that the package would distribute.",
+      "impact": "Publishing the file discloses a local account name and workspace layout. No passwords or recovery material were identified in these references.",
+      "recommendedFix": "Use the prepared public edition with <audit-dir> paths and preserve the private original and its checksums locally.",
+      "requiredVerification": "Validated the proposed JSON against the report schema and checked all 19 historic command log digests. Apply it before publication."
+    },
+    {
+      "id": "AUD-005-DOC002",
+      "title": "Published audit links lead to private logs and a missing checksum manifest",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": "docs/audits/AUD-004-2026-11-16.md:14,86,113; .gitignore:4",
+      "reproduction": "Resolve the fifteen links as they would appear in a Git checkout.",
+      "expected": "Public links lead to published files. Local evidence is identified and the minimal reproducer can be run.",
+      "observed": "Thirteen links target the ignored evidence directory. One links to an absent SHA256SUMS. The original independent fixture was under the ignored directory.",
+      "impact": "Readers cannot follow the advertised references or retrieve the reproduction from the public report.",
+      "recommendedFix": "Use the prepared public report and its small AUD-004-harnesses directory. Keep raw logs local.",
+      "requiredVerification": "All relative Markdown links in the prepared copy resolve within that copy."
+    },
+    {
+      "id": "AUD-005-DOC003",
+      "title": "Release documentation omits the latest complete and targeted coverage results",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": "README.md:14; docs/COVERAGE.md:3",
+      "reproduction": "Compare the documented 98.35% for its older source fingerprint with AUD-004 and the fresh DOC-09 measurement.",
+      "expected": "The README identifies the latest complete coverage result, and the details identify any newer, narrower measurement and its source.",
+      "observed": "The README still shows 98.35% for an older snapshot. The last complete Linux measurement was 97.23% (5,891 of 6,059 lines) for c2777f00 in AUD-004. The current measurement of 47 unit and seven strict integration tests covered 90.82% (5,533/6,092). Neither current release document contains those updated figures.",
+      "impact": "Readers using the release documents cannot see how much of the new strict file API was exercised. The old number remains a valid historical measurement.",
+      "recommendedFix": "Use the latest complete result in the README. In docs/COVERAGE.md, publish the full result and the current targeted result separately. Label the current per-file table with the targeted scope.",
+      "requiredVerification": "Check the previous complete result against AUD-004, and the targeted result against the current input fingerprint and per-file totals. The audit includes all file counts. A separate local coverage-only patch applied cleanly in git apply --check."
+    }
+  ],
+  "observations": [],
+  "remediation": [
+    {
+      "id": "AUD-004-API001",
+      "status": "verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "2d41af8fdfe47f7e00fb9d3112a6438f568d580fba471c8148f052e8abf7caaa",
+      "title": "File metadata preserves the strict writer",
+      "evidence": "src/strict/files.rs:48,97,120,132,151,162,183,249; src/strict.rs:119. Header, set facts and code remain strict types throughout. A protected input with a Vec destination produced precisely E0277 for HeldMut. Each independent probe had one invalid argument. With a protected destination the output matched the explicit portable writer."
+    },
+    {
+      "id": "AUD-004-DOC001",
+      "status": "verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "2d41af8fdfe47f7e00fb9d3112a6438f568d580fba471c8148f052e8abf7caaa",
+      "title": "Public geometry on platforms without a protected stack",
+      "evidence": "README.md:237,296; docs/TECHNICAL.md:277,283; tests/suite/strict_elsewhere.rs:10. Public geometry and metadata remain usable. Calls that process payload bytes require a protected stack and refuse on Windows/WASM. Source and platform tests agree. This is not a new native Windows run."
+    },
+    {
+      "id": "AUD-004-DOC002",
+      "status": "verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "2d41af8fdfe47f7e00fb9d3112a6438f568d580fba471c8148f052e8abf7caaa",
+      "title": "Full equality includes the input binding",
+      "evidence": "src/correct/changes.rs:207,325; docs/TECHNICAL.md:187; docs/audits/README.md:62. The docs distinguish matching locations and values from matching bound plans. Ordinary equality reads the words and the binding on the calling thread. strict::values remains the documented callback for a secret."
+    },
+    {
+      "id": "AUD-002-SEC002",
+      "status": "verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "2d41af8fdfe47f7e00fb9d3112a6438f568d580fba471c8148f052e8abf7caaa",
+      "title": "No implicit portable payload writer through strict file metadata",
+      "evidence": "src/strict/files.rs:97,151,162,183,249; src/strict/codes.rs:42. The remaining gap in this finding is closed. The strict writer paths require Held/HeldMut, and a caller who wants portable writers must opt in. Returned payloads and explicit comparisons remain subject to the documented application contract."
+    }
+  ],
+  "limitations": [
+    "Release candidate is uncommitted. GitHub\u2019s Linux ARM64, macOS and Windows native CI for these source bytes is outstanding. CI is also required on the final Linux x86-64 revision. Local Linux checks and target cross-lints cannot replace native checks. The configured native matrix does not cover Android or iOS device execution.",
+    "Author feature-matrix and five fuzz runs were inspected and retained. Only the negative doctest input changed between those runs and the final handoff. The final doctests and independent API probes were executed separately.",
+    "cargo audit used the locally cached RustSec advisory database. Fresh advisory lookup on the release commit belongs to CI.",
+    "The manifest intentionally disables crates.io publication while the format is marked draft. The package contents listing and an offline dry run were checked. No publishable archive was certified, and reproducible release packaging and signatures were not tested.",
+    "The full instrumented suite timed out after 35 minutes (exit 124). A broader retry exited 143 with an empty log. The current Linux x86-64 default-feature coverage uses the completed unit stage (47 tests) and fresh profiles for seven strict integration tests. The ordinary suite passed all 165 integration tests. Coverage from the other 158 integration tests contributes nothing to the current figure. Coverage excludes test sources, doctests, fuzz campaigns, the separate field proof, other platforms and feature sets. The latest complete result is 97.23% (5,891 of 6,059 lines) for snapshot c2777f00.",
+    "Existing strict-mode limits include OS-specific memory properties, caller-owned copies after return and ordinary equality on returned plans. The legacy AUD-002-SEC001 native acceptance requirement is distinct from the four findings verified here."
+  ],
+  "procedureHashes": {
+    "FULL_AUDIT_GUIDE.md": "179fc5e27bcc9f9c0eec75b38b910f4918041e79c904840ef68efa8210d20dd2",
+    "audits/AUDIT_STANDARD.md": "c43e25bbcbdd6d22d52a38f571a759f5b688af062b980c3adecd5326efc082ec",
+    "audits/AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+    "audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+  },
+  "executed": {
+    "proof": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--release",
+        "--lib",
+        "field::proof",
+        "--",
+        "--ignored"
+      ],
+      "start": "2026-11-16T01:32:04.573442+00:00",
+      "end": "2026-11-16T01:48:34.379220+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "52827ca5e079ebc349a29ea4c5d5e757035e860e93d804be9a0e19ec9cdc5962"
+    },
+    "type-chain": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "<audit-dir>/evidence/chain.rs",
+        "--emit=metadata",
+        "--error-format=json",
+        "-o",
+        "<audit-dir>/chain.rmeta"
+      ],
+      "start": "2026-11-16T01:32:02.755681+00:00",
+      "end": "2026-11-16T01:32:02.915973+00:00",
+      "exitCode": 1,
+      "expected": 1,
+      "sha256": "3c78dc8251db67c51a9dd33e9c19737f93a039cd92d7e706ad1c8bbdbf33a453"
+    },
+    "rustsec-root": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "audit",
+        "--no-fetch",
+        "--file",
+        "Cargo.lock"
+      ],
+      "start": "2026-11-16T01:32:03.800069+00:00",
+      "end": "2026-11-16T01:32:04.361256+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "93986607a664cf8d0a180f44e51b8377e7f16084fcdbdd43c7da2c91ec4fee5b"
+    },
+    "type-payload": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "<audit-dir>/evidence/payload.rs",
+        "--emit=metadata",
+        "--error-format=json",
+        "-o",
+        "<audit-dir>/payload.rmeta"
+      ],
+      "start": "2026-11-16T01:32:02.434291+00:00",
+      "end": "2026-11-16T01:32:02.590405+00:00",
+      "exitCode": 1,
+      "expected": 1,
+      "sha256": "c2e08a95847fd75a9930c836e2ddb733ecb1c2dd32d9944cba9cadf5023e8b60"
+    },
+    "positive-build": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "<audit-dir>/evidence/positive.rs",
+        "-o",
+        "<audit-dir>/positive"
+      ],
+      "start": "2026-11-16T01:32:02.916275+00:00",
+      "end": "2026-11-16T01:32:03.209379+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "publish-dry": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "publish",
+        "--dry-run",
+        "--locked",
+        "--offline",
+        "--allow-dirty"
+      ],
+      "start": "2026-11-16T01:32:03.623867+00:00",
+      "end": "2026-11-16T01:32:03.799533+00:00",
+      "exitCode": 101,
+      "expected": 101,
+      "sha256": "c695bd59a54a5e50397b9544ac57ed7daae27fe8b3fabba73f550c91530a3290"
+    },
+    "type-facts": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "<audit-dir>/evidence/facts.rs",
+        "--emit=metadata",
+        "--error-format=json",
+        "-o",
+        "<audit-dir>/facts.rmeta"
+      ],
+      "start": "2026-11-16T01:32:02.590680+00:00",
+      "end": "2026-11-16T01:32:02.755389+00:00",
+      "exitCode": 1,
+      "expected": 1,
+      "sha256": "2c1ae0934531bef0ce3c10501a11ca7b8a9fb5776bc25cd3be15765056dd2234"
+    },
+    "doctests": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--doc"
+      ],
+      "start": "2026-11-16T01:31:02.351645+00:00",
+      "end": "2026-11-16T01:31:48.939057+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "999f900dca592f5586a4d83efc8f1c1365f1cb734296000d93cfc015fd8f2999"
+    },
+    "coverage-interrupted": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "55m",
+        "--",
+        "cargo",
+        "llvm-cov",
+        "(162 integration tests selected)"
+      ],
+      "start": "2026-11-16T02:24:05.775205+00:00",
+      "exitCode": 143,
+      "expected": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "rustsec-fuzz": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "audit",
+        "--no-fetch",
+        "--file",
+        "fuzz/Cargo.lock"
+      ],
+      "start": "2026-11-16T01:32:04.361435+00:00",
+      "end": "2026-11-16T01:32:04.573271+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "b6150b110a02d92d455420b697fbfa44f7a352b4f8c73f875d05b281f1359df8"
+    },
+    "package-list": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "package",
+        "--list",
+        "--locked",
+        "--offline",
+        "--allow-dirty"
+      ],
+      "start": "2026-11-16T01:32:03.440886+00:00",
+      "end": "2026-11-16T01:32:03.623537+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "ef430596f0df3c593f2734861d5051d0d397369e2a369587a41e311b546ee103"
+    },
+    "coverage": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "1G",
+        "--time",
+        "10m",
+        "--",
+        "<audit-dir>/target-coverage/debug/deps/suite-5860152c9db3b1d2",
+        "strict::",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "start": "2026-11-16T02:29:04.654683+00:00",
+      "end": "2026-11-16T02:29:35.421033+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "9c1963a7d2018bf50b9746950c79c585373e7a2038b7cdda461c206c78a9d3cf",
+      "unitProfile": "5933849075ceb394e8395ff98b432434ee3ea70afac37c7eb9d2d4201a60262c",
+      "additionalProfiles": [
+        "441e0d6eac005df4257d06cc24041e38c144a3e6c6c01c08e8d04a6d8792b63f",
+        "57804a971382bea3d87110af38008301bcd8bd1797a7802b4510c2afe0956606"
+      ],
+      "unitBinary": "6abbcb19d6437d6421244f617ddb9de46ac20001fa1fc464645c97f86c93e44f",
+      "suiteBinary": "b1c9619d3e040d489a7d3d876602da769c09b4d5075c88fc252b1c81d83c3f3e",
+      "llvmTools": [
+        "llvm-profdata merge -sparse",
+        "llvm-cov export -summary-only, both test binaries"
+      ]
+    },
+    "type-output": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "--extern",
+        "reed_solomon_core=<audit-dir>/target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=<audit-dir>/target/debug/deps",
+        "<audit-dir>/evidence/output.rs",
+        "--emit=metadata",
+        "--error-format=json",
+        "-o",
+        "<audit-dir>/output.rmeta"
+      ],
+      "start": "2026-11-16T01:32:02.267624+00:00",
+      "end": "2026-11-16T01:32:02.433952+00:00",
+      "exitCode": 1,
+      "expected": 1,
+      "sha256": "a07dc33276d9444bdc21718956e93f260c8ce9b810c5379501268dc5466d3dfb"
+    },
+    "build": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--lib"
+      ],
+      "start": "2026-11-16T01:22:36.885382+00:00",
+      "end": "2026-11-16T01:31:02.351465+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "03c59220fb665d425ca3e85f1dfda3f1f8b6d2c72326f020bbcd1da877254386"
+    },
+    "positive": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "<audit-dir>/positive"
+      ],
+      "start": "2026-11-16T01:32:03.209569+00:00",
+      "end": "2026-11-16T01:32:03.351381+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "b99f4809fb700355f8b997ce068a889a42de38a32259f86289cc13e36be51ff0"
+    },
+    "strict": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--test",
+        "suite",
+        "strict::",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "start": "2026-11-16T01:31:48.939325+00:00",
+      "end": "2026-11-16T01:32:02.267426+00:00",
+      "exitCode": 0,
+      "expected": 0,
+      "sha256": "67ebdbb132e6366ab8f2c9e7efc35201b6c5b7ed9249aeedc13e6db6955f7b91"
+    },
+    "coverage-full-attempt": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "35m",
+        "--",
+        "cargo",
+        "llvm-cov",
+        "--locked",
+        "--offline",
+        "--json",
+        "--summary-only",
+        "--output-path",
+        "<audit-dir>/evidence/coverage-raw.json"
+      ],
+      "start": "2026-11-16T01:48:34.379558+00:00",
+      "end": "2026-11-16T02:23:36.495419+00:00",
+      "exitCode": 124,
+      "expected": 0,
+      "sha256": "9e2485d4d448ac6fb35b50a59950ee7862873d2cf3fe7c86632744ac9d0b5fc6"
+    }
+  },
+  "verifiedBuildArtifacts": {
+    "field-proof": "c8f77b43ebfc8f2cad3cfdb0a7339d7be49846f73439a30f2fb614da0e5943b1",
+    "strict-suite": "6a2ef79e7aad32b76b2fc4ce7bbb45e32e43a90b8984369b0a4e2a07064e1dba",
+    "lib-default": "abf940397bd547c59649058228c73db433e6bbf26b5bc3cb0fa1e3e22b723cfa",
+    "positive-consumer": "0b8e6ec37f13c4ff7d9848d134d78f89511a0a6abaaa3a0f25c2742c64073c25"
+  },
+  "coverageScope": {
+    "unitTestsPassed": 47,
+    "strictIntegrationTestsPassed": 7,
+    "ordinarySuiteIntegrationsPassed": 165,
+    "retainedUnitRun": true,
+    "fullAttemptExit": 124,
+    "firstRetryExit": 143,
+    "scope": "Default Linux unit tests and suite strict:: tests only"
+  },
+  "retainedFuzz": {
+    "cyclic": {
+      "executions": 50332,
+      "seconds": 61,
+      "sha256": "647d6c517db55a65f73ea18197fe6d261bb15e67d25baade9a4d65214f5407f7"
+    },
+    "calls": {
+      "executions": 326506,
+      "seconds": 61,
+      "sha256": "f6a401a9421dc81896e3813b41065cad4111ac86f2e517fd3520ae06e83180e3"
+    },
+    "plans": {
+      "executions": 161285,
+      "seconds": 61,
+      "sha256": "c0e9f0f1423aa0b6c3ab4f243ea8958f8860c8f660271c4c1c4e0f3bf23f4aee"
+    },
+    "files": {
+      "executions": 344003,
+      "seconds": 61,
+      "sha256": "24d50460cabcd696aa9b98d7c7201b34d9a4d22c9529c2f7f12c2d859cc2c63f"
+    },
+    "sets": {
+      "executions": 34908,
+      "seconds": 61,
+      "sha256": "c29e95e658492ca745cbbc40c08003ebc74c583fba49e48976697e0b25a8749b"
+    }
+  },
+  "fileCorpusSeeds": {
+    "set-0": "4a6906f6e8e39716e0a928ef1dd6651bdad1501035282da4edeab5a937ca4f28",
+    "set-1": "b87a464c648b43f4613d9d89f2f4cf868c47bfe0b067006e97e16d16480579d8",
+    "set-2": "60b47a53e5ce48e245d12b24dad358550032addeb86b9514e721a427a8a24bc2",
+    "set-3": "56b5f2abaad66716305da2cee23f987c27ae483a1be66e9ae4dbfe5fc2709143"
+  },
+  "coverage": {
+    "covered": 5533,
+    "measured": 6092,
+    "percentage": 90.82,
+    "sourceInputs": "8bbe74a9143a0bc54b7fd71b8479dc114c3bf42715fb42ac4d84672c4cb020a2",
+    "files": {
+      "src/buffer.rs": {
+        "count": 76,
+        "covered": 73,
+        "percent": 96.05263157894737
+      },
+      "src/buffer/numbers.rs": {
+        "count": 35,
+        "covered": 34,
+        "percent": 97.14285714285714
+      },
+      "src/buffer/pages.rs": {
+        "count": 30,
+        "covered": 30,
+        "percent": 100
+      },
+      "src/code.rs": {
+        "count": 193,
+        "covered": 169,
+        "percent": 87.56476683937824
+      },
+      "src/code/owned.rs": {
+        "count": 99,
+        "covered": 92,
+        "percent": 92.92929292929293
+      },
+      "src/correct.rs": {
+        "count": 639,
+        "covered": 631,
+        "percent": 98.74804381846636
+      },
+      "src/correct/changes.rs": {
+        "count": 200,
+        "covered": 197,
+        "percent": 98.5
+      },
+      "src/correct/errors.rs": {
+        "count": 27,
+        "covered": 27,
+        "percent": 100
+      },
+      "src/correct/plan.rs": {
+        "count": 292,
+        "covered": 261,
+        "percent": 89.38356164383562
+      },
+      "src/cyclic.rs": {
+        "count": 10,
+        "covered": 10,
+        "percent": 100
+      },
+      "src/cyclic/decode.rs": {
+        "count": 237,
+        "covered": 224,
+        "percent": 94.51476793248945
+      },
+      "src/cyclic/owned.rs": {
+        "count": 297,
+        "covered": 279,
+        "percent": 93.93939393939394
+      },
+      "src/cyclic/words.rs": {
+        "count": 183,
+        "covered": 168,
+        "percent": 91.80327868852459
+      },
+      "src/field.rs": {
+        "count": 230,
+        "covered": 226,
+        "percent": 98.26086956521739
+      },
+      "src/field/binary.rs": {
+        "count": 69,
+        "covered": 63,
+        "percent": 91.30434782608695
+      },
+      "src/field/gf2048.rs": {
+        "count": 70,
+        "covered": 70,
+        "percent": 100
+      },
+      "src/field/gf256.rs": {
+        "count": 58,
+        "covered": 58,
+        "percent": 100
+      },
+      "src/field/gf65536.rs": {
+        "count": 64,
+        "covered": 64,
+        "percent": 100
+      },
+      "src/field/lanes.rs": {
+        "count": 118,
+        "covered": 118,
+        "percent": 100
+      },
+      "src/field/proof.rs": {
+        "count": 120,
+        "covered": 106,
+        "percent": 88.33333333333333
+      },
+      "src/file.rs": {
+        "count": 115,
+        "covered": 85,
+        "percent": 73.91304347826086
+      },
+      "src/file/crc32c.rs": {
+        "count": 28,
+        "covered": 28,
+        "percent": 100
+      },
+      "src/file/facts.rs": {
+        "count": 148,
+        "covered": 143,
+        "percent": 96.62162162162163
+      },
+      "src/file/header.rs": {
+        "count": 267,
+        "covered": 247,
+        "percent": 92.50936329588015
+      },
+      "src/file/pile.rs": {
+        "count": 47,
+        "covered": 42,
+        "percent": 89.36170212765957
+      },
+      "src/file/reading.rs": {
+        "count": 141,
+        "covered": 113,
+        "percent": 80.1418439716312
+      },
+      "src/file/set.rs": {
+        "count": 458,
+        "covered": 362,
+        "percent": 79.03930131004367
+      },
+      "src/file/set/shards.rs": {
+        "count": 398,
+        "covered": 358,
+        "percent": 89.9497487437186
+      },
+      "src/file/set/sink.rs": {
+        "count": 58,
+        "covered": 58,
+        "percent": 100
+      },
+      "src/file/set/vote.rs": {
+        "count": 333,
+        "covered": 245,
+        "percent": 73.57357357357357
+      },
+      "src/file/writing.rs": {
+        "count": 210,
+        "covered": 203,
+        "percent": 96.66666666666667
+      },
+      "src/list.rs": {
+        "count": 52,
+        "covered": 49,
+        "percent": 94.23076923076923
+      },
+      "src/recurrence.rs": {
+        "count": 40,
+        "covered": 40,
+        "percent": 100
+      },
+      "src/self_test.rs": {
+        "count": 263,
+        "covered": 255,
+        "percent": 96.95817490494296
+      },
+      "src/strict.rs": {
+        "count": 126,
+        "covered": 116,
+        "percent": 92.06349206349206
+      },
+      "src/strict/codes.rs": {
+        "count": 152,
+        "covered": 128,
+        "percent": 84.21052631578947
+      },
+      "src/strict/files.rs": {
+        "count": 209,
+        "covered": 161,
+        "percent": 77.03349282296651
+      }
+    }
+  },
+  "toolchain": {
+    "rust": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+    "coverage": "cargo-llvm-cov 0.9.1",
+    "audit": "cargo-audit-audit 0.23.0"
+  },
+  "githubMain": {
+    "checked": "2026-11-16T01:40:52.852385+00:00",
+    "head": "73771bfb62327c4eec540cc64c26d35c52cbf052",
+    "runs": [
+      {
+        "conclusion": "success",
+        "head_sha": "73771bfb62327c4eec540cc64c26d35c52cbf052",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43733702257",
+        "name": "CI",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "f6e2888aca317699b94eaa4b0facc27a5f3a169a",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43728920578",
+        "name": "CI",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "f6e2888aca317699b94eaa4b0facc27a5f3a169a",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43728920501",
+        "name": "RustSec audit",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "b8776cf788ce9231b43ecf956ea139a4fb53efbc",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43719416629",
+        "name": "CI",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "b8776cf788ce9231b43ecf956ea139a4fb53efbc",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43719416598",
+        "name": "RustSec audit",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "9c75fba897e4a72e22091b90a9fa14eac4662671",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43714252171",
+        "name": "CI",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "4afe60775c150c34a4631d71ac50bab2a4f3a6b7",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43698221641",
+        "name": "RustSec audit",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "head_sha": "4afe60775c150c34a4631d71ac50bab2a4f3a6b7",
+        "html_url": "https://github.com/hobby-eng/reed-solomon-core/actions/runs/43698221644",
+        "name": "CI",
+        "status": "completed"
+      }
+    ]
+  },
+  "registryName": {
+    "status": 404,
+    "registryDetail": "{\"errors\":[{\"detail\":\"crate `reed-solomon-core` does not exist\"}]}",
+    "checked": "2026-11-16T01:46:15.019842+00:00",
+    "endpoint": "https://crates.io/api/v1/crates/reed-solomon-core"
+  },
+  "dependency": {
+    "version": "0.1.0",
+    "checksum": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+    "rustsecAdvisoryRevision": "02e2517f457a359fc6d3440ea4560c8ea188fee8",
+    "devOnlyWarnings": [
+      "RUSTSEC-2024-0384",
+      "RUSTSEC-2026-0253"
+    ],
+    "dependencyTreeLogDigests": {
+      "normal": "0e14ee897e079feffcb2394e7bf9569b8719170388f4c79dab635a6831a633d5",
+      "lru": "5a0a38441dc2359a458be82c70ed4c581f62cd06872f27be080505901c7c75c3",
+      "instant": "3cc81147c6880e9211f348408233b3558f1e449d7099101379bafdc71c2c7acb"
+    }
+  },
+  "publicEditionOfAudit004": {
+    "AUD-004-2026-11-16.md": "5fd3e6cd71f99fccb959b786c365960c24e07cedfe13eed3ae8bc75f0b027cf6",
+    "AUD-004-2026-11-16.json": "ab2359954ca65fb4a4a77f74cecc6e1865a30506a6398cc901c76205a5da77e9",
+    "AUD-004-harnesses/README.md": "6efa5031405417ba77047610f8bbf50032a4beb7ff5fe20c71de3d130f26572a",
+    "AUD-004-harnesses/public-api.rs": "1904a957a7381af7366e6e9a997c7adc2a11032e6135874113a90e37a1a31d4e"
+  },
+  "coverageDocumentationPatch": {
+    "sha256": "3efbc904434b4d5898ceed0480a14a80c107f6b55328733a4a466f08bdec318e",
+    "files": [
+      "README.md",
+      "docs/COVERAGE.md"
+    ],
+    "applies": true
+  },
+  "handoffDelta": {
+    "againstAudit004": [
+      "CHANGELOG.md",
+      "README.md",
+      "docs/TECHNICAL.md",
+      "docs/audits/AUD-004-2026-11-16.json",
+      "docs/audits/AUD-004-2026-11-16.md",
+      "docs/audits/README.md",
+      "src/correct/changes.rs",
+      "src/strict.rs",
+      "src/strict/codes.rs",
+      "src/strict/files.rs",
+      "tests/suite/strict.rs",
+      "tests/suite/strict_elsewhere.rs"
+    ],
+    "sinceFuzzRun": [
+      "src/strict.rs"
+    ],
+    "oldDiff": "e8747a34d1f56f0e81fbed75a53ec9e815b99308f1f3a8fc1cc672f07cccc798",
+    "finalDiff": "2d41af8fdfe47f7e00fb9d3112a6438f568d580fba471c8148f052e8abf7caaa"
+  }
+}

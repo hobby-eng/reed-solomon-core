@@ -1,0 +1,937 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-003",
+  "auditNumber": 3,
+  "date": "2026-11-15",
+  "title": "Verification of AUD-002 with secret-protection-core 0.1.0",
+  "reviewer": {
+    "name": "Codex (AI-assisted review)",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "snapshot": {
+    "commit": "73771bfb62327c4eec540cc64c26d35c52cbf052",
+    "commitComplete": false,
+    "workingTree": "Uncommitted fixes on main. The supplied final diff matches the independently generated diff, including new sources.",
+    "sourceFingerprint": "4f965d8f0d3c7b75711f1cbf46a6484b09203fb6952d36cc8aa4c680bead11df",
+    "diffSha256": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30"
+  },
+  "scope": "All 26 AUD-002 entries, four strict-mode conditions, RS plan/file APIs, source provenance, OS claims and build configurations.",
+  "checks": {
+    "CHECK-SEC-001": {
+      "title": "Threat model and secret ownership",
+      "status": "reviewed",
+      "evidence": "Trace of ownership, strict admission, SHA mismatch and callback destinations."
+    },
+    "CHECK-SEC-002": {
+      "title": "Secret Vault, CSP, sandbox, and transport",
+      "status": "reviewed",
+      "evidence": "Per-buffer and stack controls, process isolation is a host precondition; no application sandbox here."
+    },
+    "CHECK-SEC-003": {
+      "title": "Network egress and secret guards",
+      "status": "not-applicable",
+      "evidence": "The codec exposes no network transport or provider."
+    },
+    "CHECK-SEC-004": {
+      "title": "Randomness, encryption, and authentication",
+      "status": "reviewed",
+      "evidence": "Content fingerprints in both plan forms, SHA-256 mismatch handling; no key or encryption in the codec."
+    },
+    "CHECK-SEC-005": {
+      "title": "Secret lifecycle and exceptional paths",
+      "status": "reviewed",
+      "evidence": "Allocation/stack/cleanup, lazy result handling and generated debug IR."
+    },
+    "CHECK-SEC-006": {
+      "title": "Browser injection, persistence, and sensitive APIs",
+      "status": "not-applicable",
+      "evidence": "No browser storage, scripting or host UI in this crate."
+    },
+    "CHECK-SEC-007": {
+      "title": "Read-only guarantees and availability bounds",
+      "status": "reviewed",
+      "evidence": "Lock, workspace and allocation limits, failure atomicity and 32-bit size conversion."
+    },
+    "CHECK-FUN-001": {
+      "title": "BIP39, entropy, and seed interpretation",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-002": {
+      "title": "HD derivation and every coin/profile",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-003": {
+      "title": "BIP85, BIP38, messages, and Silent Payments",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-004": {
+      "title": "Scripts, descriptors, Miniscript, and multisig",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-005": {
+      "title": "Transactions, PSBT version context, and commitments",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-FUN-006": {
+      "title": "Recovery and backup formats",
+      "status": "reviewed",
+      "evidence": "Point/cyclic, erasures and unknown errors, independent oracles, k-of-n subsets, file and digest cases in both integration profiles."
+    },
+    "CHECK-FUN-007": {
+      "title": "Discovery, providers, proofs, and accounting",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-API-001": {
+      "title": "Actual dependency call contracts",
+      "status": "reviewed",
+      "evidence": "Pinned dependency and strict/portable interfaces, two consumers inspected separately."
+    },
+    "CHECK-API-002": {
+      "title": "Async state, cancellation, and revisions",
+      "status": "not-applicable",
+      "evidence": "No such wallet, transaction, provider or asynchronous application operation in this codec."
+    },
+    "CHECK-API-003": {
+      "title": "Public export schema and monetary fidelity",
+      "status": "reviewed",
+      "evidence": "Error representation, correction output types, checked sizes."
+    },
+    "CHECK-API-004": {
+      "title": "Encoding and import/export interoperability",
+      "status": "reviewed",
+      "evidence": "File readers/writers, validation order and file repair."
+    },
+    "CHECK-BLD-001": {
+      "title": "Manifest, flags, and feature composition",
+      "status": "reviewed",
+      "evidence": "Three Linux feature profiles, freestanding evidence retained from submitted gates."
+    },
+    "CHECK-BLD-002": {
+      "title": "Matrix depth and runtime sampling",
+      "status": "reviewed",
+      "evidence": "Native Linux execution; compile-only Windows/macOS/WASM; no new foreign native run."
+    },
+    "CHECK-BLD-003": {
+      "title": "Lockfiles, source provenance, and licenses",
+      "status": "reviewed",
+      "evidence": "Two Cargo locks, matched registry source, signed-release archive; RustSec local cached database."
+    },
+    "CHECK-BLD-004": {
+      "title": "Canonical WASM and Docker bytes",
+      "status": "not-applicable",
+      "evidence": "No canonical Docker/browser artifact is specified for this uncommitted codec snapshot."
+    },
+    "CHECK-BLD-005": {
+      "title": "Artifacts, CI, and release workflows",
+      "status": "reviewed",
+      "evidence": "CI trigger and profile selection; no new release/CI deployment."
+    },
+    "CHECK-UI-001": {
+      "title": "Real files and representative viewports",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-UI-002": {
+      "title": "Navigation, inputs, and state preservation",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-UI-003": {
+      "title": "Secret visibility, help, QR, and accessibility",
+      "status": "not-applicable",
+      "evidence": "No such browser interface in this library."
+    },
+    "CHECK-ARC-001": {
+      "title": "Ownership, imports, and composition seams",
+      "status": "reviewed",
+      "evidence": "Distinct strict wrappers, shared file reader, mutation and result paths."
+    },
+    "CHECK-ARC-002": {
+      "title": "Dead code, duplication, and false positives",
+      "status": "reviewed",
+      "evidence": "Reused cyclic workspace; remaining infallible allocations in self-test."
+    },
+    "CHECK-ARC-003": {
+      "title": "Comments, tests, and production-path fidelity",
+      "status": "reviewed",
+      "evidence": "Public acceptance tests, an independent failing allocator, comparisons to real writer fixtures."
+    },
+    "CHECK-DOC-001": {
+      "title": "User-facing capability and safety descriptions",
+      "status": "reviewed",
+      "evidence": "Public secret-handling guarantee, OS exceptions, example use and exported errors."
+    },
+    "CHECK-DOC-002": {
+      "title": "Commands, metadata, links, and legal materials",
+      "status": "reviewed",
+      "evidence": "Installation graph, checksum, verification commands and test targets."
+    },
+    "CHECK-DOC-003": {
+      "title": "Audit records and evidence consistency",
+      "status": "reviewed",
+      "evidence": "26 earlier findings, historical checksum/errata, fresh handoff hash and coverage provenance."
+    }
+  },
+  "findings": [
+    {
+      "id": "AUD-003-SEC001",
+      "category": "SEC",
+      "kind": "finding",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "title": "Removing files can compare shard payloads on the caller’s stack",
+      "evidence": "src/strict/files.rs:248–249; src/file/set.rs:567–577; src/file/set/shards.rs:169–173,277,317",
+      "reproduction": "A strict set retains two copies of the same shard. Calling without with both copies retained invokes duplicate resolution.",
+      "expected": "Operations comparing secret shard bytes run only on an admitted stack.",
+      "observed": "The strict wrapper calls the ordinary method directly. Duplicate resolution compares the surviving payload slices on that thread.",
+      "impact": "The operation can process payload bytes without satisfying the strict stack conditions. Mapping protection on the original buffers does not cover those temporaries.",
+      "recommendedFix": "Move the recomputation into strict(...) or restructure it to use verified public metadata only.",
+      "requiredVerification": "Cover retained duplicates with and without a protected stack; require refusal before comparison if a stack cannot be admitted."
+    },
+    {
+      "id": "AUD-003-SEC002",
+      "category": "SEC",
+      "kind": "finding",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "title": "Lazy block and survey checks escape the strict reader",
+      "evidence": "src/strict/files.rs:102–104,129–131; src/file/reading.rs:150–174; src/file/crc32c.rs:17–25",
+      "reproduction": "Observe the return types of strict::read and strict::Pile::readings, then trace block() and survey() on a valid file.",
+      "expected": "File-backed operations that process secret payload should retain the strict contract past header parsing.",
+      "observed": "The returned ShardFile is the ordinary reader. block() and survey() compute CRC over the payload on the caller thread and do not enter the protected stack.",
+      "impact": "Reading a block or inspecting a file can process secret data outside the advertised boundary. The initial buffer remains protected.",
+      "recommendedFix": "Provide a strict reader with guarded lazy operations or validate/cache the required state inside the strict operation. Keep the lifetime/owner restriction explicit for any borrowed view.",
+      "requiredVerification": "Cover both reader entry points, repeated calls, absent stack admission and accepted ordinary file shapes."
+    },
+    {
+      "id": "AUD-003-SEC003",
+      "category": "SEC",
+      "kind": "finding",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "title": "Reading a correction’s location also decodes the original and replacement symbols",
+      "evidence": "src/correct/changes.rs:58–63,101–105,164–188,231–233; tests/suite/strict.rs:111",
+      "reproduction": "Read the public position/kind through get or the iterator of a strict plan, without requesting its values.",
+      "expected": "Metadata access should read only metadata. Strict symbol access belongs in the protected callback.",
+      "observed": "get calls record and decodes both u16 fields. In local unoptimized Linux LLVM IR it reserves a 24-byte ordinary stack slot and passes it as the record return destination before projecting metadata.",
+      "impact": "An application can materialize recovery-word values in ordinary temporary storage merely by showing a position. This does not depend on the callback retaining a copy.",
+      "recommendedFix": "Have get decode only the position/kind offsets. Provide a strict plan view if ordinary symbol access is otherwise accidentally exposed.",
+      "requiredVerification": "Inspect a debug build for symbol loads on metadata-only access and cover get, iter and IntoIterator; verify the separate value accessor remains guarded."
+    },
+    {
+      "id": "AUD-003-SEC004",
+      "category": "SEC",
+      "kind": "finding",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "title": "Strict recovery returns the computed digest in an ordinary printable error",
+      "evidence": "src/file/set.rs:124,159–163,423–430; src/strict/files.rs:207–218; secret-protection-core 0.1.0 src/os/unix.rs:752–762,781–784",
+      "reproduction": "Trace the existing digest-mismatch branch in rebuild and rebuild_into; inspect the type and formatting of the forwarded error.",
+      "expected": "A strict error should report failed integrity without copying a private intermediate into caller memory or diagnostics.",
+      "observed": "SetError::Digest carries both the stated hash and the actual hash of the reconstructed data. The latter differs from the public header; derived Debug prints all 32 bytes. The strict wrapper forwards that value from the protected-stack job.",
+      "impact": "A log or crash report can include a stable fingerprint of the reconstructed bytes. This matters especially for partially known or low-entropy material. No memory dump or leak was measured.",
+      "recommendedFix": "Map mismatches to a status-only strict error before returning from the protected closure. Keep detailed diagnostics confined to the portable API where appropriate.",
+      "requiredVerification": "Cover mismatches through both strict APIs; verify the error payload and Debug output contain no computed digest and output handling still follows the documented policy."
+    },
+    {
+      "id": "AUD-003-DOC001",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "title": "The strict-mode example populates unchecked secret buffers",
+      "evidence": "README.md:251–254,261–271; src/strict/codes.rs:223–229; upstream src/protect.rs:61–75",
+      "reproduction": "Follow the README’s strict-mode input and callback-destination construction under best-effort allocation.",
+      "expected": "The documented path for actual secrets should confirm required protection before storing any secret in caller-owned buffers.",
+      "observed": "The example fills Secret::with_capacity before checking its properties. The callback destination is also created with with_capacity and captured by the closure; strict::values checks the Changes buffer, not that destination.",
+      "impact": "The sample can put an input or recovered word into unlocked memory despite its comment describing protected output. The published example uses public constants; the risk is for applications following it with real input.",
+      "recommendedFix": "Show a checked helper that allocates, confirms lock/fork/dump properties for the supported platform, and only then accepts bytes. On Apple document the separate process-wide measure.",
+      "requiredVerification": "Exercise the documented path under a small lock budget and check that neither caller-supplied destination nor input is populated when its required protection is absent."
+    },
+    {
+      "id": "AUD-003-FUN001",
+      "category": "FUN",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "for_data validates digest-specific size after it hashes the input",
+      "evidence": "src/file/facts.rs:85,102–122",
+      "reproduction": "Trace for_data with DataDigest::Sha256 for a descriptor accepted without a digest and rejected with one.",
+      "expected": "The method documents that it rejects invalid facts before computing the digest.",
+      "observed": "The first new call passes None; Some(sha256(data)) is evaluated before the second constructor validates the digest-bearing shape.",
+      "impact": "The documented ordering is wrong for sizes beyond the digest bound; the metadata decoder itself rejects them correctly. No impractically large payload was tested.",
+      "recommendedFix": "Validate the digest-bearing layout with a placeholder before hashing, then set the computed digest in the validated facts.",
+      "requiredVerification": "Test ordering at the metadata boundary using a counting digest hook or a separate shape-validation helper without allocating a giant message."
+    }
+  ],
+  "observations": [],
+  "remediation": [
+    {
+      "id": "AUD-002-SEC001",
+      "status": "fixed",
+      "scopeDisposition": "Linux verified; native evidence pending",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "strict.rs:183–249, buffer.rs:55–73 and strict.rs:45–73 gate caller buffers, new allocations and stack before use. Six strict Linux tests passed, including the non-skipped memory-limit child. Missing native evidence for this snapshot on the other supported systems. The checks here concern storage admission; operations that bypass admission appear below."
+    },
+    {
+      "id": "AUD-002-SEC002",
+      "status": "open",
+      "scopeDisposition": "Partly fixed",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Sealed Held/HeldMut and the compile-fail test reject Vec. strict::read and Pile::readings return portable ShardFile handles; FileSet::without skips the strict gate (AUD-003-SEC001/002)."
+    },
+    {
+      "id": "AUD-002-SEC003",
+      "status": "open",
+      "scopeDisposition": "Partly fixed",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Public Change exposes only position and kind, Changes::values offers a callback and strict::values checks the list. get/iteration still decodes both payload words on the caller stack (AUD-003-SEC003). Deliberate copies made by a callback are outside the documented contract."
+    },
+    {
+      "id": "AUD-002-SEC004",
+      "status": "open",
+      "scopeDisposition": "Partly fixed",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Strict main operations use a 512 KiB protected stack. Scaling tails are wiped; SHA state uses zeroize. Unguarded duplicate comparison, lazy CRC, metadata access and the mismatched digest still cross that boundary. See AUD-003-SEC001–004."
+    },
+    {
+      "id": "AUD-002-SEC005",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Both lockfiles use the registry archive at the same digest. All 19 upstream src/*.rs files, including subdirectories, matched the archive, unpacked build inputs and signed-tag source. The tag descends from the upstream native acceptance commit. Native upstream checks are historical."
+    },
+    {
+      "id": "AUD-002-SEC006",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "TECHNICAL.md:256–258 distinguishes multiplication/CRC from the decoder, which branches on values. Source inspection, not a timing measurement."
+    },
+    {
+      "id": "AUD-002-SEC007",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Poll reserves for full membership before appending and reserves half the shard count for wrong holders; Finder bounds its locator list. Source and public multi-file vote regressions (src/file/set/vote.rs:250–258, src/correct.rs:494, tests/suite/votes.rs). Votes intentionally report locations."
+    },
+    {
+      "id": "AUD-002-API001",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Point and cyclic identities and ordered (index, length, bytes) enter SHA-256; apply verifies fingerprint and all records before any write. Tests change untouched symbols, order and code parameters (src/correct/plan.rs:139–203, src/cyclic/owned.rs:198, tests/suite/plans.rs:484, cyclic.rs:445)."
+    },
+    {
+      "id": "AUD-002-API002",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Fallible metadata reservation and bounded extensions traced. On small alloc-only inputs, denial of each baseline allocation produced CodeError::Memory for encode (8), rebuild (7), redundancy (5), plan (10) and correct (7). The correct input was unchanged."
+    },
+    {
+      "id": "AUD-002-API003",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "BySlot sorts without allocation; file output semantics distinguish refusals before writing from late failures after framing. In-place suite plus single-allocation refusal sweep for multi-file writing and repairs. src/file/set/sink.rs:99, src/file/writing.rs:90, tests/suite/in_place.rs:78,123."
+    },
+    {
+      "id": "AUD-002-API004",
+      "status": "open",
+      "scopeDisposition": "Partly fixed",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Card-plan expected changes now use a fixed array. Other startup checks use infallible collect()/to_vec() (src/self_test.rs:271–273,290–295,364–366). The alloc-only test process ended with exit 134 on a 120-byte allocation. Replace the remaining fixed-size collections with arrays/fallible storage and compare borrowed slices. The regression must return passed()==false without terminating."
+    },
+    {
+      "id": "AUD-002-API005",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "src/code.rs:62 and tests/suite/refusals.rs:253 distinguish the 256-byte scratch contract from the threshold; suite passed."
+    },
+    {
+      "id": "AUD-002-API006",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "FileError::Memory and in-place docs detail early untouched versus late zeroed outputs. tests/suite/in_place.rs:78,123 and the allocator check exercise both output contracts."
+    },
+    {
+      "id": "AUD-002-API007",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "src/file/facts.rs:85 rejects a digest-bearing size of 2^61 bytes; tests/suite/files.rs:267 validates the two descriptor boundary values. Separate early-hash issue in AUD-003-FUN001."
+    },
+    {
+      "id": "AUD-002-ARC001",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Two correction passes reuse the syndrome buffer and decoder room (src/cyclic/owned.rs:135–157,268). Ancillary metadata allocation is still possible; the old duplicated decoder workspace is gone."
+    },
+    {
+      "id": "AUD-002-ARC002",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "The no-allocator self-test calls Header::file_into and compares all 86 bytes against a fixed answer (src/file.rs:139–157); the borrowed profile passed."
+    },
+    {
+      "id": "AUD-002-FUN001",
+      "status": "open",
+      "scopeDisposition": "Partly fixed",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "After validating inputs the common writer returns early on empty indexes. Its owned wrapper converts file_len to usize first (src/file/writing.rs:25,95). On 32-bit, threshold 1, 1 GiB input, one-byte blocks, a hypothetical file needs over 5 GiB. With zero requested files the owned method returns Memory; files_into returns success. Static geometry, no giant allocation. Move the empty return ahead of the conversion after validations."
+    },
+    {
+      "id": "AUD-002-DOC001",
+      "status": "open",
+      "scopeDisposition": "Partly fixed",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "The main platform paragraph now describes fallback and owner generation (TECHNICAL.md:265). Line 271 still says an ordinary Secret is refused at the lock limit; 273 treats Isolation::enter as a guarantee. Use checked constructors/confirmed measures, clarify cached child views and relay upstream's process-wide no-fork precondition while a protected stack runs (upstream src/stack.rs:63–67)."
+    },
+    {
+      "id": "AUD-002-DOC002",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Digest enforcement at the high-level writer, one-member k=1 sets and the two file-format field identifiers are distinguished (src/file/facts.rs:72, src/file.rs:89, src/file/set.rs:127, TECHNICAL.md:381; digest/format suites)."
+    },
+    {
+      "id": "AUD-002-DOC003",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Erased positions are tested before reading them in the cyclic search; documentation scopes this to source semantics and does not rule out speculative or widened loads. src/cyclic/words.rs:168,205; src/cyclic/decode.rs:122; TECHNICAL.md:205."
+    },
+    {
+      "id": "AUD-002-BLD001",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Two bytes control agrees_in scratch size on both sides of 256 and the accepted answer is checked against agrees (fuzz/fuzz_targets/calls.rs:49–54). Both 255/256 fixed smoke inputs returned success in the reviewer run; separate retained ASan fuzz evidence."
+    },
+    {
+      "id": "AUD-002-BLD002",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "fuzz/examples/seeds.rs:16 creates the destination path; nightly seeds command wrote four files into a previously absent nested corpus."
+    },
+    {
+      "id": "AUD-002-BLD003",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Root and fuzz manifest/lock changes trigger audit.yml; two action steps name the right lockfiles. Both local advisory commands ran. Trigger wiring checked statically, no Actions run dispatched."
+    },
+    {
+      "id": "AUD-002-BLD004",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Cargo.toml requires alloc for the integration suite and example; CI selects all three profiles. The standard no-default command now passes with 29 unit tests on Linux. No new native CI run."
+    },
+    {
+      "id": "AUD-002-DOC004",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Erratum records both informational RustSec warnings, plus the distinct code/test commits 9c75fba and 92b842d. Historical logs and Git records were checked; current root scan also reports the two dev-dependency warnings."
+    },
+    {
+      "id": "AUD-002-DOC005",
+      "status": "verified",
+      "scopeDisposition": "Verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "README lists bytemuck under alloc, distinguishes self-test known answers and equivalent-entry-point checks, and lists the two profile counts (17/11); both self-test configurations passed at normal memory availability."
+    },
+    {
+      "id": "AUD-001-BLD002",
+      "status": "verified",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "verificationSnapshot": "158b257d0d2da2a0ead32b27c4c8eb0bb3f849c46b13c273f395b778c392bb30",
+      "evidence": "Both lockfiles and Cargo.toml resolve the immutable registry package; a Git force-push no longer controls these bytes."
+    }
+  ],
+  "limitations": [
+    "Runtime acceptance is Linux x86-64 only. Windows, macOS and WASM were cross-checked. Android, iOS, Windows, macOS, ARM64 Linux and WASM were not executed in this audit. No GitHub run was dispatched for the working tree.",
+    "No new line-coverage measurement. The README value of 98.35% is historical. No claim was made about seeing a secret in swap, a core dump or an external process.",
+    "The long opt-in field proof was ignored in the ordinary profile tests. No independent five-target fuzz replay; the supplied post-pin logs are retained separately.",
+    "The callable lifecycle checks concern public synthetic data. The 32-bit empty-request case and extreme SHA limit were checked from code and representable geometry, without allocating giant messages. Unoptimized Linux IR was inspected at the affected metadata reader; this was not a multi-architecture assembly review.",
+    "The register uses snapshot SHA-256 in lieu of a fix or verification commit. The frozen brief excludes edits to the checkout; this Markdown/JSON pair, register and evidence are delivered outside it."
+  ],
+  "procedureHashes": {
+    "FULL_AUDIT_GUIDE.md": "179fc5e27bcc9f9c0eec75b38b910f4918041e79c904840ef68efa8210d20dd2",
+    "audits/AUDIT_STANDARD.md": "c43e25bbcbdd6d22d52a38f571a759f5b688af062b980c3adecd5326efc082ec",
+    "audits/AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+    "audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+  },
+  "dependency": {
+    "checksum": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+    "upstream": "373aeab120a71af8fe9caf7e1ad128d9e3479f90",
+    "matchedSourceFiles": 19,
+    "pins": {
+      "Cargo.lock": {
+        "name": "secret-protection-core",
+        "version": "0.1.0",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+        "dependencies": [
+          "landlock",
+          "libc",
+          "windows-sys",
+          "zeroize"
+        ]
+      },
+      "fuzz/Cargo.lock": {
+        "name": "secret-protection-core",
+        "version": "0.1.0",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "checksum": "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354",
+        "dependencies": [
+          "landlock",
+          "libc",
+          "windows-sys",
+          "zeroize"
+        ]
+      }
+    },
+    "blockerFixAncestor": "3d914c8"
+  },
+  "executed": {
+    "allocation-build": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "2G",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "exitCode": 0,
+      "logSha256": "f0788aa36d1c86b6ccdfb7f4042a5574102d82061c046422a2d42e008a1e4710"
+    },
+    "cross-windows": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--target",
+        "x86_64-pc-windows-gnu",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exitCode": 0,
+      "logSha256": "038f62082dc760ca0df8ab5dfddc9a2f97618902039fc268db163f1fb6af1b9c"
+    },
+    "rustsec-root": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "audit",
+        "--no-fetch",
+        "--file",
+        "Cargo.lock",
+        "--json"
+      ],
+      "exitCode": 0,
+      "logSha256": "cb6cfbb32cf3322346c6e0b7640b240642628d5ecd839ee6d30c611ec8147b0d"
+    },
+    "alloc": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "exitCode": 0,
+      "logSha256": "5c06e6aa58723897587c7d20a624ff21502adadf53cb58aecfb22821a8ba55d2"
+    },
+    "cross-apple": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--target",
+        "aarch64-apple-darwin",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exitCode": 0,
+      "logSha256": "6ad031b3a221daa84708a42998b254ee431c3757b1bfa49c7bcf2aa67e4c2e8d"
+    },
+    "fmt": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "clippy": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exitCode": 0,
+      "logSha256": "33cd86041029afd0b612d5e82e35aed16bfde8557d902ca726d73ab446e2d459"
+    },
+    "docs": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "doc",
+        "--locked",
+        "--offline",
+        "--no-deps"
+      ],
+      "exitCode": 0,
+      "logSha256": "cf9155a9e20d82c5003901897de809ae6cbf11faa0c59f2da72474519ce4afad"
+    },
+    "self-test-oom": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "2G",
+        "--time",
+        "20m",
+        "--",
+        "$AUDIT_DIR/alloc-final"
+      ],
+      "exitCode": 134,
+      "logSha256": "3302546c4c3ce54215d243635d7ad38de54bac135f556c87e62ab9895203df57"
+    },
+    "clippy-borrowed": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exitCode": 0,
+      "logSha256": "c3760b49a93eeca37e31c8e42c09fcebc3fd3de1512e5bf91629f95162d4df84"
+    },
+    "allocation-compile": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "2G",
+        "--time",
+        "20m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "$AUDIT_DIR/AUD-003-harnesses/allocation.rs",
+        "--extern",
+        "reed_solomon_core=$AUDIT_DIR/target-aud-extra/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=$AUDIT_DIR/target-aud-extra/debug/deps",
+        "-o",
+        "$AUDIT_DIR/alloc-final"
+      ],
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "borrowed": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features"
+      ],
+      "exitCode": 0,
+      "logSha256": "f6122a3dea7d8c3e3e12f37e384712de87443bd7e83ca2dfd0db0757ce2bbbfe"
+    },
+    "rustsec-fuzz": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "audit",
+        "--no-fetch",
+        "--file",
+        "fuzz/Cargo.lock",
+        "--json"
+      ],
+      "exitCode": 0,
+      "logSha256": "5bb97488c5e1c8950a39312b4da48783f409750e2da20d540c0d0870023d9df5"
+    },
+    "cross-wasm": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--target",
+        "wasm32-unknown-unknown"
+      ],
+      "exitCode": 0,
+      "logSha256": "39c804f3dc3717dbc319079b057de79cf3e03004be6440c7d9237cddaf070d85"
+    },
+    "fmt-fuzz": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "fmt",
+        "--check",
+        "--manifest-path",
+        "fuzz/Cargo.toml"
+      ],
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strict": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--test",
+        "suite",
+        "strict::",
+        "--",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "exitCode": 0,
+      "logSha256": "21cb683475426186eece5b0f8b969c9b71f80dd388bdc947daec0fe3ac9ec7ff"
+    },
+    "protect": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline"
+      ],
+      "exitCode": 0,
+      "logSha256": "335f3948e23c62d708ea22f14438e9c21b84dae071839c740649f03ed4133c1c"
+    },
+    "allocation-io": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "2G",
+        "--time",
+        "20m",
+        "--",
+        "$AUDIT_DIR/alloc-final",
+        "--io"
+      ],
+      "exitCode": 0,
+      "logSha256": "71040f18e873bd06bd5b123ecf19ee5c67b60b5637823b0f01b7b69c54d8c783"
+    },
+    "clippy-alloc": {
+      "command": [
+        "run-capped",
+        "--mem",
+        "3G",
+        "--time",
+        "30m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exitCode": 0,
+      "logSha256": "3b7cf99af2185262a6ea4793cbc3e47b504b3f457e5547005511fd176cecb4ad"
+    }
+  },
+  "retainedFuzzRuns": {
+    "cyclic": 36690,
+    "calls": 211128,
+    "plans": 108905,
+    "files": 250032,
+    "sets": 12814
+  },
+  "notes": [
+    "The release pin is correct. The upstream 0.1.0 crate, source commit and both lockfiles agree; the earlier mutable-Git-reference finding AUD-001-BLD002 is verified.",
+    "The strong digest binding and stale-plan refusal now precede mutations for both RS code forms. A retained callback may intentionally copy returned data; the application is responsible for that copy.",
+    "The Apple policy waives per-page dump exclusion and does not require an Isolation report. A consumer requiring dump exclusion must confirm the appropriate process-level protection before handing over secrets. Strict payload calls refuse on Windows/WASM; metadata-only constructors may still succeed.",
+    "An ordinary fork between strict calls invalidates the assumption behind already parsed views. Pile stores borrowed slices, not fresh owners to recheck. Follow upstream’s no-fork rule while a protected stack is active and discard/reparse cached reader/set views in a child. This is a lifecycle limitation under the documented prohibition on using parent buffers in the child; it is not evidence of inherited secret data.",
+    "The currently inspected stego-core checkout uses reed-solomon-core from Git f6e2888 and secret-protection-core from Git fb2a6d3. No reed-solomon-core dependency was found in the inspected MnemoCode Rust manifests or lockfile. This audit establishes no consumer upgrade."
+  ]
+}

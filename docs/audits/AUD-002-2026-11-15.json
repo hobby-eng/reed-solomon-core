@@ -1,0 +1,4262 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-002",
+  "auditNumber": 2,
+  "date": "2026-11-15",
+  "title": "Pre-release audit of reed-solomon-core and its secret-memory boundary",
+  "reviewer": {
+    "name": "Codex and five independent review assignments",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "snapshot": {
+    "commit": "73771bfb62327c4eec540cc64c26d35c52cbf052",
+    "commitComplete": false,
+    "workingTree": "100 tracked and nonignored untracked inputs before adding audit outputs. Seven untracked Rust files included. The base alone is insufficient to reproduce this review.",
+    "sourceFingerprint": "0d6de2c4d47fc219d5b24094ddd3103e5bdba8c952511bff1387fac6d821303f",
+    "sourceFingerprintMethod": "SHA-256 of compact sorted JSON path-to-SHA256 map (UTF-8).",
+    "capturedUtc": "2026-11-15T19:48:40.566978+00:00",
+    "trackedDiffSha256": "cd84cd3c038123e070024210b8107c5644f6aa8e8b52d833ba84d99b24b2ddf5",
+    "retainedDiffIncludingNewFilesSha256": "ee0dc7ff026cd2c9f69c650309ee74d16ea1f36ac5a02d981e7fecb8c1e506f5",
+    "coverageInputFingerprint": "b06b3feb5317b1eac57920e3878c071e5b459d7ddf9732430d14e25f328372a1"
+  },
+  "scope": {
+    "procedureSha256": {
+      "FULL_AUDIT_GUIDE.md": "179fc5e27bcc9f9c0eec75b38b910f4918041e79c904840ef68efa8210d20dd2",
+      "audits/AUDIT_STANDARD.md": "c43e25bbcbdd6d22d52a38f571a759f5b688af062b980c3adecd5326efc082ec",
+      "audits/AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+      "audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+    },
+    "decision": "HOLD for mandatory protected-memory use and documented batch error handling.",
+    "environment": "Linux x86-64; pinned Rust 1.99.1; hosted OS runtime tests were not executed.",
+    "reviewAssignments": [
+      "Memory lifecycle and pinned OS backend",
+      "Fields, correction and public vectors",
+      "File format, set and vote pipeline",
+      "Builds, licenses, prior evidence and claims",
+      "Independent challenge and omitted-boundary review"
+    ],
+    "files": [
+      {
+        "path": ".github/workflows/audit.yml",
+        "sha256": "b005f6588ec0d83bfca4ad8f31eaae7d39b1010ef0e157640ccb2ef843fd3db0",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha256": "b8ed986539786edbf5de064ea8c652be0f2c6d62d6950d3fdd2f4870e60d0e30",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": ".gitignore",
+        "sha256": "b824220c6110f2b8ccb25db135e6f98ae6b54ef7ed3fd32c08ed8d5dbdf7ec10",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "AGENTS.md",
+        "sha256": "8dbb3c77bc069b84a165ed9855e6c5858562d691d412d05cc28d5f7bad7c4928",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "CHANGELOG.md",
+        "sha256": "9ac360ba01a55effe563fbbeb607d2a7c30a5ebde4081f9d1d57cf2072d5aff6",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "Cargo.lock",
+        "sha256": "2008ee5d1d919906b856e04cd1502b8a13e54223b5a73bc45ee6f09fbee12210",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "Cargo.toml",
+        "sha256": "1d66c149f20026e4b97c7810c056cf10705ac4e67cb2b86bf1dcb93c99a6fb92",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "LICENSE-APACHE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "LICENSE-MIT",
+        "sha256": "9c44407fa4ecf62d982f0244a4a3afbc3d5d74afbd93d6bc4bba3d1d5c3e5044",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "README.md",
+        "sha256": "5bcf96ea9e848a619e3adba28e4937e89ec3952934d2e0dbfc1ae018180bd84e",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "sha256": "0664b90ce52bf4ce92bf454c951a91c53897648ed3cd91021cf8d0b175426959",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "clippy.toml",
+        "sha256": "330d3040793d707bb2a91d6d06f22e105ee6dfde5cd5060d42304c6e07522bea",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "docs/COVERAGE.md",
+        "sha256": "55b5f79743ab66f8445981a61643a1a504c51086cf16b85ecb6977357d99bf89",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "docs/README.md",
+        "sha256": "e260df4ac522587481c26bab713898989289749ccd6322e0dbb384f3487c757d",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "docs/ROADMAP.md",
+        "sha256": "6af7f9cbff7171698d83ee2002a7f4ffe3a5cf607216e1574c878eed6cbee42f",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "docs/TECHNICAL.md",
+        "sha256": "8476335a46fc7e2d872cf38f4e2ceb3096d9734830488af634fa2c888a51d2c5",
+        "reviewArea": "documentation, procedure and compatibility claims"
+      },
+      {
+        "path": "docs/audits/AUD-001-2026-11-15.json",
+        "sha256": "499aa804d23025a755557fd905698ebe3201ce06137a2192637ff45bf6addb1a",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-2026-11-15.md",
+        "sha256": "a58cc76c7617af5036793393a119cf5fec847a26214b49831296326519089d34",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/README.md",
+        "sha256": "a6ddec2ab1a994ad6c87b6096a42130f3460ae5bb8f62b1efd8475bc343c56e7",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/.gitignore",
+        "sha256": "e005979318db417d742efd014c6d72a7405128832d26e586fff772c031fc3445",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/Cargo.lock",
+        "sha256": "bddaa02c139f106d0014a309ab97a464602c267acf3cc20fd90f28647e1a93b9",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/Cargo.toml",
+        "sha256": "c6d3afc4c28c048e6a9ccdbca99f249059d8da6c96b7b12037fcd7c4c2a43bd9",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/clippy.toml",
+        "sha256": "3b2e7f88a20e629e2678d6e45a35a0cbe097d1c5b8c074319344012fc00444b6",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/examples/seeds.rs",
+        "sha256": "8cf4fbf9aa2deb06e0d545a9d18b753d63c24fc22d308e86b562701a6f106c51",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/files.rs",
+        "sha256": "081bffd9eacf815bc24c625b0ccc3bb5c32dbb91ab87677569c4922dfa2d9f6c",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/plans.rs",
+        "sha256": "a7ae9624fd1c446233ea466c7ccd96dd0e5b28716020df6f29d607313118fb3d",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/sets.rs",
+        "sha256": "e8cb0785bf582dddaed4aa618c0577e7cb51028ba3347507760f11f07266804b",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "docs/audits/README.md",
+        "sha256": "8647b45d1c083767682b03fcabc9c3b0c0e940cc51d335a3ef7b20c176a774c8",
+        "reviewArea": "historical audit, retained evidence claims or historical harness"
+      },
+      {
+        "path": "dprint.json",
+        "sha256": "f02eb7f6fa10c82e56547a38b3756a3b98eedf9e9b683c05fff3b1cd9783fe77",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "examples/measure.rs",
+        "sha256": "dd9cc858c5ef899f1472de31f565544ea026ab72efbabed06a4872d93f863528",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/.gitignore",
+        "sha256": "e005979318db417d742efd014c6d72a7405128832d26e586fff772c031fc3445",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/Cargo.lock",
+        "sha256": "7815bac366a9d7942e4c6320b8243268a06c8620c04d3764f43de82709e6959a",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/Cargo.toml",
+        "sha256": "b8e83a615a3375e8ba9dbfdf0b82cf4c230f550ed844dc491ed17ae29779dea4",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/clippy.toml",
+        "sha256": "3b2e7f88a20e629e2678d6e45a35a0cbe097d1c5b8c074319344012fc00444b6",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/examples/seeds.rs",
+        "sha256": "09e517fb947e3abc731410ac70a64094ba22d2fa9810960fbdb2e9b3d0726c4b",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/fuzz_targets/calls.rs",
+        "sha256": "620e39156d63a9f5e41b053acd4fe1f2a952adbffe0ff9047aa0fed6c37fc1d8",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/fuzz_targets/cyclic.rs",
+        "sha256": "643491b0b1213880c4b748cf15795e1e8b92769d738410595a4b0f26f9efef21",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/fuzz_targets/files.rs",
+        "sha256": "ab7750f375c7ef430690a73964ba95d7051a37181a80315303a3797b3ad8468d",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/fuzz_targets/plans.rs",
+        "sha256": "471d3e06961442a3ac1f8d05ea92a7992a0cabffd598e7951f9d900f8e520394",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/fuzz_targets/sets.rs",
+        "sha256": "e3c93c5425a3d4ec069d64f575aed5e37e4fd5d01b6b8e5c1ac31bda9d68ed45",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "fuzz/src/lib.rs",
+        "sha256": "6206c76a3c8672ecba357683667d59ef48a9b89c25c7b8c65e1f761f99f970af",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "rust-toolchain.toml",
+        "sha256": "3832f3fbc05ac0ba0d9669c3fbbe7dcf673265e45afccb387212923617833296",
+        "reviewArea": "packaging, CI, license, toolchain or configuration"
+      },
+      {
+        "path": "src/buffer.rs",
+        "sha256": "0651ed035736e0c4e1636176000c137802e6061af20ee749eaa516565877a740",
+        "reviewArea": "secret ownership, allocation and export boundary"
+      },
+      {
+        "path": "src/buffer/heap.rs",
+        "sha256": "c6ea79782cc19d94ee1b6b9aed57ef22446f729d2901e5007e24a182e5ef8a85",
+        "reviewArea": "secret ownership, allocation and export boundary"
+      },
+      {
+        "path": "src/buffer/numbers.rs",
+        "sha256": "5b1c4cd29c6868ae719dc3b513bd4b1105a5dc25beaefc2937fd5289919a50f7",
+        "reviewArea": "secret ownership, allocation and export boundary"
+      },
+      {
+        "path": "src/buffer/pages.rs",
+        "sha256": "44e8949395d0dae6984ff85287dfa46f1121f87fd04bed308f75570d82aa80ab",
+        "reviewArea": "secret ownership, allocation and export boundary"
+      },
+      {
+        "path": "src/code.rs",
+        "sha256": "4517a550a5f8507ac6948e3eb9ae1b51d8fd4236c048bf0ce43a65f354d6d7a4",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/code/owned.rs",
+        "sha256": "ce7b0fcfd8c9a1243b14b9c2f3d26556a81c00789b6c924e4962f9cc20d6a1c1",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/correct.rs",
+        "sha256": "875d0566a11ac27e1a6bb91c571c43011500b04375f3ddaf6e742ebf77c6cb0b",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/correct/changes.rs",
+        "sha256": "d842656ce7ef0f8e8e8a4e883c2757f23e40fa2c881631161ac6ca10eaa24248",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/correct/errors.rs",
+        "sha256": "fa9d5d9ee4ddbdb07e0afd73c3700547952554a5f356948285c40b582bdae063",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/correct/plan.rs",
+        "sha256": "9d0abba94e05cd82adc68568abd6d4439405d4978209f1ba68775b07adee26e4",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/cyclic.rs",
+        "sha256": "f62decbb96a775d356ce9d6d32263e094122f25a45c3c91ef773fd10d70f99a2",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/cyclic/decode.rs",
+        "sha256": "ad718704570b1e619ef6dee0e696d8932017b0982a48e226fd5be2704ba820d4",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/cyclic/owned.rs",
+        "sha256": "b299cc66d76b1b29a4e9b794854d42e2cc1eff24ab83b2bdd163fd8c28ee891a",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/cyclic/words.rs",
+        "sha256": "686fb9f64f235b2a504298086c2d059b1ea8163057d8f2159d5ed9d3725f6d2a",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field.rs",
+        "sha256": "d858bf721fb303114f735a0e1ea4cf558c0cbe9a66ebc243876fc73ac5123bdf",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field/binary.rs",
+        "sha256": "9469ffbf753e996c07cb7e2556dbe1046c7d52903acef6acf327a0ecf033a1f2",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field/gf2048.rs",
+        "sha256": "375e0b9e1bd37aaeae58507d0596d56b023b1fcf7d0379c009e8af161f7aae42",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field/gf256.rs",
+        "sha256": "1ee43ff4443c4405bfbe9c121c73ca9527857b8b5b02bf9c423f894dbff2b614",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field/gf65536.rs",
+        "sha256": "a967f3976f59d04eea7adfbde2d103a5a0cd9f200420d46327df1ae298f62fce",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field/lanes.rs",
+        "sha256": "3731a3d11df3dc868b53542461964fc3b325c504575283c615800b48e2ef7a98",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/field/proof.rs",
+        "sha256": "0d475a2661eae1342cca8ec26183088a8415ea1576ab499180c1dd0e9cb3179e",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/file.rs",
+        "sha256": "af52f3f6f02ab25bff034835453503299cc5b3f749897690cd734f59fd190630",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/crc32c.rs",
+        "sha256": "d495ac739a8c52e22e4564f2b0bee582022b807746da8245c4c1cfeb1ffb2366",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/facts.rs",
+        "sha256": "fed199379c9b04d036422d87901f06043b172ea3413d5bd450d3be654396da3d",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/header.rs",
+        "sha256": "c22a7176ad04a05c92479ce11d35ea6cc19ea3933286bd7f06972fe10451cc7a",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/pile.rs",
+        "sha256": "1a1e9c520fe9a69ea3c165a6ea2abad058cab0e25f9e57280d484ee0e6d9c759",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/reading.rs",
+        "sha256": "f1c0bbac8c2bca16c67a10a744bff120f27544d8fce2b19efd54b7332cb10dde",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/set.rs",
+        "sha256": "fb274ea4881a68382a202a6659414562194e6153305dec254ab8bd8dbbe2deab",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/set/shards.rs",
+        "sha256": "f4cd315d450dec509481876a57f39199154fba2edf6a55ee1dff7c9d1b3ef520",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/set/sink.rs",
+        "sha256": "c9ff99c5a1f637ce0f4acedab78f1650b00daca15eb8901333b8be0883d60eb0",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/set/vote.rs",
+        "sha256": "e456c142d340eac09645527ac64993943756876aa98de160e702213f4d2a1c10",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/file/writing.rs",
+        "sha256": "0d01f573beaf9896799230048460ccf66c1ab332683c76fcfe3ac3f036d43dbd",
+        "reviewArea": "file framing, checksum, sets, streaming, or vote"
+      },
+      {
+        "path": "src/lib.rs",
+        "sha256": "40833897e17fe816bf3f195dc09f502332625dbbafeed7ab33e6aa05cd5924ae",
+        "reviewArea": "secret ownership, allocation and export boundary"
+      },
+      {
+        "path": "src/list.rs",
+        "sha256": "6c7ba72bdfaa20843cb66d3cf91d6156c650556541a06398db397f80e755f038",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/recurrence.rs",
+        "sha256": "bb7e3d62a835dd46d3a65dbf7ec5ae8e9ac91773da08611b76f2eadbe5ee23e1",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "src/self_test.rs",
+        "sha256": "1947dee9831dc1dfc2c4ac0a590f70d8f4a169927241d1ca8e095cf257387cc1",
+        "reviewArea": "codec, field, correction, scratch, or startup self-test"
+      },
+      {
+        "path": "tests/suite/correction.rs",
+        "sha256": "b6785f27b1a729bbd9f22afbf9a94510c02e62516e305fef63c4eaeb70678f93",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/cyclic.rs",
+        "sha256": "97eeab99b3fcfad59f5910a3bff4733c8a3316c05d4c735c5e2b9a6129faf9a6",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/cyclic_words.rs",
+        "sha256": "98bb85bff701baf9aa0f52fa734d2ac03c497ae7d462d4bb57ee69e32eab2c13",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/damage.rs",
+        "sha256": "96274afe2c90ddf1a08fdab3dc131761463812734de7f4350799700e3d6f4b87",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/digests.rs",
+        "sha256": "29a5a028d21129376abfdbaea7f7b933a1196550ec4104a65c21bfc62610d4a7",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/examples.rs",
+        "sha256": "545bb897439d630e6df82f445e7059852f65dd0b2674991ea6c60138a45772ef",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/fields.rs",
+        "sha256": "7c737c3d137e59a5cf0facbbd8a8f610802c39c89edb469d5088fa78871a5510",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/files.rs",
+        "sha256": "b30a5dcc6428ccf194cca15d0f9d801ce3e571b608ebd293dd8151e4bdc7a9a3",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/in_place.rs",
+        "sha256": "4fd533189da018acaf1af28dbf66a0353965dc36b5a5fcf7a5d82d20fa343df7",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/main.rs",
+        "sha256": "575ad928ecc570efd9a7dc39927b07be5403b53a4403739680074d5442480dc4",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/oracle.rs",
+        "sha256": "a1acd237daf3e7e342379464f39a2f0eeef8bd7783dbf6f36e3b2cee4d5d7481",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/plans.rs",
+        "sha256": "fe7b123f35e748b493e45826d6c2efd6ccfc70493d53f6e74471b8f21d3a5077",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/refusals.rs",
+        "sha256": "b27f5cd24ebdef37bbcff0ecaf453ef0872ffdcd9bb67a6e0115c8b24d8455d4",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/repairs.rs",
+        "sha256": "b1ecfe9af31c0e6b7a95f6303d5a28191d439c3d24fe943d95f407bca1450a0c",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/secrets.rs",
+        "sha256": "4b1aee5e3a92d47f63c5e03fbd60d64aabd525c2c15ed0096e161403ef9215c3",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/self_test.rs",
+        "sha256": "4d0588822dd3732f75ac3f496b0d8dd0c33546174d7c4d47c562dc1fa0666731",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/sets.rs",
+        "sha256": "1e57ce7a91ab79797571eb405f91fce509b077fa869341f37259fae74744eb7f",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/stripes.rs",
+        "sha256": "143facc677d1427cb6a7c32d68cf97e4285062ebe5e4085bc58b4c917b2d656f",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/subsets.rs",
+        "sha256": "1b5b317a5d227f7147276653f104b41005dc76c473e032f3bc30f8c9ee4d542e",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/support.rs",
+        "sha256": "9a1e78f82fa0912c3e204b915f93cbbf76ef09a45cb975d4def99905e36195ac",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/vectors.rs",
+        "sha256": "76763889c496b7a24cef70bc499b36283e72150a64ce41274e94307c3fe141d1",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      },
+      {
+        "path": "tests/suite/votes.rs",
+        "sha256": "934bcb0d775b834d0c0ec59750cb9b02fcc03473706576d44f49b05d52a76042",
+        "reviewArea": "public vectors, tests, fuzz harnesses, examples or harness configuration"
+      }
+    ],
+    "publicExports": [
+      {
+        "name": "COMPARED",
+        "kind": "constant",
+        "methods": [],
+        "localTraitImpls": [],
+        "external": false
+      },
+      {
+        "name": "Code",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "apply",
+            "location": "src/correct/plan.rs:140"
+          },
+          {
+            "name": "correct",
+            "location": "src/correct.rs:58"
+          },
+          {
+            "name": "correction_memory",
+            "location": "src/correct.rs:94"
+          },
+          {
+            "name": "encode",
+            "location": "src/code/owned.rs:80"
+          },
+          {
+            "name": "field",
+            "location": "src/code.rs:93"
+          },
+          {
+            "name": "new",
+            "location": "src/code.rs:84"
+          },
+          {
+            "name": "plan",
+            "location": "src/correct/plan.rs:96"
+          },
+          {
+            "name": "rebuild",
+            "location": "src/code/owned.rs:94"
+          },
+          {
+            "name": "redundancy",
+            "location": "src/code/owned.rs:118"
+          },
+          {
+            "name": "sources",
+            "location": "src/code.rs:107"
+          },
+          {
+            "name": "threshold",
+            "location": "src/code.rs:99"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "CodeError",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Display",
+          "Eq",
+          "Error",
+          "From",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Sources",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "agrees",
+            "location": "src/code.rs:238"
+          },
+          {
+            "name": "agrees_in",
+            "location": "src/code.rs:253"
+          },
+          {
+            "name": "build",
+            "location": "src/code.rs:214"
+          }
+        ],
+        "localTraitImpls": [
+          "Debug"
+        ],
+        "external": false
+      },
+      {
+        "name": "Binary",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "degree",
+            "location": "src/field/binary.rs:35"
+          },
+          {
+            "name": "polynomial",
+            "location": "src/field/binary.rs:41"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Field",
+        "kind": "enum",
+        "methods": [
+          {
+            "name": "binary",
+            "location": "src/field.rs:43"
+          },
+          {
+            "name": "order",
+            "location": "src/field.rs:62"
+          },
+          {
+            "name": "symbol_bytes",
+            "location": "src/field.rs:73"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "FieldError",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Display",
+          "Eq",
+          "Error",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Block",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Condition",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "DataDigest",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "FileError",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Display",
+          "Eq",
+          "Error",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Frame",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Header",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "as_bytes",
+            "location": "src/file/header.rs:141"
+          },
+          {
+            "name": "block_checksum",
+            "location": "src/file/header.rs:155"
+          },
+          {
+            "name": "file",
+            "location": "src/file/header.rs:186"
+          },
+          {
+            "name": "file_into",
+            "location": "src/file/header.rs:202"
+          },
+          {
+            "name": "index",
+            "location": "src/file/header.rs:134"
+          },
+          {
+            "name": "new",
+            "location": "src/file/header.rs:86"
+          },
+          {
+            "name": "set",
+            "location": "src/file/header.rs:128"
+          },
+          {
+            "name": "trailer",
+            "location": "src/file/header.rs:147"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Length",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "SetFacts",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "block_len",
+            "location": "src/file/facts.rs:142"
+          },
+          {
+            "name": "blocks",
+            "location": "src/file/facts.rs:169"
+          },
+          {
+            "name": "code",
+            "location": "src/file/facts.rs:124"
+          },
+          {
+            "name": "data_len",
+            "location": "src/file/facts.rs:136"
+          },
+          {
+            "name": "digest",
+            "location": "src/file/facts.rs:156"
+          },
+          {
+            "name": "file_len",
+            "location": "src/file/facts.rs:175"
+          },
+          {
+            "name": "files",
+            "location": "src/file/writing.rs:23"
+          },
+          {
+            "name": "files_into",
+            "location": "src/file/writing.rs:44"
+          },
+          {
+            "name": "for_data",
+            "location": "src/file/facts.rs:99"
+          },
+          {
+            "name": "id",
+            "location": "src/file/facts.rs:130"
+          },
+          {
+            "name": "new",
+            "location": "src/file/facts.rs:64"
+          },
+          {
+            "name": "shard_len",
+            "location": "src/file/facts.rs:163"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "ShardFile",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "block",
+            "location": "src/file/reading.rs:150"
+          },
+          {
+            "name": "frame",
+            "location": "src/file/reading.rs:142"
+          },
+          {
+            "name": "header",
+            "location": "src/file/reading.rs:136"
+          },
+          {
+            "name": "read",
+            "location": "src/file/reading.rs:122"
+          },
+          {
+            "name": "survey",
+            "location": "src/file/reading.rs:170"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug"
+        ],
+        "external": false
+      },
+      {
+        "name": "Survey",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "whole",
+            "location": "src/file/reading.rs:83"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Check",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "SelfTest",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "checks",
+            "location": "src/self_test.rs:37"
+          },
+          {
+            "name": "passed",
+            "location": "src/self_test.rs:31"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "self_test",
+        "kind": "function",
+        "methods": [],
+        "localTraitImpls": [],
+        "external": false
+      },
+      {
+        "name": "Zeroize",
+        "kind": "external re-export",
+        "methods": [],
+        "localTraitImpls": [],
+        "external": true
+      },
+      {
+        "name": "Buffer",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "as_mut_slice",
+            "location": "src/buffer.rs:42"
+          },
+          {
+            "name": "as_slice",
+            "location": "src/buffer.rs:37"
+          },
+          {
+            "name": "is_locked",
+            "location": "src/buffer.rs:50"
+          },
+          {
+            "name": "is_out_of_children",
+            "location": "src/buffer.rs:64"
+          },
+          {
+            "name": "is_out_of_dumps",
+            "location": "src/buffer.rs:56"
+          }
+        ],
+        "localTraitImpls": [
+          "AsRef",
+          "Debug",
+          "Default",
+          "Deref",
+          "DerefMut",
+          "Eq",
+          "PartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Redundancy",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Change",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "FromIterator",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq",
+          "Zeroize"
+        ],
+        "external": false
+      },
+      {
+        "name": "ChangeKind",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Changes",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "get",
+            "location": "src/correct/changes.rs:46"
+          },
+          {
+            "name": "is_empty",
+            "location": "src/correct/changes.rs:40"
+          },
+          {
+            "name": "is_locked",
+            "location": "src/correct/changes.rs:54"
+          },
+          {
+            "name": "iter",
+            "location": "src/correct/changes.rs:60"
+          },
+          {
+            "name": "len",
+            "location": "src/correct/changes.rs:34"
+          }
+        ],
+        "localTraitImpls": [
+          "Debug",
+          "Default",
+          "Eq",
+          "FromIterator",
+          "IntoIterator",
+          "PartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "ChangesIter",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "ExactSizeIterator",
+          "Iterator"
+        ],
+        "external": false
+      },
+      {
+        "name": "Correction",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Mark",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "Hash",
+          "Ord",
+          "PartialEq",
+          "PartialOrd",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Plan",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "CyclicCode",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "agrees",
+            "location": "src/cyclic/owned.rs:104"
+          },
+          {
+            "name": "apply",
+            "location": "src/cyclic/owned.rs:192"
+          },
+          {
+            "name": "correct",
+            "location": "src/cyclic/owned.rs:115"
+          },
+          {
+            "name": "data",
+            "location": "src/cyclic/owned.rs:62"
+          },
+          {
+            "name": "encode",
+            "location": "src/cyclic/owned.rs:87"
+          },
+          {
+            "name": "field",
+            "location": "src/cyclic/owned.rs:56"
+          },
+          {
+            "name": "generator",
+            "location": "src/cyclic/owned.rs:80"
+          },
+          {
+            "name": "length",
+            "location": "src/cyclic/owned.rs:74"
+          },
+          {
+            "name": "new",
+            "location": "src/cyclic/owned.rs:34"
+          },
+          {
+            "name": "parity",
+            "location": "src/cyclic/owned.rs:68"
+          },
+          {
+            "name": "plan",
+            "location": "src/cyclic/owned.rs:164"
+          },
+          {
+            "name": "words",
+            "location": "src/cyclic/owned.rs:50"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "CyclicWords",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "agrees",
+            "location": "src/cyclic/words.rs:125"
+          },
+          {
+            "name": "correct_word",
+            "location": "src/cyclic/words.rs:155"
+          },
+          {
+            "name": "data",
+            "location": "src/cyclic/words.rs:51"
+          },
+          {
+            "name": "encode",
+            "location": "src/cyclic/words.rs:82"
+          },
+          {
+            "name": "field",
+            "location": "src/cyclic/words.rs:45"
+          },
+          {
+            "name": "generator",
+            "location": "src/cyclic/words.rs:69"
+          },
+          {
+            "name": "length",
+            "location": "src/cyclic/words.rs:63"
+          },
+          {
+            "name": "new",
+            "location": "src/cyclic/words.rs:24"
+          },
+          {
+            "name": "parity",
+            "location": "src/cyclic/words.rs:57"
+          },
+          {
+            "name": "room",
+            "location": "src/cyclic/words.rs:75"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Coverage",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "DigestCheck",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Dispute",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "FileSet",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "coverage",
+            "location": "src/file/set.rs:305"
+          },
+          {
+            "name": "disputed_blocks",
+            "location": "src/file/set.rs:318"
+          },
+          {
+            "name": "disputes",
+            "location": "src/file/set.rs:299"
+          },
+          {
+            "name": "facts",
+            "location": "src/file/set.rs:279"
+          },
+          {
+            "name": "id_shared",
+            "location": "src/file/set.rs:287"
+          },
+          {
+            "name": "members",
+            "location": "src/file/set.rs:293"
+          },
+          {
+            "name": "rebuild",
+            "location": "src/file/set.rs:346"
+          },
+          {
+            "name": "rebuild_into",
+            "location": "src/file/set.rs:368"
+          },
+          {
+            "name": "rebuild_work",
+            "location": "src/file/set.rs:329"
+          },
+          {
+            "name": "repair",
+            "location": "src/file/set.rs:422"
+          },
+          {
+            "name": "repair_work",
+            "location": "src/file/set.rs:336"
+          },
+          {
+            "name": "repairs",
+            "location": "src/file/set.rs:441"
+          },
+          {
+            "name": "repairs_into",
+            "location": "src/file/set.rs:464"
+          },
+          {
+            "name": "repairs_work",
+            "location": "src/file/set.rs:429"
+          },
+          {
+            "name": "stretches",
+            "location": "src/file/set.rs:311"
+          },
+          {
+            "name": "vote",
+            "location": "src/file/set/vote.rs:188"
+          },
+          {
+            "name": "vote_work",
+            "location": "src/file/set/vote.rs:154"
+          },
+          {
+            "name": "without",
+            "location": "src/file/set.rs:546"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Debug"
+        ],
+        "external": false
+      },
+      {
+        "name": "Member",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Outvoted",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Pile",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "new",
+            "location": "src/file/pile.rs:20"
+          },
+          {
+            "name": "readings",
+            "location": "src/file/pile.rs:59"
+          },
+          {
+            "name": "sets",
+            "location": "src/file/pile.rs:65"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Debug"
+        ],
+        "external": false
+      },
+      {
+        "name": "Rebuilt",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "SetError",
+        "kind": "enum",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Display",
+          "Eq",
+          "Error",
+          "From",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Stretch",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Stretches",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Iterator"
+        ],
+        "external": false
+      },
+      {
+        "name": "Vote",
+        "kind": "struct",
+        "methods": [
+          {
+            "name": "first_undecided",
+            "location": "src/file/set/vote.rs:59"
+          },
+          {
+            "name": "outvoted",
+            "location": "src/file/set/vote.rs:46"
+          },
+          {
+            "name": "outvoted_blocks",
+            "location": "src/file/set/vote.rs:71"
+          },
+          {
+            "name": "steps",
+            "location": "src/file/set/vote.rs:65"
+          },
+          {
+            "name": "undecided",
+            "location": "src/file/set/vote.rs:53"
+          },
+          {
+            "name": "undecided_blocks",
+            "location": "src/file/set/vote.rs:78"
+          }
+        ],
+        "localTraitImpls": [
+          "Clone",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "Written",
+        "kind": "struct",
+        "methods": [],
+        "localTraitImpls": [
+          "Clone",
+          "Copy",
+          "Debug",
+          "Eq",
+          "PartialEq",
+          "StructuralPartialEq"
+        ],
+        "external": false
+      },
+      {
+        "name": "protect",
+        "kind": "external re-export",
+        "methods": [],
+        "localTraitImpls": [],
+        "external": true
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "CHECK-SEC-001",
+      "title": "Threat model and secret ownership",
+      "assessment": "Reviewed secret ownership, feature composition, scratch, public borrows, RAII and upstream capability exposure (SEC001–005)."
+    },
+    {
+      "id": "CHECK-SEC-002",
+      "title": "Secret Vault, CSP, sandbox, and transport",
+      "assessment": "Native isolation is application-managed. Reviewed the OS and WASM fallbacks; no web vault, CSP or web transport is shipped."
+    },
+    {
+      "id": "CHECK-SEC-003",
+      "title": "Network egress and secret guards",
+      "assessment": "No outbound network, telemetry or worker dispatch on the RS data path. Cargo source downloads and the separately re-exported worker are outside that path."
+    },
+    {
+      "id": "CHECK-SEC-004",
+      "title": "Randomness, encryption, and authentication",
+      "assessment": "Reviewed optional SHA-256, CRC-32C, ID assignment, independent digest verification, repair semantics and absence of an encryption or origin-authentication scheme."
+    },
+    {
+      "id": "CHECK-SEC-005",
+      "title": "Secret lifecycle and exceptional paths",
+      "assessment": "Traced initialization, validation, ordinary return, refusal, growth, drops, by-value copies and limits of abort, fork, hibernation and compiler-generated temporaries."
+    },
+    {
+      "id": "CHECK-SEC-006",
+      "title": "Browser injection, persistence, and sensitive APIs",
+      "assessment": "N/A. No DOM, browser storage, script injection, JS wrapper or web user interface in this crate."
+    },
+    {
+      "id": "CHECK-SEC-007",
+      "title": "Read-only guarantees and availability bounds",
+      "assessment": "Reviewed length arithmetic in u128, work limits, stripe bounds, stale plans, single/per-batch failure semantics and the ordinary and aborting allocation paths."
+    },
+    {
+      "id": "CHECK-FUN-001",
+      "title": "BIP39, entropy, and seed interpretation",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-FUN-002",
+      "title": "HD derivation and every coin/profile",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-FUN-003",
+      "title": "BIP85, BIP38, messages, and Silent Payments",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-FUN-004",
+      "title": "Scripts, descriptors, Miniscript, and multisig",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-FUN-005",
+      "title": "Transactions, PSBT version context, and commitments",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-FUN-006",
+      "title": "Recovery and backup formats",
+      "assessment": "Reviewed polynomial basis, generator, field widths, error/erasure correction, word order, reconstruction, votes, disagreement handling, padding and digest. Public known answers and independent oracle tested."
+    },
+    {
+      "id": "CHECK-FUN-007",
+      "title": "Discovery, providers, proofs, and accounting",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-API-001",
+      "title": "Actual dependency call contracts",
+      "assessment": "Reviewed exact WorkArea, zeroize, sha2 and bytemuck contracts, feature forwarding, re-exports, source provenance and caller obligations."
+    },
+    {
+      "id": "CHECK-API-002",
+      "title": "Async state, cancellation, and revisions",
+      "assessment": "No asynchronous runtime; plan/apply state, changes between reads, early refusal and intermediate output examined."
+    },
+    {
+      "id": "CHECK-API-003",
+      "title": "Public export schema and monetary fidelity",
+      "assessment": "Reviewed binary header lengths, field codes, counters, checked narrowing and consistency rules; no balances, amounts or spreadsheets."
+    },
+    {
+      "id": "CHECK-API-004",
+      "title": "Encoding and import/export interoperability",
+      "assessment": "Compared independently written shard vectors, checksum/framing and MHFE repair vectors, including parity word order and false digest paths."
+    },
+    {
+      "id": "CHECK-BLD-001",
+      "title": "Manifest, flags, and feature composition",
+      "assessment": "Compared and exercised default, alloc and allocator-free profiles, feature-gated exports, ordinary targets, formatter and lint gates."
+    },
+    {
+      "id": "CHECK-BLD-002",
+      "title": "Matrix depth and runtime sampling",
+      "assessment": "Native unit and interface suites on Linux, cross-builds, WASM and Thumb checks. Runtime elsewhere is outside the fresh evidence."
+    },
+    {
+      "id": "CHECK-BLD-003",
+      "title": "Lockfiles, source provenance, and licenses",
+      "assessment": "Verified registry checksums for 44/44 root packages and 31/31 fuzz packages by independent reviewer; both current lockfiles audited separately. Inspected the immutable upstream Git object, notices and both licenses."
+    },
+    {
+      "id": "CHECK-BLD-004",
+      "title": "Canonical WASM and Docker bytes",
+      "assessment": "N/A for canonical release bytes. The crate ships Rust source; WASM compile coverage is recorded under BLD-002."
+    },
+    {
+      "id": "CHECK-BLD-005",
+      "title": "Artifacts, CI, and release workflows",
+      "assessment": "Reviewed package inventory, publish=false, CI permissions and triggers, action pins, native matrix, audit lockfile selection and staging status."
+    },
+    {
+      "id": "CHECK-UI-001",
+      "title": "Real files and representative viewports",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-UI-002",
+      "title": "Navigation, inputs, and state preservation",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-UI-003",
+      "title": "Secret visibility, help, QR, and accessibility",
+      "assessment": "N/A. The crate provides no wallet, chain, network provider, UI or equivalent operation for this check."
+    },
+    {
+      "id": "CHECK-ARC-001",
+      "title": "Ownership, imports, and composition seams",
+      "assessment": "Reviewed allocation backend composition, shared Berlekamp–Massey, cyclic and point-code ownership, file sink and test/production boundary."
+    },
+    {
+      "id": "CHECK-ARC-002",
+      "title": "Dead code, duplication, and false positives",
+      "assessment": "Distinguished duplicated allocation from algorithm or atomicity defects and public structural metadata from secret values."
+    },
+    {
+      "id": "CHECK-ARC-003",
+      "title": "Comments, tests, and production-path fidelity",
+      "assessment": "Reviewed startup and public tests, independent fixtures, all five fuzz target entry points and differences between two implementations and two interfaces to shared logic."
+    },
+    {
+      "id": "CHECK-DOC-001",
+      "title": "User-facing capability and safety descriptions",
+      "assessment": "Compared allocation, lock, wipe, fork, parity, time, stale plans, self-test and format descriptions to code and pinned dependencies."
+    },
+    {
+      "id": "CHECK-DOC-002",
+      "title": "Commands, metadata, links, and legal materials",
+      "assessment": "Reviewed local documentation links, examples, feature-specific invocations, claim provenance, licensing and fuzz corpus setup."
+    },
+    {
+      "id": "CHECK-DOC-003",
+      "title": "Audit records and evidence consistency",
+      "assessment": "Read previous Markdown and JSON and the historical registry. Reconciled historical remediation and evidence with this snapshot. Current source coverage is reported separately."
+    }
+  ],
+  "executed": [
+    {
+      "name": "audit-fuzz",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "3m",
+        "--",
+        "cargo",
+        "audit",
+        "--file",
+        "fuzz/Cargo.lock",
+        "--json"
+      ],
+      "startUtc": "2026-11-15T19:56:24.770523+00:00",
+      "endUtc": "2026-11-15T19:56:33.248891+00:00",
+      "exitCode": 0,
+      "logSha256": "ab72756d1987756b8ff0f1eca093deabe4e80eaecdddce4441e781f49c73e8dc",
+      "result": [
+        "34 packages, 0 vulnerabilities, informational warnings "
+      ]
+    },
+    {
+      "name": "audit-root",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "3m",
+        "--",
+        "cargo",
+        "audit",
+        "--file",
+        "Cargo.lock",
+        "--json"
+      ],
+      "startUtc": "2026-11-15T19:56:05.264850+00:00",
+      "endUtc": "2026-11-15T19:56:24.770385+00:00",
+      "exitCode": 0,
+      "logSha256": "f74a0fd0d86744d36e5bc3946d024806d9d15d0b9169360038248ffa5c862db9",
+      "result": [
+        "46 packages, 0 vulnerabilities, informational warnings RUSTSEC-2024-0384, RUSTSEC-2026-0253"
+      ]
+    },
+    {
+      "name": "bounded-integration-coverage",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "5m",
+        "--",
+        "target/llvm-cov-target/debug/deps/suite-abeb43e65856c245",
+        "--test-threads",
+        "1",
+        "--skip",
+        "correction::a_wholly_replaced_long_shard_is_put_right",
+        "--skip",
+        "correction::every_placement_of_wrong_symbols_within_the_bound_is_corrected",
+        "--skip",
+        "correction::two_thousand_wrong_symbols_in_one_column_are_found",
+        "--skip",
+        "subsets::each_of_the_130_918_choices_of_k_from_n_up_to_16_rebuilds_the_data",
+        "--skip",
+        "votes::the_vote_is_what_a_search_over_every_choice_of_holders_gives"
+      ],
+      "startUtc": "2026-11-15T20:07:40.276753+00:00",
+      "endUtc": "2026-11-15T20:08:41.109180+00:00",
+      "exitCode": 0,
+      "logSha256": "fe2205b802c962c1ddf902c1dbb1c2c98ee6e6771833d248605723d91125240d",
+      "result": [
+        "test result: ok. 151 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 55.61s"
+      ]
+    },
+    {
+      "name": "bounded-profile-merge",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "../workingspace/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-profdata",
+        "merge",
+        "-sparse",
+        "docs/audits/AUD-002-evidence/unit-only.profdata",
+        "docs/audits/AUD-002-evidence/subset-176807.profraw",
+        "-o",
+        "docs/audits/AUD-002-evidence/bounded.profdata"
+      ],
+      "startUtc": "2026-11-15T20:08:41.109771+00:00",
+      "endUtc": "2026-11-15T20:09:01.549626+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "coverage-bounded",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "../workingspace/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-cov",
+        "report",
+        "target/llvm-cov-target/debug/deps/reed_solomon_core-25df9d7da914e8c4",
+        "-object",
+        "target/llvm-cov-target/debug/deps/suite-abeb43e65856c245",
+        "-instr-profile=docs/audits/AUD-002-evidence/bounded.profdata",
+        "-sources",
+        "src/buffer/heap.rs",
+        "src/buffer/numbers.rs",
+        "src/buffer/pages.rs",
+        "src/buffer.rs",
+        "src/code/owned.rs",
+        "src/code.rs",
+        "src/correct/changes.rs",
+        "src/correct/errors.rs",
+        "src/correct/plan.rs",
+        "src/correct.rs",
+        "src/cyclic/decode.rs",
+        "src/cyclic/owned.rs",
+        "src/cyclic/words.rs",
+        "src/cyclic.rs",
+        "src/field/binary.rs",
+        "src/field/gf2048.rs",
+        "src/field/gf256.rs",
+        "src/field/gf65536.rs",
+        "src/field/lanes.rs",
+        "src/field/proof.rs",
+        "src/field.rs",
+        "src/file/crc32c.rs",
+        "src/file/facts.rs",
+        "src/file/header.rs",
+        "src/file/pile.rs",
+        "src/file/reading.rs",
+        "src/file/set/shards.rs",
+        "src/file/set/sink.rs",
+        "src/file/set/vote.rs",
+        "src/file/set.rs",
+        "src/file/writing.rs",
+        "src/file.rs",
+        "src/lib.rs",
+        "src/list.rs",
+        "src/recurrence.rs",
+        "src/self_test.rs"
+      ],
+      "startUtc": "2026-11-15T20:09:01.550166+00:00",
+      "endUtc": "2026-11-15T20:09:11.854096+00:00",
+      "exitCode": 0,
+      "logSha256": "800eb165972912c6fc17bbc3387211b177bbc50fb6a76c3e70ece6c5995132c4",
+      "result": [
+        "TOTAL                           11022               430    96.10%         689                10    98.55%        5388                98    98.18%           0                 0         -"
+      ]
+    },
+    {
+      "name": "coverage-linux",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "llvm-cov",
+        "--locked",
+        "--offline",
+        "--summary-only"
+      ],
+      "startUtc": "2026-11-15T19:54:31.342988+00:00",
+      "endUtc": "2026-11-15T20:13:46.476051+00:00",
+      "exitCode": 143,
+      "logSha256": "bbc2222fd3b2b6dfba4554906e549fd4a1b59409d4a4571d18ceeb00cb77e161",
+      "result": [
+        "test result: ok. 47 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 67.04s",
+        "Original tool session terminated (143). A bounded thermal monitor resumed its own stopped group. Only printed and independently verified measurements count."
+      ]
+    },
+    {
+      "name": "coverage-units",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "../workingspace/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-cov",
+        "report",
+        "target/llvm-cov-target/debug/deps/reed_solomon_core-25df9d7da914e8c4",
+        "-instr-profile=docs/audits/AUD-002-evidence/unit-only.profdata",
+        "-sources",
+        "src/buffer/heap.rs",
+        "src/buffer/numbers.rs",
+        "src/buffer/pages.rs",
+        "src/buffer.rs",
+        "src/code/owned.rs",
+        "src/code.rs",
+        "src/correct/changes.rs",
+        "src/correct/errors.rs",
+        "src/correct/plan.rs",
+        "src/correct.rs",
+        "src/cyclic/decode.rs",
+        "src/cyclic/owned.rs",
+        "src/cyclic/words.rs",
+        "src/cyclic.rs",
+        "src/field/binary.rs",
+        "src/field/gf2048.rs",
+        "src/field/gf256.rs",
+        "src/field/gf65536.rs",
+        "src/field/lanes.rs",
+        "src/field/proof.rs",
+        "src/field.rs",
+        "src/file/crc32c.rs",
+        "src/file/facts.rs",
+        "src/file/header.rs",
+        "src/file/pile.rs",
+        "src/file/reading.rs",
+        "src/file/set/shards.rs",
+        "src/file/set/sink.rs",
+        "src/file/set/vote.rs",
+        "src/file/set.rs",
+        "src/file/writing.rs",
+        "src/file.rs",
+        "src/lib.rs",
+        "src/list.rs",
+        "src/recurrence.rs",
+        "src/self_test.rs"
+      ],
+      "startUtc": "2026-11-15T20:03:36.718179+00:00",
+      "endUtc": "2026-11-15T20:03:36.847377+00:00",
+      "exitCode": 0,
+      "logSha256": "2f63370acb882289f0d616e661754f95672bff37ff85199a5c2eefa04daf9065",
+      "result": [
+        "TOTAL                           11022              2215    79.90%         689               106    84.62%        5388               980    81.81%           0                 0         -"
+      ]
+    },
+    {
+      "name": "cross-aarch64-apple-darwin",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--target",
+        "aarch64-apple-darwin"
+      ],
+      "startUtc": "2026-11-15T19:58:21.240336+00:00",
+      "endUtc": "2026-11-15T19:58:23.136511+00:00",
+      "exitCode": 0,
+      "logSha256": "e0114a7bc9010dc988e22ab52fc96d775f687327b092728090a21d73a57a1c95",
+      "result": []
+    },
+    {
+      "name": "cross-aarch64-unknown-linux-gnu",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--target",
+        "aarch64-unknown-linux-gnu"
+      ],
+      "startUtc": "2026-11-15T19:57:57.366289+00:00",
+      "endUtc": "2026-11-15T19:58:21.240030+00:00",
+      "exitCode": 0,
+      "logSha256": "e46c6d4b7acb59ee2900f4bdd0e7645d33139c046a02ec2642ae8d2e76bbf5ee",
+      "result": []
+    },
+    {
+      "name": "cross-x86_64-pc-windows-gnu",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--target",
+        "x86_64-pc-windows-gnu"
+      ],
+      "startUtc": "2026-11-15T19:58:23.136638+00:00",
+      "endUtc": "2026-11-15T19:58:30.360983+00:00",
+      "exitCode": 0,
+      "logSha256": "20d5a69f88112b2f2c00328c9f392c4d308de7e0799830db064230c3fc20a837",
+      "result": []
+    },
+    {
+      "name": "docs-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "doc",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc",
+        "--no-deps"
+      ],
+      "startUtc": "2026-11-15T19:54:05.688336+00:00",
+      "endUtc": "2026-11-15T19:54:06.224413+00:00",
+      "exitCode": 0,
+      "logSha256": "959c061403bd9e89d669b21ad71fd5ad666973edb7ee6523b034e5e5c1384cdf",
+      "result": []
+    },
+    {
+      "name": "docs-borrowed",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "doc",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--no-deps"
+      ],
+      "startUtc": "2026-11-15T19:50:04.898463+00:00",
+      "endUtc": "2026-11-15T19:50:05.211519+00:00",
+      "exitCode": 0,
+      "logSha256": "646e473d12cf16408a2cc47840e8cb03e5c4ecc4e89d58043a5746732be488b3",
+      "result": []
+    },
+    {
+      "name": "docs",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "doc",
+        "--locked",
+        "--offline",
+        "--no-deps"
+      ],
+      "startUtc": "2026-11-15T19:50:04.430479+00:00",
+      "endUtc": "2026-11-15T19:50:04.898287+00:00",
+      "exitCode": 0,
+      "logSha256": "06b57a6154e4a333edf6a9757792f6d79d34f3cc11ad9dcfada5ca1e3d59835b",
+      "result": []
+    },
+    {
+      "name": "fmt-fuzz",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "fuzz/Cargo.toml",
+        "--check"
+      ],
+      "startUtc": "2026-11-15T19:49:19.628989+00:00",
+      "endUtc": "2026-11-15T19:49:19.809692+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "fmt-harness",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "rustfmt",
+        "--edition",
+        "2024",
+        "docs/audits/AUD-002-harnesses/memory_contract.rs"
+      ],
+      "startUtc": "2026-11-15T19:53:57.455952+00:00",
+      "endUtc": "2026-11-15T19:53:57.675762+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "fmt",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "startUtc": "2026-11-15T19:49:19.339791+00:00",
+      "endUtc": "2026-11-15T19:49:19.628715+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "fuzz-calls",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "fuzz",
+        "run",
+        "--fuzz-dir",
+        "fuzz",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "calls",
+        "docs/audits/AUD-002-evidence/corpus/calls",
+        "--",
+        "-max_total_time=60",
+        "-rss_limit_mb=2300",
+        "-max_len=4096"
+      ],
+      "startUtc": "2026-11-15T20:01:36.434323+00:00",
+      "endUtc": "2026-11-15T20:03:07.553190+00:00",
+      "exitCode": 0,
+      "logSha256": "58aabf1aac159e60904796f40f38186cc6db1d84c92e67e5d29de70488d6db3c",
+      "result": [
+        "Done 313286 runs in 70 second(s)"
+      ]
+    },
+    {
+      "name": "fuzz-cyclic",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "fuzz",
+        "run",
+        "--fuzz-dir",
+        "fuzz",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "cyclic",
+        "docs/audits/AUD-002-evidence/corpus/cyclic",
+        "--",
+        "-max_total_time=60",
+        "-rss_limit_mb=2300",
+        "-max_len=4096"
+      ],
+      "startUtc": "2026-11-15T20:00:06.416032+00:00",
+      "endUtc": "2026-11-15T20:01:36.433873+00:00",
+      "exitCode": 0,
+      "logSha256": "5867799d55e81566c057d2e708a447b4db8d932055700bb2718abded8063e286",
+      "result": [
+        "Done 38188 runs in 64 second(s)"
+      ]
+    },
+    {
+      "name": "fuzz-files",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "fuzz",
+        "run",
+        "--fuzz-dir",
+        "fuzz",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "files",
+        "docs/audits/AUD-002-evidence/corpus/files",
+        "--",
+        "-max_total_time=60",
+        "-rss_limit_mb=2300",
+        "-max_len=4096"
+      ],
+      "startUtc": "2026-11-15T19:56:40.345272+00:00",
+      "endUtc": "2026-11-15T19:57:46.879953+00:00",
+      "exitCode": 0,
+      "logSha256": "195553913f8d1740d4830c8914de4b7334d8ba9951c61e914c287c5f416e4d4b",
+      "result": [
+        "Done 138791 runs in 66 second(s)"
+      ]
+    },
+    {
+      "name": "fuzz-plans",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "fuzz",
+        "run",
+        "--fuzz-dir",
+        "fuzz",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "plans",
+        "docs/audits/AUD-002-evidence/corpus/plans",
+        "--",
+        "-max_total_time=60",
+        "-rss_limit_mb=2300",
+        "-max_len=4096"
+      ],
+      "startUtc": "2026-11-15T19:59:03.796625+00:00",
+      "endUtc": "2026-11-15T20:00:06.415713+00:00",
+      "exitCode": 0,
+      "logSha256": "92f10207a162a101cd62d86358484f105e15984a99cf79c434591f2880fdb641",
+      "result": [
+        "Done 105821 runs in 62 second(s)"
+      ]
+    },
+    {
+      "name": "fuzz-sets",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "fuzz",
+        "run",
+        "--fuzz-dir",
+        "fuzz",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "sets",
+        "docs/audits/AUD-002-evidence/corpus/sets",
+        "--",
+        "-max_total_time=60",
+        "-rss_limit_mb=2300",
+        "-max_len=4096"
+      ],
+      "startUtc": "2026-11-15T19:57:46.880205+00:00",
+      "endUtc": "2026-11-15T19:59:03.796373+00:00",
+      "exitCode": 0,
+      "logSha256": "9a847b10d1c0501bdc7f06ef09f778a982fae0db4b6a675fec8e94eb3c7793ed",
+      "result": [
+        "Done 9057 runs in 66 second(s)"
+      ]
+    },
+    {
+      "name": "harness-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "target/aud002-memory-contract",
+        "alloc"
+      ],
+      "startUtc": "2026-11-15T19:54:05.547204+00:00",
+      "endUtc": "2026-11-15T19:54:05.688061+00:00",
+      "exitCode": 0,
+      "logSha256": "7b580ab75ce0dab2548c6f2ee65ccedbea1ac3ac4dcf3d66a34058d3766d0e5f",
+      "result": [
+        "locked=false outside_dumps=false outside_children=false",
+        "locked=false outside_dumps=false outside_children=false"
+      ]
+    },
+    {
+      "name": "harness-build-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "startUtc": "2026-11-15T19:54:01.473972+00:00",
+      "endUtc": "2026-11-15T19:54:05.264355+00:00",
+      "exitCode": 0,
+      "logSha256": "34f13537c27f204077b70d85922ce25bd36b59a11ca6ffc425a0a618e9dc6cd9",
+      "result": []
+    },
+    {
+      "name": "harness-build-protect",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--lib"
+      ],
+      "startUtc": "2026-11-15T19:53:57.676098+00:00",
+      "endUtc": "2026-11-15T19:54:00.857328+00:00",
+      "exitCode": 0,
+      "logSha256": "8c4597902fa8ac288d8f109b124d7fbbd0496579fb43c9162917d0660f1ae21f",
+      "result": []
+    },
+    {
+      "name": "harness-compile-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "docs/audits/AUD-002-harnesses/memory_contract.rs",
+        "--extern",
+        "reed_solomon_core=target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=target/debug/deps",
+        "-o",
+        "target/aud002-memory-contract"
+      ],
+      "startUtc": "2026-11-15T19:54:05.264645+00:00",
+      "endUtc": "2026-11-15T19:54:05.546915+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "harness-compile-protect",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "docs/audits/AUD-002-harnesses/memory_contract.rs",
+        "--extern",
+        "reed_solomon_core=target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=target/debug/deps",
+        "-o",
+        "target/aud002-memory-contract"
+      ],
+      "startUtc": "2026-11-15T19:54:00.857643+00:00",
+      "endUtc": "2026-11-15T19:54:01.304328+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "harness-protect",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "target/aud002-memory-contract",
+        "protect"
+      ],
+      "startUtc": "2026-11-15T19:54:01.304556+00:00",
+      "endUtc": "2026-11-15T19:54:01.473695+00:00",
+      "exitCode": 0,
+      "logSha256": "c643ec8c8394ebad8e141dacd542ae95569c6470bd5f42d04669a75e39f3ed5e",
+      "result": [
+        "locked=true outside_dumps=true outside_children=true",
+        "locked=true outside_dumps=true outside_children=true"
+      ]
+    },
+    {
+      "name": "harness-recovery-build",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--lib"
+      ],
+      "startUtc": "2026-11-15T20:01:44.426659+00:00",
+      "endUtc": "2026-11-15T20:01:44.586405+00:00",
+      "exitCode": 0,
+      "logSha256": "a13905646e2aed93ec6ea9ed6ac91490a4e01f91af0215c3965279a910612149",
+      "result": []
+    },
+    {
+      "name": "harness-recovery-compile",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "rustc",
+        "--edition=2024",
+        "docs/audits/AUD-002-harnesses/recovery_contract.rs",
+        "--extern",
+        "reed_solomon_core=target/debug/libreed_solomon_core.rlib",
+        "-L",
+        "dependency=target/debug/deps",
+        "-o",
+        "target/aud002-recovery-contract"
+      ],
+      "startUtc": "2026-11-15T20:01:44.744937+00:00",
+      "endUtc": "2026-11-15T20:01:45.052194+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "harness-recovery-fmt",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "rustfmt",
+        "--edition",
+        "2024",
+        "docs/audits/AUD-002-harnesses/recovery_contract.rs"
+      ],
+      "startUtc": "2026-11-15T20:01:44.586707+00:00",
+      "endUtc": "2026-11-15T20:01:44.744610+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "harness-recovery",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "target/aud002-recovery-contract"
+      ],
+      "startUtc": "2026-11-15T20:01:45.052398+00:00",
+      "endUtc": "2026-11-15T20:01:45.162740+00:00",
+      "exitCode": 0,
+      "logSha256": "01defeedceee6799d4b36266e1a013e384253c378540c3461399dd7395ba7243",
+      "result": [
+        "After another edit, apply returned success and agrees returned false.",
+        "Digest descriptor accepted for 2305843009213693951 bytes (metadata only).",
+        "Digest descriptor accepted for 2305843009213693952 bytes (metadata only)."
+      ]
+    },
+    {
+      "name": "install-thumb",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "2m",
+        "--",
+        "rustup",
+        "target",
+        "add",
+        "thumbv7em-none-eabihf",
+        "--toolchain",
+        "1.99.1"
+      ],
+      "startUtc": "2026-11-15T19:53:27.650395+00:00",
+      "endUtc": "2026-11-15T19:53:37.918645+00:00",
+      "exitCode": 0,
+      "logSha256": "831ad8906cd548d1be0b512110752469e0a5b4f23e8ea459eb4bf438761bef31",
+      "result": []
+    },
+    {
+      "name": "lint-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:50:03.371930+00:00",
+      "endUtc": "2026-11-15T19:50:03.560175+00:00",
+      "exitCode": 0,
+      "logSha256": "a13905646e2aed93ec6ea9ed6ac91490a4e01f91af0215c3965279a910612149",
+      "result": []
+    },
+    {
+      "name": "lint-borrowed",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:50:03.560445+00:00",
+      "endUtc": "2026-11-15T19:50:03.767191+00:00",
+      "exitCode": 0,
+      "logSha256": "6d77f64dfc8c5325b90fdbe05d8be367bdd578bcccec24f275c5ffee7d03dd6e",
+      "result": []
+    },
+    {
+      "name": "lint-fuzz",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "fuzz/Cargo.toml",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:50:04.205486+00:00",
+      "endUtc": "2026-11-15T19:50:04.430277+00:00",
+      "exitCode": 0,
+      "logSha256": "8c233a54790c4800d3dd585436af679aa838da259bfdb129412e2d51cdb75cdc",
+      "result": []
+    },
+    {
+      "name": "lint-protect",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:50:03.130265+00:00",
+      "endUtc": "2026-11-15T19:50:03.371741+00:00",
+      "exitCode": 0,
+      "logSha256": "02db5a66fa0c60ca8618bd08aac556eac4f3ec863e8630a0d353dba6a0f6e126",
+      "result": []
+    },
+    {
+      "name": "lint-thumb-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc",
+        "--target",
+        "thumbv7em-none-eabihf",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:50:03.991782+00:00",
+      "endUtc": "2026-11-15T19:50:04.205335+00:00",
+      "exitCode": 101,
+      "logSha256": "2ec1ba90ed503f66b2b712cd0973b4e9a94a7f8a3015ba495122522a0520f4c9",
+      "result": [
+        "error[E0463]: can't find crate for `core`"
+      ]
+    },
+    {
+      "name": "lint-thumb-installed-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--target",
+        "thumbv7em-none-eabihf",
+        "--features",
+        "alloc",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:55:08.107315+00:00",
+      "endUtc": "2026-11-15T19:55:10.469032+00:00",
+      "exitCode": 0,
+      "logSha256": "6587b82acc3d65ae010ba5601cada7869bd7c1eec64c1b33635af358461f9949",
+      "result": []
+    },
+    {
+      "name": "lint-thumb-installed-plain",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--target",
+        "thumbv7em-none-eabihf",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:55:04.980180+00:00",
+      "endUtc": "2026-11-15T19:55:08.106982+00:00",
+      "exitCode": 0,
+      "logSha256": "8798a0c64b46d195b5285a9b7df5578a20df24f3d1c9216fbff8f2e4027b5824",
+      "result": []
+    },
+    {
+      "name": "lint-thumb",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--target",
+        "thumbv7em-none-eabihf",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:50:03.767433+00:00",
+      "endUtc": "2026-11-15T19:50:03.991619+00:00",
+      "exitCode": 101,
+      "logSha256": "2ec1ba90ed503f66b2b712cd0973b4e9a94a7f8a3015ba495122522a0520f4c9",
+      "result": [
+        "error[E0463]: can't find crate for `core`"
+      ]
+    },
+    {
+      "name": "lint-wasm",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--target",
+        "wasm32-unknown-unknown",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-15T19:54:06.224684+00:00",
+      "endUtc": "2026-11-15T19:54:06.512065+00:00",
+      "exitCode": 0,
+      "logSha256": "59639588a6f1826f129cbcd121edc07279dab94786f5fa5bde6b3439b2e845cc",
+      "result": []
+    },
+    {
+      "name": "package",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "package",
+        "--locked",
+        "--offline",
+        "--list",
+        "--allow-dirty"
+      ],
+      "startUtc": "2026-11-15T19:50:06.034994+00:00",
+      "endUtc": "2026-11-15T19:50:11.282732+00:00",
+      "exitCode": 0,
+      "logSha256": "4b1148d947b3988066e3916c8e57acf71ba88dc74cdde9c7a80a2a253f9c7048",
+      "result": []
+    },
+    {
+      "name": "portable-all-targets",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--no-run"
+      ],
+      "startUtc": "2026-11-15T19:57:46.637769+00:00",
+      "endUtc": "2026-11-15T19:57:57.365978+00:00",
+      "exitCode": 101,
+      "logSha256": "a24df482d272c96c659f69864985a4c7e55c74b1db4caf868b41023b9b8b9977",
+      "result": [
+        "error[E0432]: unresolved imports `reed_solomon_core::Correction`, `reed_solomon_core::Pile`"
+      ]
+    },
+    {
+      "name": "profile-units",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "../workingspace/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-profdata",
+        "merge",
+        "-sparse",
+        "target/llvm-cov-target/reed-solomon-core-150453-5206528572885233431_0.profraw",
+        "-o",
+        "docs/audits/AUD-002-evidence/unit-only.profdata"
+      ],
+      "startUtc": "2026-11-15T20:03:31.499911+00:00",
+      "endUtc": "2026-11-15T20:03:36.716978+00:00",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": []
+    },
+    {
+      "name": "proof",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--release",
+        "--lib",
+        "field::proof",
+        "--",
+        "--ignored"
+      ],
+      "startUtc": "2026-11-15T19:50:11.282885+00:00",
+      "endUtc": "2026-11-15T19:56:05.264694+00:00",
+      "exitCode": 0,
+      "logSha256": "6845d77fa3e3b2f7f27cd8172147f09ba5c884a7ecadfe583ad546355abc6974",
+      "result": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 47 filtered out; finished in 345.31s"
+      ]
+    },
+    {
+      "name": "public-api",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "rustdoc",
+        "--locked",
+        "--offline",
+        "--lib",
+        "--",
+        "-Z",
+        "unstable-options",
+        "--output-format",
+        "json"
+      ],
+      "startUtc": "2026-11-15T19:55:10.469331+00:00",
+      "endUtc": "2026-11-15T19:55:19.053392+00:00",
+      "exitCode": 0,
+      "logSha256": "ce924c64e6122e15fa230d60d80838aadcdcbd3edaf98067fb8b06bb7cb7d9fe",
+      "result": []
+    },
+    {
+      "name": "seed-files",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "+nightly",
+        "run",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "fuzz/Cargo.toml",
+        "--example",
+        "seeds",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--",
+        "docs/audits/AUD-002-evidence/corpus/files"
+      ],
+      "startUtc": "2026-11-15T19:56:33.249330+00:00",
+      "endUtc": "2026-11-15T19:56:40.345106+00:00",
+      "exitCode": 0,
+      "logSha256": "e0c8850419e6c8ff041700fe5a135f04efdf256ddca7a59faef1b91b9118fa64",
+      "result": []
+    },
+    {
+      "name": "test-alloc",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "startUtc": "2026-11-15T19:49:49.154916+00:00",
+      "endUtc": "2026-11-15T19:50:02.732340+00:00",
+      "exitCode": 0,
+      "logSha256": "5379c73ba1c3a34e00ba7fc657377a3dcb88d7b5170246561939ffda39d064e0",
+      "result": [
+        "test result: ok. 47 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.77s",
+        "test result: ok. 156 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.56s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "test-borrowed",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--no-default-features",
+        "--lib"
+      ],
+      "startUtc": "2026-11-15T19:50:02.732544+00:00",
+      "endUtc": "2026-11-15T19:50:03.129979+00:00",
+      "exitCode": 0,
+      "logSha256": "8bfbb2c2ae0006fe410ddc0ccb8506f94d0ad5a440d89c0aee967da2a99130c1",
+      "result": [
+        "test result: ok. 29 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.21s"
+      ]
+    },
+    {
+      "name": "test-protect",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "test",
+        "--locked",
+        "--offline"
+      ],
+      "startUtc": "2026-11-15T19:49:19.809923+00:00",
+      "endUtc": "2026-11-15T19:49:49.154713+00:00",
+      "exitCode": 0,
+      "logSha256": "1378b3baf5450a4f56fb4abd047d331c49864e96d211f84fd9598dce81338913",
+      "result": [
+        "test result: ok. 47 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.78s",
+        "test result: ok. 156 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 28.25s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "wasm-protect",
+      "command": [
+        "run-capped",
+        "--mem",
+        "3000M",
+        "--time",
+        "20m",
+        "--",
+        "cargo",
+        "check",
+        "--locked",
+        "--offline",
+        "--target",
+        "wasm32-unknown-unknown"
+      ],
+      "startUtc": "2026-11-15T19:50:05.211668+00:00",
+      "endUtc": "2026-11-15T19:50:06.034810+00:00",
+      "exitCode": 0,
+      "logSha256": "38b2d0614c839009d468e8a9d1aab08e4fc7d4d1035a880187cccc8c2e015ebf",
+      "result": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "AUD-002-SEC001",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Owned operations accept pages the OS did not lock",
+      "severity": "high",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": [
+        "src/buffer/pages.rs:20",
+        "src/correct.rs:229",
+        "pin src/protect.rs:176",
+        "pin src/os/unix.rs:72"
+      ],
+      "reproduction": "Compare WorkArea::new with WorkArea::locked and follow both result and scratch allocation paths.",
+      "expected": "Before placing any secret, enforce the caller's required OS protections for every allocation.",
+      "observed": "WorkArea::new can succeed with a false lock status. Flags for a result do not attest earlier scratch allocations. Dump and fork exclusion are separate capabilities.",
+      "impact": "A successful native encode or recovery can use pageable secret memory. No swap or dump disclosure was measured.",
+      "recommendedFix": "Introduce one fallible strict allocation policy for all owned results and scratch. Specify required capabilities per OS and reject the operation before secret bytes enter an inadequate region.",
+      "requiredVerification": "Normal allocation and policy-refusal tests for result and scratch on each supported platform; no partial output on refusal."
+    },
+    {
+      "id": "AUD-002-SEC002",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Portable and caller-owned entry points have no secret-memory boundary",
+      "severity": "high",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": [
+        "Cargo.toml:11",
+        "src/buffer/heap.rs:8",
+        "src/code.rs:214",
+        "src/code.rs:253",
+        "src/cyclic/words.rs:150",
+        "src/file/set.rs:368",
+        "pin src/os.rs:299"
+      ],
+      "reproduction": "Compare feature selection and the Buf/Sources/CyclicWords/FileSet signatures with the two public harness runs.",
+      "expected": "A caller selecting the secret-only interface must not accidentally process plaintext in unrestricted storage.",
+      "observed": "The alloc-only path owns an ordinary Vec. Default WASM uses linear heap. Native protected builds still accept arbitrary input, output and scratch slices. agrees_in leaves generated bytes with the caller; _into may be backed by a file.",
+      "impact": "A native protected result gives no assurance about the supplied seed, scratch or destination. Zeroization after use does not protect bytes during use.",
+      "recommendedFix": "Expose a distinct strict entry point requiring protected storage for all secret-bearing inputs, outputs and scratch. Keep generic no_std methods available to public-data users. Reject unsupported targets for that entry point.",
+      "requiredVerification": "Compile-time API checks and native/portable/WASM contract tests; no unchecked path from a strict operation into a portable operation."
+    },
+    {
+      "id": "AUD-002-SEC003",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Correction records export secret symbols by value",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": [
+        "src/correct/plan.rs:34",
+        "src/correct/plan.rs:158",
+        "src/correct/changes.rs:46",
+        "src/correct/changes.rs:119"
+      ],
+      "reproduction": "Trace get, iteration, apply, and the public fixture's Copy bound.",
+      "expected": "The strict correction path should not materialize application-visible, freely copyable plaintext records.",
+      "observed": "Change is Copy with public was/becomes fields and manual Zeroize. Iteration reconstructs records; apply internally uses this interface too. Debug omits the values.",
+      "impact": "One corrected symbol can represent one mnemonic word. Wiping one returned record cannot wipe earlier copies.",
+      "recommendedFix": "In the secret profile use borrowed protected records or a protected output with scoped inspection; keep a separate position-only result. Avoid copying plaintext records during apply.",
+      "requiredVerification": "Inspect every iterator and apply path, verify that the strict record cannot implement Copy or be returned by value; test with public synthetic words."
+    },
+    {
+      "id": "AUD-002-SEC004",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Transient shard bytes and SHA input state have no enforced protected placement",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": [
+        "src/field/lanes.rs:61",
+        "src/file/facts.rs:19",
+        "docs/TECHNICAL.md:266",
+        "block-buffer 0.12.1 src/lib.rs:203,433"
+      ],
+      "reproduction": "Trace a non-aligned shard and the hash update for a non-block-aligned message.",
+      "expected": "Any secret-bearing working memory covered by the strict contract must have a specified storage policy.",
+      "observed": "The arithmetic tail copies up to seven bytes to a local array and materializes a product. The optional SHA path buffers its partial block outside WorkArea. RustCrypto enables zeroization on Drop. Protected stack and process isolation are caller choices.",
+      "impact": "RAM protection of a Buffer alone cannot cover these temporaries. Actual spills, swap and forensic recoverability were not measured.",
+      "recommendedFix": "Remove avoidable tail copies or erase them, run required secret computations within an attested protected stack/process boundary, and explicitly state limits for registers, compiler and host.",
+      "requiredVerification": "Review emitted code on supported targets and audit the protected entry point end to end, including hashing, errors, cancellation and callbacks."
+    },
+    {
+      "id": "AUD-002-SEC005",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Public protect re-export pins a revision with five upstream release blockers",
+      "severity": "high",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": [
+        "Cargo.toml:31",
+        "Cargo.lock:263",
+        "fuzz/Cargo.lock:202",
+        "src/lib.rs:46",
+        "upstream AUD-014-SEC001 through SEC005 and AUD-015"
+      ],
+      "reproduction": "Resolve the exact URL and revision in both lockfiles, compare to the upstream audit snapshot, then trace the public re-export and actual RS call sites.",
+      "expected": "The public protection API used for release should include independently verified upstream fixes.",
+      "observed": "Both lockfiles pin fb2a6d345caf8eb58097f013f12e43985402150f. Upstream documented five blockers for this revision involving ClosedSecret after fork and worker launch, termination and isolation. Fixes and follow-ups are on later commits.",
+      "impact": "Consumers using the re-exported operations can reach the affected facilities. Ordinary RS encoding calls WorkArea; no path from the encoder into those five facilities was found.",
+      "recommendedFix": "Select a reviewed fixed immutable upstream revision, update both lockfiles and narrow the re-export to the facilities the crate needs.",
+      "requiredVerification": "Verify upstream fix ancestry and platform evidence for the selected hash, compare both lockfiles and rerun native integration gates."
+    },
+    {
+      "id": "AUD-002-SEC006",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Correction timing claim is stronger than the implementation",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "docs/TECHNICAL.md:251",
+        "src/recurrence.rs:22",
+        "src/correct.rs:682"
+      ],
+      "reproduction": "Follow the discrepancy calculation with fixed error positions and varying nonzero values in the existing test.",
+      "expected": "Documentation should specify which computations can depend on data values.",
+      "observed": "A discrepancy may cancel to zero depending on error magnitudes. The decoder branches on this result; the narrower scaling-kernel statement survives review.",
+      "impact": "Callers cannot assume correction timing discloses only the positions and count. No timing recovery was demonstrated.",
+      "recommendedFix": "Limit the claim to the verified arithmetic kernel and explicitly document decoder data dependence.",
+      "requiredVerification": "Documented timing model reconciled with all decoder branches."
+    },
+    {
+      "id": "AUD-002-SEC007",
+      "category": "SEC",
+      "kind": "finding",
+      "title": "Vote metadata can survive a reallocating Vec growth",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/file/set/vote.rs:272",
+        "src/file/set/vote.rs:408",
+        "src/file/set/shards.rs:27",
+        "docs/TECHNICAL.md:260"
+      ],
+      "reproduction": "Trace differing from its first entry through grow and Drop.",
+      "expected": "The documented wipe of internal copies of disagreement positions should include previous allocations.",
+      "observed": "Zeroizing wipes the current Vec allocation. A moving reallocation after insertion can leave an older allocation unwiped.",
+      "impact": "Only metadata (disagreement positions and file numbers) is evidenced here.",
+      "recommendedFix": "Pre-reserve a checked upper bound before filling, or explicitly clear old storage during growth.",
+      "requiredVerification": "Test growing votes with public data and review reservation bounds."
+    },
+    {
+      "id": "AUD-002-API001",
+      "category": "API",
+      "kind": "finding",
+      "title": "A correction plan does not bind the complete input reading",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "docs/TECHNICAL.md:184",
+        "src/correct/plan.rs:158",
+        "tests/suite/cyclic.rs:440"
+      ],
+      "reproduction": "Compare the promise about changed readings with all preconditions checked by apply.",
+      "expected": "Either validate that the complete reading matches the planned reading, or promise only per-change preconditions.",
+      "observed": "Only positions present in Changes, their old values and the replacement ranges are verified. Unlisted symbols and shard identity are not bound.",
+      "impact": "An intervening edit elsewhere can leave the output inconsistent while apply returns success.",
+      "recommendedFix": "Require replanning after any edit or bind a plan to the input and code parameters; distinguish hand-built change lists.",
+      "requiredVerification": "Tests for changed unrelated symbols, reordered inputs, rejected stale plans and atomicity."
+    },
+    {
+      "id": "AUD-002-API002",
+      "category": "API",
+      "kind": "finding",
+      "title": "Some Result-returning owned methods use infallible metadata allocations",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/code/owned.rs:46",
+        "src/code/owned.rs:107",
+        "src/correct.rs:69",
+        "src/correct/plan.rs:118",
+        "src/correct.rs:624"
+      ],
+      "reproduction": "Trace index validation, points collection, and rebuild allocation against the published Memory result.",
+      "expected": "Report recoverable allocation failure through the documented typed error.",
+      "observed": "collect into Vec and Vec::with_capacity can enter the global allocation error handler before the caller receives Result.",
+      "impact": "Under memory pressure a host can terminate while correcting a backup.",
+      "recommendedFix": "Reuse the existing checked reservation helper before filling these vectors.",
+      "requiredVerification": "Review allocation closure across encode, rebuild, plan and correct; verify propagation using deterministic allocator tests."
+    },
+    {
+      "id": "AUD-002-API003",
+      "category": "API",
+      "kind": "finding",
+      "title": "Batch write or repair can terminate after touching the output",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "evidence": [
+        "src/file/set/sink.rs:79",
+        "src/file/writing.rs:97",
+        "src/file/writing.rs:112",
+        "src/file/set.rs:504"
+      ],
+      "reproduction": "Trace BySlot::new in both _into operations after framing; review the stable sort's allocation contract.",
+      "expected": "Later failures must return a typed error and clear outputs as promised.",
+      "observed": "Stable sort_by_key may allocate a temporary Vec. When allocation fails its global error path bypasses the caller's Result and cleanup after headers were written.",
+      "impact": "Existing file-backed outputs can be left partially written on process termination; no forced allocator failure was executed.",
+      "recommendedFix": "Use an allocation-free unstable sort keyed on both slot and original ordinal, or prepare all necessary fallible scratch before writing.",
+      "requiredVerification": "Cover duplicate targets, ordering and typed late failure in writer and repair; verify cleanup at the actual API."
+    },
+    {
+      "id": "AUD-002-API004",
+      "category": "API",
+      "kind": "finding",
+      "title": "Self-test can abort while constructing expected corrections",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/self_test.rs:338",
+        "src/correct/changes.rs:169"
+      ],
+      "reproduction": "Trace the reference Change lists used inside self_test.",
+      "expected": "Self-test should return a useful status when optional test scratch cannot be created.",
+      "observed": "FromIterator<Change> invokes the global allocation error handler on failure, including a refused WorkArea mapping.",
+      "impact": "An application using the startup check may terminate.",
+      "recommendedFix": "Compare the returned plan with a fixed public array and reuse it for apply.",
+      "requiredVerification": "Verify self-test status for unavailable scratch."
+    },
+    {
+      "id": "AUD-002-API005",
+      "category": "API",
+      "kind": "finding",
+      "title": "agrees_in reports the threshold for a fixed scratch-length failure",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/code.rs:59",
+        "src/code.rs:261"
+      ],
+      "reproduction": "Compare the Buffer error display with COMPARED.",
+      "expected": "Diagnostics should identify the required 256-byte workspace.",
+      "observed": "A short comparison buffer triggers an error message about the number of shards.",
+      "impact": "At a small threshold the recovery advice is incorrect.",
+      "recommendedFix": "Report the required size or add a distinct comparison-scratch error.",
+      "requiredVerification": "Test error text for a 255-byte buffer and a threshold of two."
+    },
+    {
+      "id": "AUD-002-API006",
+      "category": "API",
+      "kind": "finding",
+      "title": "FileError::Memory describes the wrong outcome of a late failure",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/file.rs:54",
+        "src/file/writing.rs:60"
+      ],
+      "reproduction": "Compare the error rustdoc with the actual _into cleanup.",
+      "expected": "Callers should know whether their previous output remains available.",
+      "observed": "The variant promises no write; files_into can zero every output after a late refusal.",
+      "impact": "A caller may wrongly expect its old output to be preserved.",
+      "recommendedFix": "Document the different early and late guarantees for each operation.",
+      "requiredVerification": "Check the docs against existing in-place outcome tests."
+    },
+    {
+      "id": "AUD-002-API007",
+      "category": "API",
+      "kind": "finding",
+      "title": "The digest-bearing format accepts lengths beyond the SHA-256 standard",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/file/facts.rs:64",
+        "src/file/facts.rs:203",
+        "FIPS 180-4 §6.2"
+      ],
+      "reproduction": "Compare the optional hash and u64 data_len contract to the SHA-256 bound of fewer than 2^64 input bits.",
+      "expected": "A digest-bearing descriptor should have an interoperable byte length.",
+      "observed": "The shape checks do not specifically reject digest-bearing inputs of 2^61 bytes or more when the geometry passes.",
+      "impact": "A format reader can accept a descriptor outside the standard hash input domain; primarily a metadata interoperability issue.",
+      "recommendedFix": "Reject such lengths when the digest is present or specify a different versioned mechanism.",
+      "requiredVerification": "Check the boundary at 2^61 minus one and 2^61 using metadata only."
+    },
+    {
+      "id": "AUD-002-ARC001",
+      "category": "ARC",
+      "kind": "finding",
+      "title": "Cyclic correction acquires two search workspaces per nontrivial call",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/cyclic/owned.rs:134",
+        "src/cyclic/owned.rs:224",
+        "docs/TECHNICAL.md:200"
+      ],
+      "reproduction": "Follow a correctable word through the analysis and write passes.",
+      "expected": "The stated single-workspace allocation should cover both passes.",
+      "observed": "Each pass allocates again. Second-pass allocations occur before writes; atomicity was not disproved.",
+      "impact": "Extra mappings and a second opportunity for a Memory result. Peak space need not double.",
+      "recommendedFix": "Reuse scratch across passes or document the allocation count accurately.",
+      "requiredVerification": "Review allocation count and atomicity in a correction requiring two passes."
+    },
+    {
+      "id": "AUD-002-ARC002",
+      "category": "ARC",
+      "kind": "finding",
+      "title": "The file-format self-test bypasses the public no-alloc writer",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/file.rs:134",
+        "src/file/header.rs:202",
+        "tests/suite/files.rs:129"
+      ],
+      "reproduction": "Compare the startup fixture construction with Header::file_into.",
+      "expected": "A self-test claiming to check serialization should run the shipped serialization path.",
+      "observed": "The fixture chains sections itself, while the public writer writes offsets. Integration tests cover the writer separately.",
+      "impact": "A writer regression may leave startup self-test green.",
+      "recommendedFix": "Write the fixed public vector with file_into into a fixed array.",
+      "requiredVerification": "Test that the self-test compares every byte of the real writer output."
+    },
+    {
+      "id": "AUD-002-FUN001",
+      "category": "FUN",
+      "kind": "finding",
+      "title": "Empty batch writes still perform avoidable memory and preparation work",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/file/writing.rs:126",
+        "src/file/writing.rs:245",
+        "src/file/set.rs:727",
+        "tests/suite/sets.rs:171"
+      ],
+      "reproduction": "Trace an empty target list and a zero-length shard through writer preparation.",
+      "expected": "After validating inputs, an empty operation should avoid unrelated scratch allocation.",
+      "observed": "The writer prepares blocks and comparison scratch despite having no spare holders to compare, and even when no outputs are requested.",
+      "impact": "Empty requests can return avoidable Memory failures and cost work.",
+      "recommendedFix": "Return early after required validation; allocate comparison scratch only when used.",
+      "requiredVerification": "Cover empty targets and zero-length payload, retaining prior validation precedence."
+    },
+    {
+      "id": "AUD-002-DOC001",
+      "category": "DOC",
+      "kind": "finding",
+      "title": "The protection documentation misstates three OS or constructor contracts",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "docs/TECHNICAL.md:258",
+        "docs/TECHNICAL.md:264",
+        "src/buffer.rs:21",
+        "src/buffer.rs:60",
+        "pin src/os/windows.rs:215",
+        "pin src/os.rs:150,299"
+      ],
+      "reproduction": "Cross-check claims against the pinned constructors, backend selection, generation guard and WER registration.",
+      "expected": "Memory advice should name the exact constructor, platform and borrow lifetime.",
+      "observed": "WorkArea::new and best-effort Secret constructors can succeed without a lock. An already obtained slice is not rechecked on access after fork. WASM uses the heap. WER registration can require multiple blocks for a very large region.",
+      "impact": "Misleading guidance when selecting platform protections.",
+      "recommendedFix": "Specify strict constructors and generation/OS boundaries; link to documented host responsibilities.",
+      "requiredVerification": "Cross-check the amended native, Windows and WASM documentation against the selected pin."
+    },
+    {
+      "id": "AUD-002-DOC002",
+      "category": "DOC",
+      "kind": "finding",
+      "title": "Format documentation overstates set, digest and field restrictions",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "docs/TECHNICAL.md:358",
+        "src/file/set.rs:126",
+        "src/file.rs:83",
+        "src/file/header.rs:48",
+        "src/field.rs:52",
+        "tests/suite/digests.rs:123",
+        "tests/suite/sets.rs:181"
+      ],
+      "reproduction": "Compare the full writer with low-level constructors; consider k=1 and equivalent GF(256) constructors.",
+      "expected": "Describe supported field encodings, threshold-one recovery and which writers check the supplied digest.",
+      "observed": "Low-level file construction can carry a caller-supplied digest. A single shard suffices at k=1. Alternative degree-eight polynomials are rejected by the format code, even though their symbols occupy one byte.",
+      "impact": "Confusing recovery and compatibility guidance.",
+      "recommendedFix": "Scope the digest claim to files/files_into, state k=1 explicitly and identify the v1 field identifiers.",
+      "requiredVerification": "Review docs against existing low-level digest, one-shard and field tests."
+    },
+    {
+      "id": "AUD-002-DOC003",
+      "category": "DOC",
+      "kind": "finding",
+      "title": "The erased-symbol read guarantee overstates the Rust source contract",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "src/cyclic/words.rs:150",
+        "src/cyclic/decode.rs:122",
+        "docs/TECHNICAL.md:200"
+      ],
+      "reproduction": "Trace erased-symbol filtering inside syndromes_of.",
+      "expected": "The promised no-read property should match the data access order, or be narrowed to no influence on the result.",
+      "observed": "The loop binds the symbol by value before the erased-position test. It is excluded from the syndrome. Optimized code may omit the load.",
+      "impact": "Source does not justify the stronger property; mathematical erasure recovery is unaffected.",
+      "recommendedFix": "Move the dereference after checking membership or adjust the wording.",
+      "requiredVerification": "Verify erased placeholders have no contribution and match the stated source-level access guarantee."
+    },
+    {
+      "id": "AUD-002-BLD001",
+      "category": "BLD",
+      "kind": "finding",
+      "title": "The calls fuzz target cannot generate a valid agrees_in scratch size",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "fuzz/fuzz_targets/calls.rs:48",
+        "src/code.rs:261",
+        "tests/suite/refusals.rs:222"
+      ],
+      "reproduction": "Inspect the range of next() before the modulo.",
+      "expected": "Randomized calls should reach accepted and rejected scratch sizes.",
+      "observed": "next() produces one byte, so next() % 300 is always below COMPARED=256. Ordinary tests cover the success path.",
+      "impact": "Fuzz iteration counts overstate coverage of this API branch.",
+      "recommendedFix": "Generate sizes on both sides of COMPARED using a wider input or boundary selection.",
+      "requiredVerification": "Add a reachable accepted call and verify both outcomes in the fuzz harness."
+    },
+    {
+      "id": "AUD-002-BLD002",
+      "category": "BLD",
+      "kind": "finding",
+      "title": "Clean-checkout instructions omit the fuzz corpus directory",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "AGENTS.md:27",
+        "fuzz/examples/seeds.rs:29",
+        "fuzz/.gitignore:2"
+      ],
+      "reproduction": "Compare the seed generator with the untracked corpus path.",
+      "expected": "The documented command should work in a clean checkout.",
+      "observed": "The generator writes into an existing directory and unwraps the result. The directory is Git-ignored and omitted from the instructions.",
+      "impact": "Release smoke checks can stop before fuzzing.",
+      "recommendedFix": "Create the directory in the seed generator or document its creation.",
+      "requiredVerification": "Run the documented seed command with a new scratch corpus."
+    },
+    {
+      "id": "AUD-002-BLD003",
+      "category": "BLD",
+      "kind": "finding",
+      "title": "The advisory workflow omits the fuzz dependency graph",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        ".github/workflows/audit.yml:9",
+        ".github/workflows/audit.yml:35",
+        "fuzz/Cargo.lock"
+      ],
+      "reproduction": "Check path triggers and the pinned action's selected lockfile.",
+      "expected": "Both committed dependency graphs should receive advisory checks.",
+      "observed": "Fuzz-only changes do not trigger the workflow, and the action runs the root audit without selecting the fuzz lockfile.",
+      "impact": "Development/test packages can miss automated advisory review. This audit separately scanned both.",
+      "recommendedFix": "Add both fuzz manifest paths to triggers and an explicit second lockfile audit.",
+      "requiredVerification": "Verify both audits run after a fuzz-only manifest change."
+    },
+    {
+      "id": "AUD-002-BLD004",
+      "category": "BLD",
+      "kind": "finding",
+      "title": "The standard no-default-features test command selects alloc-only targets",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "Cargo.toml:11",
+        "src/lib.rs:32",
+        "examples/measure.rs:14",
+        "tests/suite/main.rs:1",
+        ".github/workflows/ci.yml:51"
+      ],
+      "reproduction": "Compare auto-discovered test and example targets with alloc-gated exports; compile the default no-feature test command without running it.",
+      "expected": "Users should be able to run the ordinary test command for the advertised portable configuration.",
+      "observed": "The documented --lib subset passes, but the suite and example import alloc-only exports without required-features.",
+      "impact": "The natural cargo test invocation fails at compilation; this is not a defect in the no-alloc library build.",
+      "recommendedFix": "Declare required-features on alloc-only targets and retain independent no-alloc unit tests.",
+      "requiredVerification": "Run cargo test --no-default-features and the alloc-only suite in CI."
+    },
+    {
+      "id": "AUD-002-DOC004",
+      "category": "DOC",
+      "kind": "finding",
+      "title": "Historical advisory and remediation summaries do not match their evidence",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "docs/audits/AUD-001-2026-11-15.md:96",
+        "docs/audits/AUD-001-2026-11-15.json",
+        "docs/audits/README.md:25"
+      ],
+      "reproduction": "Compare historical advisory output and the patches that actually modified the fuzz harnesses.",
+      "expected": "Release records should preserve non-fatal warnings and identify the matching fix revisions.",
+      "observed": "AUD-001 reported no advisory despite informational warnings in the retained log; 92b842d does not include all the fuzz changes credited to it for ARC003/004 (9c75fba does).",
+      "impact": "A reader can misinterpret advisory coverage and the provenance of historical repairs.",
+      "recommendedFix": "Add a dated erratum to the register and distinguish dependency warnings from vulnerability findings.",
+      "requiredVerification": "Cross-check both IDs and Git revisions against logs and patches."
+    },
+    {
+      "id": "AUD-002-DOC005",
+      "category": "DOC",
+      "kind": "finding",
+      "title": "README omits a default dependency and overgeneralizes self-test coverage",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "evidence": [
+        "README.md:10",
+        "README.md, Self-test and test sections",
+        "src/self_test.rs:374",
+        "Cargo.toml:34",
+        "tests/suite/cyclic_words.rs:152"
+      ],
+      "reproduction": "Compare features, test fixtures and the README's dependency and test descriptions.",
+      "expected": "State the actual default dependency list, feature-specific checks and provenance of expected results.",
+      "observed": "bytemuck is enabled by default via alloc; the startup check has 17 cases with alloc and 11 without. Some tests compare two front ends of shared code, alongside genuine external vectors.",
+      "impact": "Users can overestimate independence and coverage of startup diagnostics.",
+      "recommendedFix": "Document the profile-specific checks and distinguish external vectors from equivalence tests.",
+      "requiredVerification": "Reconcile the README with feature composition and both self-test results."
+    }
+  ],
+  "observations": [
+    {
+      "id": "AUD-002-SEC008",
+      "category": "SEC",
+      "kind": "observation",
+      "severity": "info",
+      "status": "accepted",
+      "releaseBlocking": false,
+      "title": "File payloads and identifying digests can leave process memory",
+      "evidence": [
+        "src/file/writing.rs:19",
+        "src/file/set.rs:159",
+        "src/file/reading.rs:107"
+      ],
+      "reproduction": "Inspect the listed source and the public interface.",
+      "expected": "Document the application and validation boundary.",
+      "observed": "The systematic files store plaintext fragments by design. CRC, majority voting and an unkeyed digest do not authenticate authors or encrypt a seed. Debug hides shard payloads but may show identifiers and digest metadata. A low-entropy message can be sensitive even as a digest.",
+      "impact": "Relevant when interpreting the release guarantees.",
+      "recommendedFix": "Carry this boundary forward into consumer documentation.",
+      "requiredVerification": "Recheck if the boundary changes."
+    },
+    {
+      "id": "AUD-002-SEC009",
+      "category": "SEC",
+      "kind": "observation",
+      "severity": "info",
+      "status": "accepted",
+      "releaseBlocking": false,
+      "title": "A share in a caller mapping may be visible before final verification",
+      "evidence": [
+        "src/file/set.rs:368",
+        "src/file/set.rs:391"
+      ],
+      "reproduction": "Inspect the listed source and the public interface.",
+      "expected": "Document the application and validation boundary.",
+      "observed": "rebuild_into writes then verifies; a later returned error zeros the destination. A memory-mapped output is not a private transactional staging area. The caller must own the storage and control concurrent readers and persistence.",
+      "impact": "Relevant when interpreting the release guarantees.",
+      "recommendedFix": "Carry this boundary forward into consumer documentation.",
+      "requiredVerification": "Recheck if the boundary changes."
+    },
+    {
+      "id": "AUD-002-FUN002",
+      "category": "FUN",
+      "kind": "observation",
+      "severity": "info",
+      "status": "accepted",
+      "releaseBlocking": false,
+      "title": "Recovery boundaries were supported by independent vectors and the exhaustive field check",
+      "evidence": [
+        "src/field/proof.rs",
+        "tests/suite/oracle.rs",
+        "tests/suite/cyclic.rs",
+        "tests/suite/subsets.rs"
+      ],
+      "reproduction": "Inspect the listed source and the public interface.",
+      "expected": "Document the application and validation boundary.",
+      "observed": "No arithmetic error was identified within the correction bound. Outside it, another valid codeword can be returned. Integrity of the original requires an independently trusted reference when authenticity matters.",
+      "impact": "Relevant when interpreting the release guarantees.",
+      "recommendedFix": "Carry this boundary forward into consumer documentation.",
+      "requiredVerification": "Recheck if the boundary changes."
+    },
+    {
+      "id": "AUD-002-BLD005",
+      "category": "BLD",
+      "kind": "observation",
+      "severity": "info",
+      "status": "accepted",
+      "releaseBlocking": false,
+      "title": "The source candidate has no exact native release-matrix attestation",
+      "evidence": [
+        "Cargo.toml:9",
+        ".github/workflows/ci.yml",
+        "docs/COVERAGE.md"
+      ],
+      "reproduction": "Inspect the listed source and the public interface.",
+      "expected": "Document the application and validation boundary.",
+      "observed": "The release target is a source crate with publish=false and a draft file format. Dirty changes and untracked modules are absent from the base commit. Older hosted matrix runs do not attest these exact bytes.",
+      "impact": "Relevant when interpreting the release guarantees.",
+      "recommendedFix": "Carry this boundary forward into consumer documentation.",
+      "requiredVerification": "Recheck if the boundary changes."
+    }
+  ],
+  "remediation": [
+    {
+      "id": "AUD-002-SEC001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/buffer/pages.rs:20",
+        "src/correct.rs:229",
+        "pin src/protect.rs:176",
+        "pin src/os/unix.rs:72"
+      ]
+    },
+    {
+      "id": "AUD-002-SEC002",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "Cargo.toml:11",
+        "src/buffer/heap.rs:8",
+        "src/code.rs:214",
+        "src/code.rs:253",
+        "src/cyclic/words.rs:150",
+        "src/file/set.rs:368",
+        "pin src/os.rs:299"
+      ]
+    },
+    {
+      "id": "AUD-002-SEC003",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/correct/plan.rs:34",
+        "src/correct/plan.rs:158",
+        "src/correct/changes.rs:46",
+        "src/correct/changes.rs:119"
+      ]
+    },
+    {
+      "id": "AUD-002-SEC004",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/field/lanes.rs:61",
+        "src/file/facts.rs:19",
+        "docs/TECHNICAL.md:266",
+        "block-buffer 0.12.1 src/lib.rs:203,433"
+      ]
+    },
+    {
+      "id": "AUD-002-SEC005",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "Cargo.toml:31",
+        "Cargo.lock:263",
+        "fuzz/Cargo.lock:202",
+        "src/lib.rs:46",
+        "upstream AUD-014-SEC001 through SEC005 and AUD-015"
+      ]
+    },
+    {
+      "id": "AUD-002-SEC006",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "docs/TECHNICAL.md:251",
+        "src/recurrence.rs:22",
+        "src/correct.rs:682"
+      ]
+    },
+    {
+      "id": "AUD-002-SEC007",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/file/set/vote.rs:272",
+        "src/file/set/vote.rs:408",
+        "src/file/set/shards.rs:27",
+        "docs/TECHNICAL.md:260"
+      ]
+    },
+    {
+      "id": "AUD-002-API001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "docs/TECHNICAL.md:184",
+        "src/correct/plan.rs:158",
+        "tests/suite/cyclic.rs:440"
+      ]
+    },
+    {
+      "id": "AUD-002-API002",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/code/owned.rs:46",
+        "src/code/owned.rs:107",
+        "src/correct.rs:69",
+        "src/correct/plan.rs:118",
+        "src/correct.rs:624"
+      ]
+    },
+    {
+      "id": "AUD-002-API003",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/file/set/sink.rs:79",
+        "src/file/writing.rs:97",
+        "src/file/writing.rs:112",
+        "src/file/set.rs:504"
+      ]
+    },
+    {
+      "id": "AUD-002-API004",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/self_test.rs:338",
+        "src/correct/changes.rs:169"
+      ]
+    },
+    {
+      "id": "AUD-002-API005",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/code.rs:59",
+        "src/code.rs:261"
+      ]
+    },
+    {
+      "id": "AUD-002-API006",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/file.rs:54",
+        "src/file/writing.rs:60"
+      ]
+    },
+    {
+      "id": "AUD-002-API007",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/file/facts.rs:64",
+        "src/file/facts.rs:203",
+        "FIPS 180-4 §6.2"
+      ]
+    },
+    {
+      "id": "AUD-002-ARC001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/cyclic/owned.rs:134",
+        "src/cyclic/owned.rs:224",
+        "docs/TECHNICAL.md:200"
+      ]
+    },
+    {
+      "id": "AUD-002-ARC002",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/file.rs:134",
+        "src/file/header.rs:202",
+        "tests/suite/files.rs:129"
+      ]
+    },
+    {
+      "id": "AUD-002-FUN001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/file/writing.rs:126",
+        "src/file/writing.rs:245",
+        "src/file/set.rs:727",
+        "tests/suite/sets.rs:171"
+      ]
+    },
+    {
+      "id": "AUD-002-DOC001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "docs/TECHNICAL.md:258",
+        "docs/TECHNICAL.md:264",
+        "src/buffer.rs:21",
+        "src/buffer.rs:60",
+        "pin src/os/windows.rs:215",
+        "pin src/os.rs:150,299"
+      ]
+    },
+    {
+      "id": "AUD-002-DOC002",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "docs/TECHNICAL.md:358",
+        "src/file/set.rs:126",
+        "src/file.rs:83",
+        "src/file/header.rs:48",
+        "src/field.rs:52",
+        "tests/suite/digests.rs:123",
+        "tests/suite/sets.rs:181"
+      ]
+    },
+    {
+      "id": "AUD-002-DOC003",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "src/cyclic/words.rs:150",
+        "src/cyclic/decode.rs:122",
+        "docs/TECHNICAL.md:200"
+      ]
+    },
+    {
+      "id": "AUD-002-BLD001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "fuzz/fuzz_targets/calls.rs:48",
+        "src/code.rs:261",
+        "tests/suite/refusals.rs:222"
+      ]
+    },
+    {
+      "id": "AUD-002-BLD002",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "AGENTS.md:27",
+        "fuzz/examples/seeds.rs:29",
+        "fuzz/.gitignore:2"
+      ]
+    },
+    {
+      "id": "AUD-002-BLD003",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        ".github/workflows/audit.yml:9",
+        ".github/workflows/audit.yml:35",
+        "fuzz/Cargo.lock"
+      ]
+    },
+    {
+      "id": "AUD-002-BLD004",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "Cargo.toml:11",
+        "src/lib.rs:32",
+        "examples/measure.rs:14",
+        "tests/suite/main.rs:1",
+        ".github/workflows/ci.yml:51"
+      ]
+    },
+    {
+      "id": "AUD-002-DOC004",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "docs/audits/AUD-001-2026-11-15.md:96",
+        "docs/audits/AUD-001-2026-11-15.json",
+        "docs/audits/README.md:25"
+      ]
+    },
+    {
+      "id": "AUD-002-DOC005",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": null,
+      "evidence": [
+        "README.md:10",
+        "README.md, Self-test and test sections",
+        "src/self_test.rs:374",
+        "Cargo.toml:34",
+        "tests/suite/cyclic_words.rs:152"
+      ]
+    }
+  ],
+  "limitations": [
+    "Fresh runtime evidence is for Linux x86-64 with public inputs. Target compilation does not execute the native Windows, Apple, ARM, bare-metal or browser memory backends. No hosted CI was dispatched for the dirty candidate.",
+    "This is a defensive source and contract review plus ordinary repo tests. No collection of actual secrets, forced failures in a system allocator, swap/dump forensics, timing attack or proof of emitted-code zeroization was performed. Rust source placement cannot establish absence of compiler spills.",
+    "Fuzz runs are bounded smoke checks. The calls scratch-size blind spot persists. Existing external vectors cover specific parameterizations. No mathematical or exhaustive security proof is claimed.",
+    "Upstream cross-platform audit outcomes are retained evidence for their own pinned objects. No whole-consumer MnemoCode or MHFE audit, registry publication or deployed binary attestation is included.",
+    "Public API inventory lists crate-level exports, locally implemented methods and explicit local trait implementations at the default feature union. External re-exports are named with their dependency version and boundary; their entire dependency graph was not re-audited."
+  ],
+  "coverageMeasurement": {
+    "unit": "LLVM source lines",
+    "measured": 5388,
+    "covered": 5290,
+    "percent": "98.18%",
+    "scope": "default Linux, 47 unit and 151 instrumented integration tests, five long tests omitted only from coverage; all 156 passed in ordinary runs",
+    "sourceFingerprint": "b06b3feb5317b1eac57920e3878c071e5b459d7ddf9732430d14e25f328372a1",
+    "tool": "cargo-llvm-cov and LLVM bundled with Rust 1.99.1",
+    "priorScopePercent": "98.35% on previous source",
+    "toolVersions": {
+      "rustc": "1.99.1",
+      "llvm": "23.1.1",
+      "cargo-llvm-cov": "0.9.1"
+    },
+    "freshMeasurementUtcDate": "2026-11-15",
+    "perFile": [
+      {
+        "filenameAsPrinted": "buffer/numbers.rs",
+        "measured": 32,
+        "covered": 32,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "buffer/pages.rs",
+        "measured": 30,
+        "covered": 30,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "buffer.rs",
+        "measured": 62,
+        "covered": 62,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "code/owned.rs",
+        "measured": 85,
+        "covered": 84,
+        "linePercent": "98.82%"
+      },
+      {
+        "filenameAsPrinted": "code.rs",
+        "measured": 187,
+        "covered": 173,
+        "linePercent": "92.51%"
+      },
+      {
+        "filenameAsPrinted": "correct/changes.rs",
+        "measured": 162,
+        "covered": 161,
+        "linePercent": "99.38%"
+      },
+      {
+        "filenameAsPrinted": "correct/errors.rs",
+        "measured": 27,
+        "covered": 27,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "correct/plan.rs",
+        "measured": 251,
+        "covered": 249,
+        "linePercent": "99.20%"
+      },
+      {
+        "filenameAsPrinted": "correct.rs",
+        "measured": 638,
+        "covered": 636,
+        "linePercent": "99.69%"
+      },
+      {
+        "filenameAsPrinted": "cyclic/decode.rs",
+        "measured": 236,
+        "covered": 234,
+        "linePercent": "99.15%"
+      },
+      {
+        "filenameAsPrinted": "cyclic/owned.rs",
+        "measured": 254,
+        "covered": 252,
+        "linePercent": "99.21%"
+      },
+      {
+        "filenameAsPrinted": "cyclic/words.rs",
+        "measured": 183,
+        "covered": 182,
+        "linePercent": "99.45%"
+      },
+      {
+        "filenameAsPrinted": "cyclic.rs",
+        "measured": 10,
+        "covered": 10,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "field/binary.rs",
+        "measured": 69,
+        "covered": 63,
+        "linePercent": "91.30%"
+      },
+      {
+        "filenameAsPrinted": "field/gf2048.rs",
+        "measured": 70,
+        "covered": 70,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "field/gf256.rs",
+        "measured": 58,
+        "covered": 58,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "field/gf65536.rs",
+        "measured": 64,
+        "covered": 64,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "field/lanes.rs",
+        "measured": 116,
+        "covered": 116,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "field/proof.rs",
+        "measured": 120,
+        "covered": 106,
+        "linePercent": "88.33%"
+      },
+      {
+        "filenameAsPrinted": "field.rs",
+        "measured": 221,
+        "covered": 221,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "file/crc32c.rs",
+        "measured": 28,
+        "covered": 28,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "file/facts.rs",
+        "measured": 149,
+        "covered": 149,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "file/header.rs",
+        "measured": 267,
+        "covered": 264,
+        "linePercent": "98.88%"
+      },
+      {
+        "filenameAsPrinted": "file/pile.rs",
+        "measured": 44,
+        "covered": 43,
+        "linePercent": "97.73%"
+      },
+      {
+        "filenameAsPrinted": "file/reading.rs",
+        "measured": 141,
+        "covered": 139,
+        "linePercent": "98.58%"
+      },
+      {
+        "filenameAsPrinted": "file/set/shards.rs",
+        "measured": 398,
+        "covered": 392,
+        "linePercent": "98.49%"
+      },
+      {
+        "filenameAsPrinted": "file/set/sink.rs",
+        "measured": 46,
+        "covered": 46,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "file/set/vote.rs",
+        "measured": 331,
+        "covered": 328,
+        "linePercent": "99.09%"
+      },
+      {
+        "filenameAsPrinted": "file/set.rs",
+        "measured": 449,
+        "covered": 426,
+        "linePercent": "94.88%"
+      },
+      {
+        "filenameAsPrinted": "file/writing.rs",
+        "measured": 200,
+        "covered": 198,
+        "linePercent": "99.00%"
+      },
+      {
+        "filenameAsPrinted": "file.rs",
+        "measured": 119,
+        "covered": 113,
+        "linePercent": "94.96%"
+      },
+      {
+        "filenameAsPrinted": "list.rs",
+        "measured": 52,
+        "covered": 52,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "recurrence.rs",
+        "measured": 40,
+        "covered": 40,
+        "linePercent": "100.00%"
+      },
+      {
+        "filenameAsPrinted": "self_test.rs",
+        "measured": 249,
+        "covered": 242,
+        "linePercent": "97.19%"
+      }
+    ]
+  },
+  "independentReferences": {
+    "mhfe_spec/vectors/profiles/repair-words.json": "fa4f77a52b0e494df5f92f76487cb2fdcfea89304d0f62340ae3159f2d5eac76",
+    "secret-protection-core/docs/audits/AUD-014-2026-11-15.json": "ea572896cbe433e9fad2358f48c07af8b8989e9a4d5cf363c3e0960116270007",
+    "secret-protection-core/docs/audits/AUD-015-2026-11-15.json": "5868ffa0afe5ead64f063d946028d33bdd428eb3b7786a783248e64b8d02784f"
+  },
+  "reviewCrossChecks": [
+    "Memory effects and dependency reachability were independently challenged. No crypto worker or ClosedSecret operation was called by the ordinary codec.",
+    "Correction bounds and public parity vectors were reviewed independently of the file reader and memory backend. The API001 public harness returned Ok, then an independent agrees check returned false.",
+    "The file writer and repair pipeline both call the same potentially allocating stable sort after framing; atomicity on a normal Err and process abort are different outcomes.",
+    "The release reviewer compared historical logs and actual source snapshots, confirmed the stale-plan claim and the correction allocations, and examined the historical advisory warnings.",
+    "The allocator-free cyclic remainder is generated from public generator coefficients. Allocations of public coefficients or indices were not classified as leaked payload."
+  ]
+}
