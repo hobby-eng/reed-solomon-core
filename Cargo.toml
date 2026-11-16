@@ -5,8 +5,13 @@ edition = "2024"
 rust-version = "1.99"
 description = "Reed-Solomon coding for sets of shards: any k of n rebuild the data; repair, extend, check and correct a set"
 license = "MIT OR Apache-2.0"
-# Not published while the shard file format is a draft.
-publish = false
+repository = "https://github.com/hobby-eng/reed-solomon-core"
+documentation = "https://docs.rs/reed-solomon-core"
+readme = "README.md"
+keywords = ["reed-solomon", "erasure-coding", "error-correction", "shards", "no-std"]
+categories = ["algorithms", "encoding", "no-std"]
+# The audit records, CI and the fuzz targets stay in the repository.
+exclude = ["/docs/audits/", "/.github/", "/fuzz/"]
 
 [features]
 default = ["protect"]

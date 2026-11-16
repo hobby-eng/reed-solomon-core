@@ -1,7 +1,7 @@
 # reed-solomon-core
 
-> [!WARNING]
-> **Draft, not ready for production.** reed-solomon-core is an early draft: the interface will still change, the shard file format is a draft, and nobody outside the project has reviewed it. Do not rely on it for data you cannot afford to lose.
+> [!NOTE]
+> **First release.** In versions before 1.0 the interface may still change, each change in the [changelog](CHANGELOG.md). Version 1 of the shard file format is fixed: later versions read and write it unchanged. The crate has been checked by its tests, its fuzz targets and AI-assisted audits ([records](docs/audits/README.md)), not by an independent human auditor; keep a second copy of data you cannot afford to lose.
 
 [![CI](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml)
 [![RustSec audit](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml/badge.svg)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml)
@@ -11,7 +11,7 @@ reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into 
 
 The [documentation index](docs/README.md) lists the guides; [How it works](docs/TECHNICAL.md) has the mathematics and the guarantees.
 
-Line coverage on Linux x86-64, measured on 2026-11-15 with the default features, is **98.35%** for the unit tests and the tests of the public interface (source fingerprint `5f5a9adb`). [Test scope and per-file results](docs/COVERAGE.md).
+Line coverage on Linux x86-64, measured on 2026-11-16 with the default features, is **98.23%** for the unit tests, the tests of the public interface and those of the strict mode (source fingerprint `bc7307c5`). [Test scope and per-file results](docs/COVERAGE.md).
 
 ## Contents
 

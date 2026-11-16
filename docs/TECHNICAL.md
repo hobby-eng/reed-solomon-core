@@ -293,7 +293,7 @@ The calls of the crate's root types take any memory and go on with what the syst
 
 ## The shard file
 
-A shard file holds one shard together with what a program needs to find its set again and to tell which of its bytes survived. This is version 1 of the format; it stays a draft until the crate is published.
+A shard file holds one shard together with what a program needs to find its set again and to tell which of its bytes survived. This is version 1 of the format, fixed with release 0.1.0: later releases read and write it unchanged, and another layout would get another version number.
 
 ```
 header | block 0, checksum | block 1, checksum | … | header | trailer
