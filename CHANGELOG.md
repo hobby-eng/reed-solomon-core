@@ -2,7 +2,7 @@
 
 ## 0.1.0 — 2026-11-16
 
-The first release. The interface may change in versions before 1.0; version 1 of the shard file format is fixed.
+The first release. Version 1 of the shard file format is fixed.
 
 - The code: shard `i` is the value at point `i` of the polynomial that the `k` data shards fix. Writing a set, rebuilding from any `k` shards, making a lost shard again and giving a set more shards are one interpolation.
 - Three fields: GF(2^8) with 0x11D and GF(2^16) as an extension of it, with the same bytes as `reed-solomon-erasure` 6.0.0, and GF(2^11) with 0x805, whose symbol is one word of a list of 2,048 words.

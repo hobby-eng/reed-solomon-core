@@ -1,8 +1,5 @@
 # reed-solomon-core
 
-> [!NOTE]
-> **First release.** In versions before 1.0 the interface may still change, each change in the [changelog](CHANGELOG.md). Version 1 of the shard file format is fixed: later versions read and write it unchanged. The crate has been checked by its tests, its fuzz targets and AI-assisted audits ([records](docs/audits/README.md)), not by an independent human auditor; keep a second copy of data you cannot afford to lose.
-
 [![CI](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml)
 [![RustSec audit](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml/badge.svg)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
