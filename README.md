@@ -10,6 +10,8 @@ The [documentation index](docs/README.md) lists the guides; [How it works](docs/
 
 Line coverage on Linux x86-64, measured on 2026-11-16 with the default features, is **98.23%** for the unit tests, the tests of the public interface and those of the strict mode (source fingerprint `bc7307c5`). [Test scope and per-file results](docs/COVERAGE.md).
 
+The crate has been checked by its tests, its fuzz targets and AI-assisted audits ([records](docs/audits/README.md)); no independent human auditor has reviewed it.
+
 ## Contents
 
 - [What it is for](#what-it-is-for)
