@@ -1,235 +1,163 @@
 # How reed-solomon-core works
 
-This document describes how the crate is built and why, in enough detail to check every result by hand or to write another implementation that gives the same bytes. The [README](../README.md) is the short way in; the [roadmap](ROADMAP.md) lists what is planned.
+The crate uses two Reed–Solomon constructions. Shard files use polynomial evaluation. Formats such as QR codes prescribe a cyclic generator instead. Both can recover lost symbols and correct wrong ones, but they generally produce different parity bytes. For Rust signatures, return values and examples, see the [API description](API.md).
 
-## Contents
-
-- [Overview](#overview)
-- [Principles](#principles)
-- [Terms](#terms)
-- [Where things are in the code](#where-things-are-in-the-code)
-- [The code](#the-code)
-- [Fields](#fields)
-- [Making shards](#making-shards)
-- [Checking a set](#checking-a-set)
-- [Correcting wrong symbols](#correcting-wrong-symbols)
-- [Gaps at known places and a plan of changes](#gaps-at-known-places-and-a-plan-of-changes)
-- [The cyclic code](#the-cyclic-code)
-- [What is guaranteed](#what-is-guaranteed)
+- [Fields and interpolation](#the-code)
+- [Correction and erasures](#correcting-wrong-symbols)
+- [Cyclic generator and decoding](#the-cyclic-code)
+- [Shard file version 1](#the-shard-file)
+- [Recovery and voting across files](#a-set-from-its-files)
 - [Memory and work](#memory-and-work)
-- [Measured time](#measured-time)
-- [The data path](#the-data-path)
 - [Secrets in memory](#secrets-in-memory)
-- [The strict mode](#the-strict-mode)
-- [The shard file](#the-shard-file)
-- [Self-test and tests](#self-test-and-tests)
-- [References](#references)
-
-## Overview
-
-reed-solomon-core keeps data recoverable when parts of it are lost or damaged. The data is cut into `k` shards, and the code makes further shards from them: any `k` shards of the set give the data back, and shards beyond `k` find and put right wrong symbols. The crate is a library. What a shard is, a file, a photo or a printed word, is decided by the program that uses it.
-
-The crate is built in layers, each using only the ones above it:
-
-```
-fields          GF(2^8), GF(2^11), GF(2^16): adding, multiplying and inverting symbols
-  code          any shard of a set from any k shards, by interpolation: write, rebuild, extend, check
-    correction  wrong symbols at unknown places found and put right; gaps at known places;
-                a plan of every change before anything changes
-      file      one shard with its set's facts, block checksums, a second header and a trailer
-        sets    files sorted into sets; data rebuilt block by block from whichever files hold
-                each block; lost files made again; the files that differ named; SHA-256 compared
-```
-
-Without the `alloc` feature the crate allocates nothing and offers the fields, the code on the caller's buffers, the cyclic code in memory the caller gives (`CyclicWords`), the reading of shard files, the writing of one (`Header::file_into`) and the self-test. With it come the owned helpers, the correction, the writing of files and everything about sets. The `protect` feature, on by default, includes `alloc`, keeps every buffer of data in protected pages ([Secrets in memory](#secrets-in-memory)) and adds the strict mode, the calls for a secret in the open ([The strict mode](#the-strict-mode)).
-
-## Principles
-
-- **Two constructions, chosen by type.** In the code by points, shard `i` is the value at point `i` of one polynomial: writing a set, rebuilding it, making a lost shard again and giving a set more shards are the same interpolation, and "any `k` shards are enough" follows from one fact: `k` values fix a polynomial of degree below `k`. The cyclic code adds to data that stays as it is the remainder of its division by a generator, as formats such as QR codes fix it ([The cyclic code](#the-cyclic-code)). Nothing is guessed from the symbols.
-- **The bytes of established implementations.** Where another implementation of the same code exists, the crate writes its bytes, and the tests compare them shard by shard.
-- **Refuse first, then work.** Every request is checked before the first byte of an output is written. A correction changes every column or none, a rebuild returns all the data or none, and a list the crate keeps is asked for before it is filled.
-- **Never guess.** A file whose two headers differ is refused, not resolved by choosing one. Two sets with one identifier are both listed. Which construction made a list of symbols is never guessed from the symbols.
-- **Bounds are stated and checked before the work.** The working memory of a correction has a published bound, sizes are worked out in 128-bit numbers before they are narrowed, and the calls on sets take a limit in steps that is compared with their cost before anything is computed.
-- **A check says what it can.** Shards agree or do not; data has the digest its files state or does not. No check says who made a shard: that needs an authentication the program trusts from elsewhere.
-- **Known answers from outside.** Every value the self-test and the tests expect was computed apart from the crate, and each one names its source.
-- **No secret leaks through the data path.** The crate has no `unsafe` code, and no byte of a shard chooses a branch or a table entry where shards are scaled or checksummed.
-
-## Terms
-
-| Term                  | Meaning                                                                                      |
-| --------------------- | -------------------------------------------------------------------------------------------- |
-| symbol                | one element of the field: one byte, or two bytes                                             |
-| shard                 | a row of symbols; every shard of a set has the same length                                   |
-| set, `n`              | the shards made from one piece of data; `n` is how many there are                            |
-| threshold, `k`        | how many shards give the data back; the shards 0 to `k − 1` are the data itself              |
-| point                 | the field element of a shard's number: shard `i` sits at the point `i`                       |
-| column, offset        | the symbols at one place of every shard; each column is one code word                        |
-| spare shards, `m − k` | of `m` shards at hand, those beyond `k`: they check and correct                              |
-| syndromes             | `m − k` sums of a column that are all zero exactly when its symbols are one code word        |
-| wrong symbol, error   | a symbol that differs from the code word, at a place nobody knows; it costs two spare shards |
-| gap, mark             | a symbol known to be unreadable, at a known place; it costs one spare shard                  |
-| block                 | the unit of damage in a shard file: a run of the shard's bytes under one checksum            |
-| set facts             | what every file of a set states alike: field, `k`, identifier, lengths, digest               |
-| holder                | a shard that has a block intact in one of its files                                          |
-| dispute               | files of one shard that differ on a block although both checksums hold                       |
-| step                  | the unit in which the work of a call on a set is counted and limited                         |
-
-## Where things are in the code
-
-| Module                             | What it holds                                                                                                                                                                                       |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/field.rs` and `src/field/`    | the three fields; `lanes.rs` is the scaling kernel through which every byte of a shard passes                                                                                                       |
-| `src/buffer.rs`, `src/buffer/`     | `Buffer`, in protected pages (`pages.rs`) or the allocator's memory (`heap.rs`), and `Numbers`, a buffer seen as numbers of two bytes                                                               |
-| `src/list.rs`                      | the short lists of a search, cut from one room                                                                                                                                                      |
-| `src/strict.rs`, `src/strict/`     | the strict mode: what memory it takes and checks, its stack, and its calls for the codes (`codes.rs`) and for files and sets (`files.rs`)                                                           |
-| `src/code.rs`, `src/code/owned.rs` | `Code`, `Sources`: interpolation on buffers, and the owned helpers `encode`, `rebuild`, `redundancy`                                                                                                |
-| `src/correct.rs`                   | the decoder: syndromes and error values; `Code::correct` and the search the vote uses                                                                                                               |
-| `src/recurrence.rs`                | Berlekamp–Massey, which both constructions use                                                                                                                                                      |
-| `src/correct/plan.rs`              | marked gaps and the plan of changes: `Code::plan`, `Code::apply`, and the fingerprint that binds a plan to its shards                                                                               |
-| `src/correct/changes.rs`           | `Changes`, the list of a plan, with its fingerprint and records in one buffer                                                                                                                       |
-| `src/cyclic.rs` and `src/cyclic/`  | `CyclicWords` (`words.rs`) in the caller's memory and `CyclicCode` (`owned.rs`) in its own: the remainder and the words a stripe at a time; `decode.rs` makes the generator and puts one word right |
-| `src/file/header.rs`, `crc32c.rs`  | the header of a shard file, byte for byte, and its checksum                                                                                                                                         |
-| `src/file/facts.rs`                | `SetFacts`: what a set states, the sizes that follow, the SHA-256 of the data                                                                                                                       |
-| `src/file/reading.rs`              | `ShardFile::read`: a file that may be damaged, cut short or followed by other bytes                                                                                                                 |
-| `src/file/writing.rs`              | `SetFacts::files`: the files of a set from its data                                                                                                                                                 |
-| `src/file/pile.rs`                 | `Pile::new`: any files sorted into sets                                                                                                                                                             |
-| `src/file/set.rs`, `set/shards.rs` | `FileSet`: who holds each block, rebuild, repair, coverage, stretches, the set without some files                                                                                                   |
-| `src/file/set/vote.rs`             | `FileSet::vote`: which files differ from what the others share                                                                                                                                      |
-| `src/self_test.rs`                 | the known answers a program runs before it relies on the crate                                                                                                                                      |
-| `tests/suite/`                     | the tests of the public interface, each file one subject                                                                                                                                            |
-| `tests/strict/`                    | the strict mode, in a test process of its own: the long tests of the suite use up the lock limit of theirs                                                                                          |
+- [Measurements](#measured-time) and [tests](#self-test-and-tests)
 
 ## The code
 
-The data is cut into `k` shards of equal length. A shard is a row of symbols; a symbol is one or two bytes, depending on the field. Take the symbols at one offset of the `k` data shards: they are the values, at the points 0 to `k − 1`, of exactly one polynomial of degree below `k` over the field. Shard `i` of the set holds that polynomial's value at the point `i`, where the point of a shard is its number read as a field element.
+Each column across the k data shards defines a polynomial of degree below k. Shard i stores its value at field element i. The first k shard indexes hold the original data. Any k distinct points fix the polynomial, so issuing a new shard never changes the earlier ones.
 
-Three things follow. The shards 0 to `k − 1` are the data itself. The coefficients that make a shard from the data depend only on its number and on `k`, not on how many shards there are, so shards made later never change the ones made before. And a set can have as many shards as the field has elements.
+For source points xᵢ and target t, the interpolation weights are
 
-A polynomial of degree below `k` is fixed by any `k` of its values. That is why any `k` shards rebuild all the others, and it is the whole proof that the code loses nothing (it is "maximum distance separable"): no property of a matrix has to be shown.
-
-Every operation is one interpolation. From `k` shards at the points `x_1 … x_k`, the shard at the point `t` is
-
-```
-shard_t = Σ L_i(t) · shard_i,    L_i(t) = Π_{l≠i} (t − x_l) / (x_i − x_l)
+```text
+Lᵢ(t) = ∏ⱼ≠ᵢ (t − xⱼ) / (xᵢ − xⱼ)
+shard(t) = Σᵢ Lᵢ(t) · shard(xᵢ).
 ```
 
-with the field's arithmetic, in which subtraction is exclusive or. Writing a set takes the data shards as sources; making a lost shard again or a new one takes any `k` shards at hand.
-
-The Reed–Solomon libraries of Backblaze and Klaus Post, and the `reed-solomon-erasure` crate, describe the same code as a Vandermonde matrix multiplied by the inverse of its top `k` rows. A row of that product is the list of values `L_i(t)`, so the bytes are the same.
+Subtraction is XOR. Weights depend only on the indexes. Preparing k source weights takes k(k − 1) multiplications and k field inversions. The same weights serve every column. A target that matches a source can be copied. This construction gives the same systematic coefficients as a Vandermonde matrix normalized on its first k rows.
 
 ## Fields
 
-| Field            | Elements                | Polynomial                                                                                   | A symbol in bytes                                                                     | Most shards |
-| ---------------- | ----------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------- |
-| `Field::Gf256`   | 256                     | x^8 + x^4 + x^3 + x^2 + 1 (0x11D)                                                            | one byte                                                                              | 256         |
-| `Field::Gf65536` | 65,536                  | the field above extended by x^2 + 2x + 128                                                   | `[high, low]` for `high·x + low`                                                      | 65,536      |
-| `Field::Gf2048`  | 2,048                   | x^11 + x^2 + 1 (0x805)                                                                       | two bytes, the high one first, holding a number below 2,048                           | 2,048       |
-| `Field::Binary`  | 2^m, for m from 2 to 16 | a primitive polynomial of degree m: the standard one of the degree, or one the program gives | one byte holding a number below 2^m up to m = 8; two bytes, the high one first, above | 2^m         |
+| Field                    | Symbol representation                                   | Arithmetic                                                              |
+| ------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| GF(256)                  | One byte                                                | Binary polynomial modulo 0x11D.                                         |
+| GF(65,536)               | Two bytes, high first                                   | A pair of GF(256) elements, high·x + low, reduced modulo x² + 2x + 128. |
+| GF(2,048)                | Two bytes, high first, value below 2,048                | Binary polynomial modulo 0x805.                                         |
+| Binary field of degree m | One byte for m = 2…8, two big-endian bytes for m = 9…16 | Binary polynomial modulo the selected primitive polynomial.             |
 
-`Field::Gf256` and `Field::Gf65536` take any bytes. `Field::Gf2048` exists so that one symbol can be one word of a list of 2,048 words: the shards a code adds are then words of the list too. Two bytes that hold 2,048 or more are not a symbol of this field, and every call that is given one returns `CodeError::Symbol` before it writes anything. The element 2 generates all 2,047 nonzero elements of this field, so the polynomial is primitive.
-
-**Choosing a field.** `Field::binary(m, polynomial)` makes GF(2^m) for a degree `m` from 2 to 16, by a primitive polynomial written with its x^m term (x^4 + x + 1 is 0x13), or by the standard one of the degree for `None`: 0x7, 0xB, 0x13, 0x25, 0x43, 0x89, 0x11D, 0x211, 0x409, 0x805, 0x1053, 0x201B, 0x4443, 0x8003 and 0x1100B for the degrees 2 to 16. A polynomial is taken only when its highest term is x^m, its constant term 1, and x has the order 2^m − 1 modulo it, so that the powers of x are every nonzero element: at most 65,535 steps, done once. The degree 8 with 0x11D is `Field::Gf256` and the degree 11 with 0x805 is `Field::Gf2048`, so one field has one value. `Field::Gf65536` stays a field of its own: GF(2^16) as an extension of GF(2^8), whose bytes are those of `reed-solomon-erasure`; the degree 16 of `Field::binary` is a field of polynomials and writes other bytes.
-
-The size of a field limits only how many shards a set can have: 2^m. A larger field makes every symbol longer and every step slower and gains nothing else, so a program takes the smallest field whose symbols hold what it codes and whose elements number at least its shards. Fields above 2^16 are not offered: 65,536 shards are more than any set needs, a symbol of more than two bytes would be slower for every set, and showing a polynomial of a large degree primitive needs the factors of 2^m − 1. The degree 1 makes two points and only `k` = 1. These fields have no shard file: the file format names only `Field::Gf256` and `Field::Gf65536`.
-
-**The arithmetic.** In all fields adding is exclusive or, so subtracting is the same as adding.
-
-- `Field::Gf256`: a byte is a polynomial over GF(2), bit `i` the coefficient of `x^i`, and a product is reduced by 0x11D. The element 2 generates the nonzero elements. A product is eight steps of add, shift and reduce, each chosen by a mask made from one bit of an operand, and an inverse is `a^254` by the same seven squarings and multiplications for every `a`: no table is indexed by an element and no branch depends on one (see [The data path](#the-data-path)).
-- `Field::Gf65536`: the element `[high, low]` is `high·x + low` with `high` and `low` in the field above, and `x^2 = 2x + 128`. So `(a_h·x + a_l)(b_h·x + b_l)` has the high byte `a_h·b_l + a_l·b_h + 2·a_h·b_h` and the low byte `a_l·b_l + 128·a_h·b_h`. For example `[01,00]·[01,00] = x^2 = [02,80]`. The inverse is the conjugate `high·x + (2·high + low)` divided by the norm `low^2 + 2·high·low + 128·high^2`, which lies in GF(2^8).
-- `Field::Gf2048`: bit `i` of the number is the coefficient of `x^i`, and a product is reduced by 0x805. There are no tables: a product is eleven steps of add, shift and reduce, each chosen by a mask, and an inverse the same chain of squarings and multiplications for every element. The sets this field serves are a few dozen symbols.
-- `Field::Binary`: bit `i` of the number is the coefficient of `x^i`, and a product is `m` steps of add, shift and reduce by the polynomial, each chosen by a mask; the inverse is `a^(2^m − 2)` by the same `m − 1` squarings and multiplications for every `a`. Whole shards are scaled by the kernel of the other fields, with lanes of one or two bytes: every lane is doubled at once by moving its low `m − 1` bits up and bringing its bit `m − 1` back as the polynomial without its x^m term.
-
-**Points.** The point of shard `i` is the element whose bytes are the number `i`: in `Field::Gf256` the byte `i` for `i` up to 255, in `Field::Gf2048` the number `i` below 2,048, in `Field::Gf65536` the element `[i / 256, i mod 256]`, and in a field of degree `m` the number `i` below 2^m. A number the field has no element for is refused with `CodeError::Index`.
-
-## Making shards
-
-`Code::sources` takes the numbers of `k` different shards and computes one weight for each, `1 / Π_{l≠i} (x_i − x_l)`. That is `k²` field multiplications, done once however many shards are made afterwards. `Sources::build` then writes any shard of the set for one stretch of bytes, from the same stretch of each source, into a buffer of the caller; a large file is processed stretch by stretch and never has to be in memory at once. A shard that is itself among the sources is copied.
-
-With the `alloc` feature, `Code::encode` writes shards from the data and `Code::rebuild` from any `k` or more shards given as `(number, bytes)`. Asking `rebuild` for numbers a set never had is how a set grows.
-
-Every refusal comes before the first byte of an output is written, and a shard given for correction is left as it was. Refused are wrong counts, numbers the field does not have, a number given twice, shards of different lengths or of a length that is not a whole number of symbols, and, in the field of words, a symbol that is not a word. When a request is wrong in several ways, the counts, the numbers and the lengths are reported before a symbol. The working memory a caller lends to `Code::sources` is not an output: after a refusal it may hold anything.
-
-## Checking a set
-
-Any `k` shards form a valid set, so `k` shards cannot be checked against each other. With more, `Sources::agrees` and `Code::redundancy` compare each further shard with what the first `k` make. The answer of `redundancy` is `None` for exactly `k` shards, `Agrees`, or `Differs`.
+The point code supports at most 2ᵐ distinct shard indexes. A custom polynomial is given with its leading term and must have degree m and make x primitive. The standard degree-8 and degree-11 polynomials select the named GF(256) and GF(2,048) variants. A degree-16 binary field and the named composite field use different representations. The wire format below accepts only the two designated byte-oriented fields.
 
 ## Correcting wrong symbols
 
-`Code::correct` finds wrong symbols without being told which shards are wrong.
+Let m denote the distinct shards available at a column, r = m − k, and uᵢ the reciprocal of the product of differences from xᵢ to the other m − 1 points. A valid column has r zero syndromes.
 
-For the `m` shards at hand, with points `x_i` and weights `u_i = 1 / Π_{l≠i} (x_i − x_l)` taken over those `m`, the symbols at one offset give `m − k` syndromes:
-
-```
-S_j = Σ u_i · x_i^j · symbol_i,    j = 0 … m − k − 1
+```text
+Sⱼ = Σᵢ uᵢ · xᵢʲ · symbolᵢ,    0 ≤ j < r.
 ```
 
-All are zero exactly when the symbols lie on one polynomial of degree below `k`. Otherwise the data cancels out and the syndromes are the power sums of the errors alone, `S_j = Σ Y_e · X_e^j`, where `X_e` is the point of a wrong symbol and `Y_e = u_e · error_e`.
+For a damaged column these are the power sums of its errors. Berlekamp–Massey finds a recurrence of length L. The decoder evaluates its characteristic polynomial at all supplied points and requires L distinct roots and 2L ≤ r. Shard zero is a valid error location. It gives a zero constant term in the degree-L characteristic polynomial. Synthetic division of the product of the root factors recovers the error magnitudes. The decoder verifies them against every syndrome.
 
-The Berlekamp–Massey algorithm finds the shortest recurrence the syndromes obey, of length `L`. Its characteristic polynomial has the points of the wrong symbols as its roots. The point 0 of shard 0 is one of the possible roots: an error there shows as a polynomial whose degree is one below `L`. The decoder evaluates the polynomial at every point at hand and goes on only if it finds exactly `L` different roots and `2L ≤ m − k`.
+### Gaps at known places and a plan of changes
 
-The error values come from the product `Q(z) = Π (z − X_e)`: dividing `Q` by `(z − X_e)` gives a polynomial that is zero at every other wrong point, so one synthetic division per error yields `Y_e`, with memory in proportion to the number of errors and no matrix. The decoder then recomputes every syndrome from its answer, requires every error to be nonzero, and divides by `u_e`.
+For s marked locations build G(X) = ∏(X − xᵢ), with coefficients g₀ through gₛ. The transformed syndromes Tⱼ = Σᵢ gᵢ Sⱼ₊ᵢ, for 0 ≤ j < r − s, contain only contributions from unknown errors because G vanishes at the marks. The decoder locates these errors and then solves for all e + s magnitudes. Each unknown error costs two spare symbols and each mark costs one. A marked position is reported even when the proposed replacement equals the supplied symbol.
 
-The shards are read twice. The first pass finds every wrong symbol and changes nothing; only if every offset was resolved does the second pass correct them. So either everything is put right or nothing is touched.
+The guaranteed radius is **2e + s ≤ r at each column**. Exactly k unmarked symbols give no redundancy to check. Outside the radius the decoder may return an unresolved column or find a different valid word. A trusted digest or authentication tag is needed to establish which data was intended.
 
-A line of symbols read from paper is the same problem with shards one symbol long: the unreadable symbols are left out, the misread ones are found.
-
-## Gaps at known places and a plan of changes
-
-`Code::correct` knows of a gap only as a shard that is not given at all. A file or a card often holds a shard that is there with one unreadable symbol, and leaving the whole shard out would waste the rest of it. `Code::plan` takes the shards and a list of marks, each naming a shard by its place among the shards given and a symbol by its place in the shard, counted in symbols. A marked symbol may hold any element of the field; its value is not used. A mark given twice counts once.
-
-A gap at a known place costs one spare shard of its column, where a wrong symbol at an unknown place costs two. With `s` marked symbols at the points `x_1 … x_s` of a column, take `G(X) = Π (X − x_j)` with coefficients `g_0 … g_s`, and from the syndromes `S_j` of the column form
-
-```
-T_j = Σ_{i=0..s} g_i · S_{j+i},    j = 0 … m − k − s − 1
-```
-
-Each `S_j` is a sum of terms `Y·X^j` over the wrong and the marked symbols, so `T_j` is the sum of `Y·G(X)·X^j`. `G` is zero at every marked point and at no other, so the marked symbols drop out and the `T_j` are power sums of the wrong symbols alone. The point 0 needs no care of its own: if it is marked, `G` has the factor `X`. Berlekamp–Massey finds the recurrence of the `T_j` as it finds that of the syndromes, and the wrong symbols are its roots among the points that are not marked. A column goes on only with `2e ≤ m − k − s` for its `e` wrong symbols, that is `2e + s ≤ m − k`. Then the errors of all `e + s` symbols follow from the first `e + s` syndromes by the synthetic division of `Code::correct`, and every syndrome is checked against them. A wrong symbol must have an error that is not zero; a marked symbol may turn out to have held the right value. A column with more marks than spare shards is unresolved.
-
-Nothing is changed. The answer is `Plan::Changes`, a list (`Changes`) of every change in the order of the symbols and, within one, of the shards. A change (`Change`) names the shard, the symbol and whether it was marked (`ChangeKind::Filled`) or found (`ChangeKind::Replaced`). What the symbol holds and what it becomes can be words of a recovery phrase, so they stay in the list's own buffer: `Changes::values` hands the two values of one change to a closure, `strict::values` does so on a protected stack, and no call returns a record that holds them. `Changes::get` and the iteration read a change's place and kind from their own bytes and leave the values unread. Two lists compared with `==` are read whole, values and fingerprints, on the caller's stack: lists with the same changes for other shards differ there, while `get` and `strict::values` show only that the changes agree. Every marked symbol is in the list, also when it keeps its value, so that a program can show a person each place with what was read there and what it becomes. As for `Code::correct`, the plan covers every column or there is none: `Plan::Unresolved` counts the columns that could not be put right. `Plan::Agrees` means no column disagrees and nothing was marked, and `Plan::Unchecked` that exactly `k` shards and no mark were given.
-
-`Code::apply` makes the changes of a plan in the shards the plan was made for, and only there. The list keeps at its front a fingerprint of them: the SHA-256 of a tag of its own, of what names the code (the construction, the degree and polynomial of the field and `k`, or for the cyclic code its length, parity, first root and step), and of each shard in the order given, with its index or place, its length and its bytes. `apply` computes the fingerprint of the shards it is given and compares every byte of the two before it writes anything. Then it checks every change: the place is in the shards, the symbol there holds what the change says it held, and the new value is an element of the field. If anything does not fit, it returns `CodeError::Changes` and changes nothing. So a plan fits only the reading it was made from. One symbol changed anywhere since, shards in another order, another shard or another code is refused before the first write, and nothing has to be undone. A program cannot make or copy a list; to change a reading, it plans again. The fingerprint follows from the data, so it lies in the list's buffer beside the values, and the state of the hash is wiped. While a change is checked and written, the crate reads it from the buffer onto the stack, which in the strict mode is a protected one.
-
-Example: a card of 12 words of a list of 2,048 and 4 words that the code adds, in `Field::Gf2048`, each word one shard of one symbol. Words 3 and 8 are unreadable and marked, and word 11 was copied wrong. That is `2 · 1 + 2 = 4` spare words, exactly the 4 there are: the plan fills words 3 and 8 and replaces word 11.
-
-Marks are checked after the counts, the numbers and the lengths of the shards and before their symbols: a mark outside the shards is `CodeError::Mark`. The working memory is that of `Code::correct` with room for `m − k` symbols of a column instead of half as many, a sorted copy of the marks and the list of changes, which holds at most the marks and `(m − k) / 2` symbols for each column, 24 bytes a change after the 32 bytes of the fingerprint.
+Correction scans first and writes only after all columns have a solution. A preview stores changes in symbol order, then in input-shard order. Its protected or wipe-on-drop buffer has a 32-byte fingerprint followed by 24-byte records. The fingerprint binds the input to the construction and field parameters, shard indexes or positions, lengths, order and bytes. Applying a plan rechecks its fingerprint and each substitution before the first write. [Plan and result types](API.md#plan-and-apply-corrections).
 
 ## The cyclic code
 
-`CyclicCode::new(field, data, parity, first_root, root_step)` is a shortened systematic cyclic Reed–Solomon code. α is the element x, which generates the field when its polynomial is primitive, as every field of the crate but `Field::Gf65536` has; β = α^root_step, and the generator is g(x) = Π (x + β^(first_root + i)) for i below `parity`. β has the order (2^m − 1) / gcd(root_step, 2^m − 1), and a word of `data + parity` places must not be longer: then the roots differ, the places' locators differ, and the bound of the BCH argument holds. Anything else is refused with `CodeError::Shape`, before any symbol is looked at.
+A word of length n has d data places followed by p parity places. The first data symbol is the highest coefficient. For β = α^root_step the generator and check symbols are
 
-A word has a fixed layout. Place i holds the coefficient of x^(n − 1 − i) of c(x), n = data + parity: the data come first, d_0 at the highest power, and the check symbols r_(parity − 1) … r_0 follow, the remainder of d(x)·x^parity divided by g(x). Each shard is one place, and each symbol of the shards a word of its own, so long shards are words side by side. Making the check symbols adds each data shard, scaled by the coefficients of x^(parity + t) mod g(x), to the check shards: the same kernel as the code by points, and the factors follow from the generator, which is public.
+```text
+g(x) = ∏ᵢ₌₀…ₚ₋₁ (x + β^(first_root + i))
+parity(x) = data(x) · xᵖ mod g(x).
+```
 
-Putting a word right takes its syndromes S_l = c(β^(first_root + l)), made a stripe of words at a time in protected pages, at most 4 MiB at once. The symbols at marked places count as zero; their locators X = β^(n − 1 − i) give the erasure locator Γ(x) = Π (1 + X x), and Berlekamp–Massey over the syndromes Γ leaves gives the locator of the wrong places. When 2e + s goes beyond `parity` the word is not put right. Otherwise a search over the n places finds the roots of the errata locator Ψ = Λ·Γ, which must be as many as its degree, all inside the word; Forney's formula X^(1 − first_root) Ω(X⁻¹) / Ψ'(X⁻¹), with Ω = S·Ψ mod x^parity, gives the value at each, a place not marked must get a value that is not zero, and the word with the values added must have no syndrome left. A word that fails any of this is unresolved, and then `plan` and `correct` change nothing. Beyond the bound the answer is unresolved or another word of the code, as for the code by points.
+The positive data and parity counts must fit within the order of β, which is (2ᵐ − 1) / gcd(root_step, 2ᵐ − 1) for a primitive α. The implementation uses the binary element 2 and excludes the composite GF(65,536) representation. It supports the primitive-polynomial binary fields, including degree 16. QR uses first root 0 and step 1 in GF(256). MHFE-REPAIR-1 uses first root 1 and step 1 in GF(2,048).
 
-`plan` lists every change in the order of the words and, within one, of the places; every marked symbol is listed, as filled, even when it held the right value. The list is bound to the shards of the word by the same fingerprint, and `apply` compares it and checks every change before it writes one, with the same function as the code by points. `correct` finds every change in a first pass and makes them in a second, as the code by points does, so that it keeps no list; both passes use one room of a search and one buffer of syndromes, taken once; `agrees` stops at the first stripe that holds a word with a syndrome. The lengths, the symbols, the marks, the stripe and Berlekamp–Massey are checked and done by the same functions as for the code by points. A shard lost whole is named by its place, in any order and as often as a program likes: in every word it costs one check symbol, as a mark does, and its bytes take no part in the syndromes or in the check of symbols, so it may hold anything. It must still have the length of the others, because `correct` and `apply` write it anew in place, and `plan` lists each of its symbols as filled. A mark on a lost shard adds nothing.
+Place i has locator X = β^(n − 1 − i). The decoder evaluates the word at each generator root, treats specified erasures as zero and forms their locator Γ(z) = ∏(1 + Xz). Berlekamp–Massey finds the remaining error locator Λ. The combined locator Ψ = ΛΓ must have the expected number of distinct roots among the n places. For Ω = SΨ mod zᵖ, Forney’s formula gives each magnitude as X^(1 − first_root) Ω(X⁻¹) / Ψ′(X⁻¹). All resulting syndromes must vanish. The same bound 2e + s ≤ p applies to each word.
 
-`CyclicWords` is the same code in memory the caller gives, without an allocator. `CyclicWords::new` writes the generator into a slice of `parity + 1` elements, `encode` writes the check shards into the caller's buffers with a remainder of `parity` elements, `agrees` makes the syndromes in the caller's room, a stripe as wide as that room, and `correct_word` puts one word right in place, its symbols as numbers, with the places `erased`, in rising order. The code reads a symbol only once it knows that its place is not among them; a compiler may still load such a symbol, but its value takes part in no result. The room of a search, `CyclicWords::room(parity)` = 10 · (parity + 1) elements, holds its ten lists; none is longer than `parity + 1`, since the errata locator has e + s + 1 terms with 2e + s ≤ parity. The values in them follow from the data, so the room is wiped before the call returns, as the syndromes are. Counts, lengths, marks and symbols are refused in that order, before anything is written. `CyclicCode` holds a generator of its own and calls the same functions: `CyclicCode::words` gives its `CyclicWords`, and its correction takes the room of one search per call, in a buffer of its own, for both passes.
+## The shard file
 
-Its known answers come from outside the crate: the repair words that MHFE-REPAIR-1 publishes for four containers and 2, 4, 6 and 8 words, the generators its specification prints and its three repairs; the parity of the version 1-M example of ISO/IEC 18004, annex I; and words of two other sets of parameters (GF(2^11) with first root 5 and step 3, GF(2^8) with first root 1), with the refusals, computed by a reference in Python written from the text of MHFE-REPAIR-1 and textbook definitions.
+Version 1 stores one shard per file. Each integer is big-endian.
 
-## What is guaranteed
+```text
+header | block 0, CRC | block 1, CRC | … | identical header | trailer
+```
 
-- Any `k` shards of a set make every shard of it.
-- With `m` shards at hand, up to `(m − k) / 2` wrong symbols at every offset are found and corrected, wherever they are. A missing shard costs half as much as a wrong one: a set of `n` shards survives `e` wrong and `s` missing shards when `2e + s ≤ n − k`. The count is taken at each offset by itself, and which shards are missing is known: they are the ones not given.
-- With `s` symbols of an offset marked unreadable, `Code::plan` puts the offset right when its `e` wrong symbols meet `2e + s ≤ m − k`, and every marked symbol is among the changes it lists. Beyond that the offset is unresolved, or the plan leads to another valid set that fills every marked symbol and replaces at most `(m − k − s) / 2` others.
-- An offset with between one and `m − k` wrong symbols is never reported clean.
-- Beyond `(m − k) / 2` wrong symbols at an offset there are three possible answers. `Unresolved`: no valid set is near enough, and nothing is changed. `Corrected`: another valid set differs from the shards given in no more than `(m − k) / 2` symbols at that offset, and the shards are changed into it. `Agrees`: with more than `m − k` wrong symbols the shards given may already be another valid set, and nothing is changed. The code cannot tell such a set from the original. A program that must know checks a digest or an authentication tag of the data that it trusts independently.
-- With exactly `k` shards nothing can be checked: any `k` shards are a valid set, and the answer is `Unchecked`.
-- Nothing here says who made a shard. Someone who can replace every shard can make a consistent set of other data.
+### The header
 
-The first point rests on a fact of fields: a polynomial of degree below `k` that is not zero has fewer than `k` roots, so `k` values fix it. A test checks by exhaustion that the arithmetic of a field, as the crate computes it, is a field (`src/field/proof.rs`). For every pair of elements the product lies in the field, equals the product in the other order, and is the sum of the products with the basis elements of the second factor, so it is linear over GF(2) in both factors; and the kernel that scales whole shards, through which every byte of a made shard passes, gives the same product. On every triple of basis elements the product is associative, and by linearity on every triple. 1 is its unit and every element but zero has an inverse. It checks `Field::Gf256`, `Field::Gf2048`, `Field::Gf65536` and the field of the standard polynomial of each degree from 2 to 16, which for degrees 8 and 11 are the first two, and the fields of 0x187 and 0x1002D. The fields of up to 4,096 elements are checked in every run; the larger ones take minutes and are checked before a release (`cargo test --release --lib field::proof -- --ignored`). A field the program gives another polynomial is computed by the code of `Field::binary` for its degree, as those of 0x187 and 0x1002D are, and is not checked by itself.
+| Offset        | Bytes   | Meaning                                                                   |
+| ------------- | ------- | ------------------------------------------------------------------------- |
+| 0             | 4       | ASCII SHRD (53 48 52 44 hex).                                             |
+| 4             | 1       | Version 1.                                                                |
+| 5             | 1       | Field ID 1 for GF(256), 2 for the composite GF(65,536). ID 3 is reserved. |
+| 6             | 1       | Bit 0 signals SHA-256. All other bits are zero.                           |
+| 7             | 1       | Identifier length I, from 1 to 32.                                        |
+| 8             | I       | Application-chosen set identifier.                                        |
+| 8 + I         | 4       | Threshold k, from 1 to the field order.                                   |
+| 12 + I        | 4       | Shard index, strictly below the field order.                              |
+| 16 + I        | 8       | Original data length in bytes.                                            |
+| 24 + I        | 4       | Positive block size in bytes, aligned to a whole symbol.                  |
+| 28 + I        | 0 or 32 | Optional SHA-256 of the original data.                                    |
+| Final 4 bytes | 4       | CRC-32C over all preceding header bytes.                                  |
+
+The header length H is 33–96 bytes. Files in one set share every set fact, including lengths and digest. Only the shard index and the header CRC derived from it can differ.
+
+### Blocks, the second header and the trailer
+
+Divide the data length by k, round up, then round up to a whole symbol to get shard length S. Split the data into consecutive S-byte chunks and zero-pad unused bytes. There are B = ⌈S / block_size⌉ blocks per shard. Empty data has zero blocks. A final short block carries its own checksum.
+
+The four-byte block CRC covers the header’s four CRC bytes followed by the four-byte block number (starting at zero) and the payload of that block. After the second header, the 12-byte trailer consists of ASCII SHRT, H as a four-byte integer, and a four-byte CRC of those first eight bytes. File length is 2H + S + 4B + 12.
+
+CRC-32C uses polynomial 0x1EDC6F41, reflected input and output, and 0xFFFFFFFF for both initialization and final XOR. The check value for ASCII “123456789” is 0xE3069283. At most 2³² blocks fit because the last block number is 0xFFFFFFFF. File length must fit u64. With a digest, data length must be below 2⁶¹ bytes. Size arithmetic uses wider intermediates before narrowing.
+
+### Reading
+
+The reader inspects the start and the physical end without scanning for signatures inside the payload. An end header qualifies as sound only if its trailer validates and its own sizes describe that exact file length. A version-1 header with an unknown flag or field needs a valid checksum to count as unsupported. A future version can have a different layout, so the magic and version byte alone identify it.
+
+| Start \ end     | sound                               | unsupported     | another version       | damaged     | absent       |
+| --------------- | ----------------------------------- | --------------- | --------------------- | ----------- | ------------ |
+| sound           | the same: read; different: conflict | read, see below | read                  | read        | read         |
+| unsupported     | conflict                            | unsupported     | unsupported           | unsupported | unsupported  |
+| another version | read                                | unsupported     | version, of the start | version     | version      |
+| damaged         | read                                | unsupported     | version, of the end   | damaged     | damaged      |
+| absent          | read                                | unsupported     | version, of the end   | damaged     | unrecognized |
+
+A sound start also determines the expected position of the duplicate header. A different header classified as sound or unsupported there causes a conflict. A version-1 duplicate with a valid CRC and invalid parameters, such as a zero threshold, is damaged. An ordinary appended tail is reported as extra bytes. A different sound header and trailer at the new physical end that exactly describe the extended file can also cause a conflict. A sound end copy can recover a damaged start when the file has the expected length.
+
+Each complete block with a matching CRC is intact. A complete block with a wrong CRC is damaged. An incomplete payload or checksum is missing. These rules also apply to truncated files. CRC detects accidental damage. An adversary able to replace the contents can recompute both CRC and the optional SHA-256 in the header.
+
+### A set from its files
+
+The reader groups files by the full set facts. Two sets with the same identifier and different facts remain separate. For each block, each shard index contributes at most one holder. Disagreeing checksum-valid copies of the same index put that shard in dispute for that block. Reading caches checksum results. A mapped input must remain unchanged while the pile or a derived set is in use.
+
+The lowest k available holder indexes provide the interpolation basis for that block. Exactly k holders leave nothing to compare. With more, each extra holder must agree. A mismatch identifies which shards differ from the basis, which may itself contain a wrong shard. Different blocks may use different holders. Reconstruction verifies zero padding and any declared digest over exactly the original data length. Repairing one or more shard files preserves the declared digest without performing that whole-data check.
+
+### Voting
+
+Of m undisputed holders, let w disagree with a candidate word and let u count disputed shard indexes for which no copy supports it. The vote accepts a candidate when **2w + u ≤ m − k**. Duplicate copies never add witnesses. A competing word agrees with fewer than k of the agreeing holders and cannot collect enough other witnesses to beat this candidate. If the evidence does not meet the rule, the block can remain undecided. A vote changes no input and identifies files by their original positions.
+
+For speed, the decoder remembers the locations of disagreeing holders within each block. It checks each nonzero syndrome sequence against their recurrence before doing another search. A search can enlarge the list. The block is abandoned when the list exceeds ⌊(m − k)/2⌋ or a search fails.
 
 ## Memory and work
 
-Without the `alloc` feature nothing is allocated: the caller provides `k` elements for the weights and the output buffer.
+Point correction processes stripes of syndromes of at most 4 MiB. Field elements, weights, factors, counters and scratch add a term that depends on shard count. The reported decoder bound counts requested working storage. Process RSS also includes page rounding, guard mappings, allocator overhead and caller-owned data. Cyclic correction reuses its syndrome and search buffers between passes and prepares erasure metadata before each pass. Its caller-buffer search uses 10(p + 1) elements of type u16. Verification evaluates the contribution of every located error or erasure to every syndrome.
 
-`Code::correct` holds the syndromes of one stretch of the shards, at most 4 MiB, and a few elements per shard and per spare shard: two buffers, the syndromes and the room of the search's short lists, and per shard its point, weight, factor and count of changes; with `protect` each of the two buffers takes whole pages. `Code::correction_memory` returns the bound for a number of shards; it is below 8 MiB for the largest set of any field, whatever the length of the shards. All of it is allocated once, before the first pass.
+File writers and rebuilders process one block at a time. The set writer may also allocate padding buffers for the tails of data shards. For b = min(block_size, shard_length), it requests one b-byte result block and (k − whole)·b bytes for tails, where whole counts complete data shards. A pile stores a per-file bitmap of intact blocks. Conflicting copies can also require a per-shard dispute bitmap and the positions of the files involved.
 
-Its work is `m²` field multiplications for the weights, then `m · (m − k)` scalings of every stretch, and for each wrong offset about `(m − k)² + m · e` multiplications, with `e` wrong symbols.
+### Work limits for file sets
 
-`CyclicCode::correct` and `CyclicCode::agrees` hold the syndromes of one stripe of words, at most 4 MiB, a few elements per check symbol and one per shard; `CyclicCode::plan` holds its list of changes as well, 24 bytes per change and 32 for the fingerprint. `CyclicWords` allocates nothing: the caller gives the generator, the syndromes' room and the room of a search, 10 · (parity + 1) elements of two bytes. Making the syndromes takes `n · parity` scalings of every stripe, and a word that disagrees about `parity²` multiplications more and one search over its `n` places.
+These steps are accounting units. Preparing interpolation from the k lowest holders costs k² on the first block and whenever the basis changes. For a block of s symbols, synthesizing a missing target or comparing an extra holder costs k(s + 64). Copying an available block adds zero. Batch repairs can share the basis and comparisons.
 
-A call of the strict mode takes, on top of this, a thread whose stack of 512 KiB lies in locked pages, for as long as it runs ([The strict mode](#the-strict-mode)).
+For a vote write r = m − k, t = ⌊r/2⌋ and d for the number of disputed shard indexes. Blocks with too few holders establish no candidate.
+
+- With r ≥ 1, syndromes cost rm(s + 64). Preparing weights costs m² when the holders differ from the last block that used weights. Blocks with m ≤ k leave that cache intact.
+- With t ≥ 1, a disagreeing column costs r(t + 1). Searching it costs a further (4m + 64)(r + 1). At most min(s, t + 1) columns need searching. With t = 0 the first disagreement ends the block without a column charge.
+- Comparing disputed indexes costs k² + dk(s + 64) when d > 0, m ≥ k and the holders establish a candidate.
+
+The estimate assumes every column disagrees and all possible searches and dispute checks are needed. The actual count can be lower. In the five-file test with k = 3 and a two-symbol block, one wrong file costs 945 steps against a bound of 1,197. CRC scans, copying and SHA-256 take time outside this count.
+
+## Secrets in memory
+
+The scaling kernel processes eight bytes at a time. Shard bytes select neither branches nor table entries in scaling or CRC-32C. Single field multiplication and inversion also avoid indexing tables by their operands. Decoding still branches on error-dependent results, including discrepancies, roots and the number of wrong symbols. Its running time can reveal information about errors.
+
+Owned data and derived scratch are wiped on normal drop. With `protect` the crate requests guarded pages and reports which OS protections were obtained. With `alloc` alone it uses allocator memory. Ordinary caller-provided input, mappings and output buffers remain the caller’s responsibility. Indexes, counts and public metadata may live outside protected pages.
+
+### The strict mode
+
+Strict data calls check the protection of supplied storage before processing it. Each new internal buffer is checked on allocation before any secret is written into that buffer. A secret-bearing operation runs on a dedicated, wiped 512 KiB stack. Required pages are locked and excluded from child processes. Linux and Android also require per-mapping dump exclusion. On Apple systems the caller can require process-wide dump protection. A shortage of locked memory can cause a refusal even when ordinary RAM is plentiful.
+
+Windows and WebAssembly lack the protected stack required by these calls. Constructors using only public parameters can still succeed. No thread of the process may fork during a strict call. A child must reopen files rather than reuse the parent’s protected views. The guarantee ends at the caller’s storage, callbacks, disk writes, hibernation and the host. [Strict Rust interface](API.md#handle-protected-data).
 
 ## Measured time
 
@@ -250,255 +178,11 @@ Reading the files is `Pile::new`, which checks every block's checksum. The sets 
 
 The same encoding and rebuilds built for WebAssembly and run once in Node 26, whose engine is Chrome's, with the input made beforehand and the result let go afterwards, took 0.13 seconds to encode 20 MiB in GF(2^8) (156 MiB/s), 0.09 seconds to rebuild 16 MiB in GF(2^8) at 1.4 nanoseconds a step, and 1.03 seconds to rebuild 8 MiB in GF(2^16) at 4.9 nanoseconds a step. The harness for that run is not in the repository, which holds no Node.js script.
 
-So a step of the work limit comes to about one and a half nanoseconds in GF(2^8) and four and a half in GF(2^16) on this machine, natively or in a browser's engine, and a limit of 10^9 steps to one to five seconds of work, with reading and a digest on top. The work grows with `k` times the number of shards made or compared, which is why GF(2^16), used for large sets, is the slow case. No phone was measured: a program there sets its limit from `rebuild_work` and the time of a small call of its own.
-
-## The data path
-
-`out ^= factor · source` is the one operation applied to the bytes of shards. It works on eight bytes at a time with shifts and masks. The factor follows from shard numbers and is public; the bytes of the shards choose no branch and no table entry. The CRC-32C of a block is computed one bit at a time without a table, and `Sources::agrees` compares every byte of a stretch, whichever differs.
-
-Single elements are multiplied and inverted without tables and without a branch on their value in every field, so the values the decoder works with, which follow from the errors and, for a marked gap, are the symbol itself, choose no table entry either. The claim goes no further than that: the kernel that scales shards, the checksum, the comparison of bytes, and each single product and inverse. The decoder around them branches on what it computes: whether a column disagrees, whether a discrepancy of Berlekamp–Massey is zero, the length of the recurrence, where its roots are, and whether an error value is zero. A discrepancy can come out zero because of the values of the errors, not only their places, so the time a correction takes follows how many symbols were wrong and where, and can follow their values as well. No such timing was measured. The inverse of zero is told apart, as an answer of `None`.
-
-## Secrets in memory
-
-The data a program gives the crate can be a secret, such as the words of a recovery phrase on a card. The crate keeps no copy of it longer than a call and leaves none behind in memory it gives back:
-
-- Every result that holds data comes in a `Buffer`: the shards of `Code::encode` and `Code::rebuild`, the files of `SetFacts::files`, `Header::file`, `FileSet::repair` and `FileSet::repairs`, the data of `FileSet::rebuild`, the check shards of `CyclicCode::encode`, and the changes of `Code::plan` and `CyclicCode::plan`, whose list (`Changes`) keeps its fingerprint and records in one, gives the place and kind of a change when asked, and its values only to a closure. The working buffers of bytes that follow from data are buffers of the same kind: the copy a writer makes of the end of the data, the shard it makes, the buffer a set is put together in, the block a vote makes to judge a dispute, and the syndromes of the stretch a search looks at.
-- With the `protect` feature, on by default, a `Buffer` is a work area of the `secret-protection-core` crate: memory pages of its own between guard pages, wiped before they are given back, locked against swap where the system's lock limit holds them, and kept out of core dumps and of child processes where the system has a call for that: both on Linux and Android, child processes on macOS and iOS, error reports on Windows, neither in WebAssembly, where a buffer is the allocator's memory. `Buffer::is_locked`, `Buffer::is_out_of_dumps` and `Buffer::is_out_of_children` say what a buffer got, and `Changes::is_locked` what a list got. The system may give less than it is asked for: pages beyond its lock limit stay unlocked, and the protection crate's own constructors (`WorkArea::new`, `Secret::with_capacity`) succeed all the same, while `WorkArea::locked` and `Secret::locked` refuse. The calls of the crate's root types use such a buffer, and it says what it lacks; a strict call refuses it ([The strict mode](#the-strict-mode)). Windows keeps at most 512 blocks of a process out of its error reports, each smaller than 4 GiB, so a buffer takes one block for every 4 GiB it starts; a buffer beyond them stays in, and says so. Locked pages still go into the image a machine writes when it hibernates. A child made by `fork` must leave its parent's buffers alone: their pages are gone there or zeros, so the protection crate has a buffer there say it is not protected, its drop touch nothing, and a request for its bytes end the child. A slice taken from a buffer before the `fork` is not checked again. The feature brings the standard library with that crate. Without the feature it is the allocator's memory, wiped by the `zeroize` crate, whose writes the compiler cannot leave out. An empty buffer takes no memory.
-- The short lists of both decoders that follow from the data, a few numbers per spare shard or check symbol (the recurrences, the syndromes of one column, the errors and the places of the wrong symbols, and what is computed from them), are cut from one room per search, a `Buffer`; the `bytemuck` crate shows its bytes as the numbers of two bytes the decoders keep, so that the crate needs no `unsafe` code of its own for it, and a room whose numbers it cannot place is refused as memory is. The expected bytes `Sources::agrees` compares lie in a `Buffer` with the `protect` feature and on the stack without it, wiped when the call returns; `Sources::agrees_in` takes them from the caller, as the crate's own checks of sets do, one room for every block. A list of changes that has to grow moves into a larger buffer and the old one is wiped.
-- What follows from the shard numbers and the marks alone lies in the allocator's memory: the points of the shards and their weights, the factors of a stripe and the places a caller marked. The positions and counts of the wrong symbols, which the results name anyway, lie there too: the crate's own copies are wiped when let go, and those an answer hands over are the program's.
-- The state of SHA-256, with its partial block, is wiped when the hash is done (the `zeroize` feature of `sha2`); the same holds for the tails of a stretch the scaling kernel copies to the stack. Both lie on the stack, which a strict call keeps in protected pages.
-- No `Debug` text shows the bytes of data: a file read, a block and rebuilt data give their lengths, a change gives its place and kind, a buffer its length and a list of changes their number. Two buffers, and two lists of changes, are compared without stopping at the first difference.
-
-What `protect` costs. Each `Buffer` takes at least one page of memory, two guard pages of address space and a handful of system calls. A set of tens of thousands of shards made in one call can reach the system's limit on mappings (65,530 by default on Linux, more on newer distributions); the call then answers as it does without memory (`CodeError::Memory`, `FileError::Memory`, `SetError::Memory`), and so do `Code::correct` and `Code::plan` when their working memory is refused. Such a program makes the shards one after another with `Sources::build` into a buffer of its own, or builds without the feature. Locked memory has a limit too (`RLIMIT_MEMLOCK`, 8 MiB by default on Linux): a buffer beyond it is not locked and says so. The buffers share that limit with the rest of the program: about 2,048 one-page buffers held at once use up the default; the program's own `protect::Secret::locked` is then refused, and a `Secret` made otherwise is not locked and says so. A list of changes starts with room for 128 records, most of a page. A vote makes a new search, with syndromes and a room of its own, each time the shards that hold a block change: in a pile whose holders change at every block that is two buffers' system calls per block.
-
-What stays with the program. Buffers the program lends the crate, the shards it gives, the outputs of the calls without an allocator and those of `FileSet::rebuild_into` and `FileSet::repairs_into`, are the program's to wipe and to keep where it wants; `protect::WorkArea` and `protect::Secret` give it the same pages, and the strict mode takes no other memory. The stack and the allocator's memory can reach a swap file: a strict call runs on a protected stack of its own, and a program that wants the rest of its memory covered locks all of it (`protect::Options::lock_all_memory`). Crash dumps and other programs that read the memory of the process can be shut out for the whole process by `protect::Isolation::enter`, which reports what each system confirmed: the program checks that report, and it is the program's call, as a library does not change its host's process by itself. No mode of the crate covers the processor's registers, copies a compiler makes outside the stack, or the host: a debugger, the kernel or a hypervisor can read any memory of the process. The crate holds no `unsafe` code; the calls to the operating system are in `secret-protection-core`.
-
-## The strict mode
-
-The calls of the crate's root types take any memory and go on with what the system gives: they are for public data and ciphertext, and protect what they can. A secret in the open, such as a recovery phrase, goes through `reed_solomon_core::strict`, which comes with the `protect` feature. It has the calls of `Code`, `Sources`, `CyclicCode`, `SetFacts`, `Header`, `ShardFile`, `Pile` and `FileSet`, each answering as the call it stands for. Every call that touches the bytes of a secret runs as a strict call: the strict `ShardFile` checks a block or surveys the file on a protected stack each time it is asked, `FileSet::without` compares the files left of a shard there, and a rebuild whose data has another digest answers `SetError::DigestDiffers`, which names the stated digest and not the one the data has. What touches no secret byte, such as making a code, the facts, a header's fields, the members, the coverage or the frame of a file, is answered directly, also where strict calls refuse. The facts and headers come as strict types, whose calls on bytes are strict calls too; `as_portable` gives the root type, an explicit step for public data. It leaves out `CyclicWords` and `Sources::agrees_in`, which work in slices of the caller.
-
-**What it takes.** A strict call takes the secret only as `&dyn Held` or `&mut dyn HeldMut`: memory whose protection the crate can ask about. Both traits are sealed, and three types have them: the crate's `Buffer`, `protect::Secret` and `protect::WorkArea`. A `Vec`, an array or a slice given to a strict call does not compile (error E0277), which a doctest of the module checks. What is public anyway comes as ordinary values: indexes, marks, lengths, identifiers of sets, limits.
-
-**What it checks.** Memory is protected as the mode requires when its pages are locked against swap, kept out of child processes and kept out of core dumps. macOS and iOS keep no single page out of a dump, so there the last is not required, and a program keeps the whole process out of dumps (`protect::Isolation`). Every buffer the program gives is checked before the call starts, and so is the list of a plan given to `apply` or `strict::values`. Every buffer the call makes is checked when the system gives it, before a byte of the secret goes into it: the results, the syndromes and the room of a search, the list of a plan and every larger one it moves into, the block a set is put together in, and a writer's copy of the end of the data. A refusal is `CodeError::Unprotected`, `FileError::Unprotected` or `SetError::Unprotected`. Nothing falls back to other memory. A result the call made is dropped and wiped; outputs of the program are left as a refusal of memory at the same point leaves them.
-
-**Its stack.** A strict call runs on a thread of its own, whose stack of 512 KiB lies in pages protected as above and is wiped when the thread ends; when the system gives no such stack, the call refuses. The arithmetic's temporaries, the tails the scaling kernel copies, the state and partial block of SHA-256 and a change while it is checked lie there, and so do the two values `strict::values` hands to the program's closure. Linux, Android, macOS and iOS give such a stack. Windows gives a thread no stack of the program's choosing, so there, as in WebAssembly and on other systems, every strict call on the bytes of a secret refuses until the protection crate offers one, while making a code and reading public facts work; the root calls work there with what the system gives.
-
-**Files.** Reading a file and saving one stay with the program. A strict call reads a shard file only from memory it can check: a program reads the file from its disk straight into a `protect::Secret` or `WorkArea`, and `strict::Pile` refers to the blocks there, copying none. The data of a set is put together in a protected `Buffer` (`rebuild`) or in memory of the program that the call checks (`rebuild_into`), never in a mapping of a file, and so are the files a strict call writes. Saving a file or the data in the open to a disk is the program's own act, outside the crate, and the protection of memory does not reach the disk.
-
-**What it costs.** Per call a thread and 512 KiB of locked stack, and for every buffer locked pages, which must fit at once under the system's limit on locked memory, shared with the rest of the program (8 MiB by default on Linux). Beyond the limit a call answers `Unprotected`. A card of words takes a few pages; a set of large files can go beyond the limit, and a program then raises the limit or splits the work.
-
-**Fork and dumps.** While a strict call runs, no thread of the program may `fork`: the child would find the protected stack empty. After a `fork` the child leaves every view of the parent's files alone, a strict `Pile` or `ShardFile` included, and reads them again if it needs them. On macOS and iOS a program that needs secrets out of dumps confirms `protect::Isolation`'s report before it hands them over.
-
-**What it does not cover.** The bytes of a secret before the program hands them over and after it takes them back, what the program's closure keeps of the values `strict::values` hands it, the processor's registers, copies a compiler makes outside the stack, and the host are beyond the mode. A machine that hibernates writes locked pages to its disk. The tests run the strict calls of both codes, of files and of sets against the open ones on the same data. On Linux, in a process of its own whose lock limit they use up, they see every strict call refuse and leave its outputs as they were, a buffer the program gives refused, a plan of the root calls in pages that are not locked refused, and a call refuse its own result, then succeed once there is room again. macOS runs the same comparisons without that process, and on Windows a strict call is seen to refuse.
-
-## The shard file
-
-A shard file holds one shard together with what a program needs to find its set again and to tell which of its bytes survived. This is version 1 of the format, fixed with release 0.1.0: later releases read and write it unchanged, and another layout would get another version number.
-
-```
-header | block 0, checksum | block 1, checksum | … | header | trailer
-```
-
-Every number is big-endian and has a fixed width.
-
-### The header
-
-| Offset | Bytes   | Field                                                                                                                                                                                                                                        |
-| ------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0      | 4       | the mark `53 48 52 44` ("SHRD")                                                                                                                                                                                                              |
-| 4      | 1       | the version, 1                                                                                                                                                                                                                               |
-| 5      | 1       | the field: 1 for `Field::Gf256`, 2 for `Field::Gf65536`. 3 is kept for `Field::Gf2048` and never written: its symbols are not the bytes of a file. No other field has a number, the fields of `Field::binary` with one-byte symbols included |
-| 6      | 1       | flags: bit 0 says that the digest of the data is there; every other bit is zero                                                                                                                                                              |
-| 7      | 1       | the length of the set's identifier, 1 to 32                                                                                                                                                                                                  |
-| 8      | 1 to 32 | the identifier of the set: bytes the program chooses, different for every set                                                                                                                                                                |
-| …      | 4       | `k`, from 1 to the number of elements of the field                                                                                                                                                                                           |
-| …      | 4       | the number of the shard, below the number of elements of the field                                                                                                                                                                           |
-| …      | 8       | the length of the data in bytes                                                                                                                                                                                                              |
-| …      | 4       | the length of a block in bytes: above zero and a whole number of symbols                                                                                                                                                                     |
-| …      | 32      | the SHA-256 of the data, when bit 0 of the flags is set                                                                                                                                                                                      |
-| …      | 4       | the CRC-32C of every byte of the header before it                                                                                                                                                                                            |
-
-A header is 33 to 96 bytes long. No bit of it is free, so a header that passes the checks is written back to the same bytes. Everything but the number of the shard is the same in every file of a set (`SetFacts`): files that agree in it belong together.
-
-### Blocks, the second header and the trailer
-
-The length of a shard, `S`, is the data length divided by `k`, rounded up, then rounded up to a whole number of symbols. The data shards are the data cut in order into `k` pieces of `S` bytes, the last ones filled up with zero bytes.
-
-A shard is written in blocks of the block length; the last block may be shorter. There are `B = ⌈S / block length⌉` blocks, none for empty data. Block `b`, counted from zero, is followed by the CRC-32C of three things in a row: the four bytes of the header's own checksum, `b` in four bytes, and the bytes of the block. A block is so tied to its file and to its place in it.
-
-After the last block comes the header a second time, byte for byte, and then the trailer of twelve bytes: the mark `53 48 52 54` ("SHRT"), the length of the header in four bytes, and the CRC-32C of those eight bytes. A file is `2·H + S + 4·B + 12` bytes long for a header of `H` bytes, the same for every file of a set.
-
-Two limits belong to the format. `B` is at most 2^32, because the number of a block is written in four bytes; the last block then has the number FFFFFFFF. And a file is at most 2^64 − 1 bytes long. Facts that give more are refused when a set is described (`FileError::Blocks`, `FileError::Size`), and a header that states them does not hold when a file is read. SHA-256 takes fewer than 2^64 bits, so facts that state a digest are refused for data of 2^61 bytes or more (`FileError::Size`), and a header that states them does not hold. The sizes are worked out in 128-bit numbers, rounding up through quotient and remainder, and checked before they are narrowed.
-
-The checksum is CRC-32C: the polynomial 0x1EDC6F41, input and output reflected, the initial value and the final exclusive-or FFFFFFFF, written with the high byte first. The checksum of the nine characters "123456789" is E3069283. It is computed one bit at a time, without a table, so the bytes of a shard choose no branch and no table entry here either.
-
-### Reading
-
-`ShardFile::read` takes the bytes of a file, or what is left of them. It looks for a header at the start, and for the copy at the end through the trailer in the last twelve bytes. What it finds in each place is one of five things:
-
-| Found           | Meaning                                                                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| sound           | a header of version 1 whose checksum holds and whose every value, the sizes included, is one the format allows                              |
-| unsupported     | bytes whose checksum holds by the layout of version 1 and that name a field or a flag this version does not read                            |
-| another version | the mark and, in the byte after it, a version number other than 1. Nothing else is read: a later version may lay its header out differently |
-| damaged         | the mark of a header or a trailer, and no header that holds                                                                                 |
-| absent          | no mark: no header's mark at the start, no trailer's mark in the last twelve bytes                                                          |
-
-A sound header at the end counts only where its own sizes put it: the trailer's checksum holds, the length it names is the header's own, and the file is exactly as long as the header says. A trailer or a header anywhere else proves nothing and is not searched for. The sizes of an unsupported header cannot be worked out, so its place at the end is never certain.
-
-The answer follows from the two findings, in this order:
-
-1. Two headers in places that are certain, and different: `FileError::Conflict`. Neither is chosen, whichever comes first. That is a sound header at each end, or an unsupported one at the start and a sound one at the end.
-2. A sound header: the file is read by it.
-3. An unsupported header: `FileError::Unsupported`.
-4. A header that names another version: `FileError::Version`, the number at the start before the one at the end.
-5. A mark and nothing that holds: `FileError::Damaged`. No mark at either end: `FileError::Unrecognized`.
-
-| Start \ end     | sound                               | unsupported     | another version       | damaged     | absent       |
-| --------------- | ----------------------------------- | --------------- | --------------------- | ----------- | ------------ |
-| sound           | the same: read; different: conflict | read, see below | read                  | read        | read         |
-| unsupported     | conflict                            | unsupported     | unsupported           | unsupported | unsupported  |
-| another version | read                                | unsupported     | version, of the start | version     | version      |
-| damaged         | read                                | unsupported     | version, of the end   | damaged     | damaged      |
-| absent          | read                                | unsupported     | version, of the end   | damaged     | unrecognized |
-
-So one wrong bit in a version byte or in a flag costs nothing while the other copy is sound: the sound copy is believed and the other is reported as damaged. `Unsupported` rests on a checksum; `Version` rests on nothing but the mark and one byte, and a file of version 1 whose version byte went wrong in the only copy left reads the same way.
-
-Once a header is believed, the copy at the end and the trailer are looked for where its sizes put them, also when other bytes follow. What stands in the place of the copy is read by its own length: another header whose checksum holds there, sound or unsupported, longer or shorter than the first, is a `Conflict` as well. An unsupported header that the trailer of a longer file points at, after the end the sound header gives, is among the bytes that follow and is used for nothing. `ShardFile::frame` then says whether the header at the start, the copy at the end and the trailer are intact, damaged or missing, and whether the file has its exact length, is short or is long.
-
-What this means for a damaged file:
-
-- A file that lost its end is read by the header at its start. A block that is wholly there and whose checksum holds is used; the others are missing. Bytes are only ever taken from a block's own place, never from the place of the copy at the end.
-- A file whose first header is damaged is read by the copy at the end, as long as the file still has its exact length.
-- A file that lost its first bytes, or both its first header and its end, is not read: nothing is promised for it.
-- Bytes after the end are counted and used for nothing.
-
-`ShardFile::block` checks one block when it is asked for and `ShardFile::survey` checks them all. `Survey::whole` is true for exactly the files `Header::file` writes: every piece intact and the length exact.
-
-Reading allocates nothing, and its work is bounded by the bytes given, whatever a header says: `read` looks at three headers at most, a block is checked in one pass over its bytes, and a survey ends at the first block the file does not hold, so a header that counts 2^32 blocks in a file of a hundred bytes costs nothing.
-
-### What the checksums do not say
-
-CRC-32C finds accidental damage: every run of wrong bits up to 32 bits long in what one checksum covers, and other damage unless the changed bytes happen to have the same checksum. Such collisions exist; for random damage they are about one in four billion. A block moved to another place or taken from another file fails the same way, with the same exception. The checksums are no signature: someone who changes a file on purpose can make every one of them fit.
-
-The digest in the header is the SHA-256 of the data, computed by the `sha2` crate. `SetFacts::for_data` with `DataDigest::Sha256` computes it from the data, and `SetFacts::files` and `SetFacts::files_into` write no file for data that does not have the digest the facts state, so the files they write never state the digest of other data. `SetFacts::new` takes a digest as given, for facts known otherwise, such as those of a header that was read; `Header::file` and `Header::file_into` write the facts they are given beside any shard, so files written one by one can state a digest the data does not have. Files that read without a fault say nothing yet about the digest: it is compared when the data is put together. A match says that the data came back as the digest describes it, never who wrote the set: whoever changes the data in every file can state its new digest as well. Only a digest or an authentication tag the program trusts from elsewhere tells that.
-
-### A set from its files
-
-`SetFacts::files` writes the files of a set from its data. The data is cut in order into the `k` data shards, what is left of the last ones is filled up with zero bytes, and every other shard follows from them. A file for a further number can be written at any time and leaves the earlier files as they are.
-
-`Pile::new` takes any number of files in any order. Each one is read as above; the ones that read are sorted into sets. Files are one set when they state the same facts: field, `k`, identifier, data length, block length and digest. Two sets with one identifier and other facts are both listed and both marked (`FileSet::id_shared`): by the rules that cannot happen, so one of them is not what it says, and nothing tells which. Neither is preferred; a program asks for the set it wants. Nothing depends on the order of the files: the sets come in an order of their facts and their files in the order of their numbers.
-
-For each set, `FileSet::members` lists its files, each with its place among the files given, its number, the condition of its pieces and whether another file holds the same shard. These are separate facts: a file can be a copy and damaged at once.
-
-**Who holds a block.** A shard holds a block when one of its files has the block with a checksum that holds, and no two of its files differ on it. Files of one shard fill each other in: each may have lost other blocks. They are compared block by block with the first file that has the block. Where two of them differ although both checksums hold, the shard is left out of that block and of no other, and the difference is listed (`FileSet::disputes`: the shard, how many blocks, the first one, the files that took part). Every file of the shard that has such a block with a checksum that holds took part, whichever of the others it agrees with, so the list is the same in any order of the files. `FileSet::disputed_blocks` gives every such block. Nothing says which file is right.
-
-**How a block is made.** The `k` lowest shards that hold a block are its sources. Every further shard that holds it is compared with what the sources make. So a set rebuilds when every block has `k` holders, whichever files they are, even when no `k` files are whole. `FileSet::coverage` says how many blocks have fewer than `k` holders and which is the first. `FileSet::stretches` goes through all the blocks in stretches that one number of shards hold, so that a program can show which parts still rebuild, which are confirmed by spare shards and which are lost. Blocks that no file reaches come as one stretch, not one by one.
-
-| Holders of a block | What happens                                                                                                                                                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| fewer than `k`     | the set does not rebuild: `SetError::Blocks`                                                                                                                                                                                          |
-| exactly `k`        | the block is made, with nothing to compare it with; `Rebuilt::bare` counts such blocks                                                                                                                                                |
-| more than `k`      | the block is made and every further holder compared. One that differs stops everything: `SetError::Inconsistent` names the block, the sources and the shards that differ. Which is wrong cannot be told from that: it may be a source |
-
-`FileSet::rebuild` returns the data only when every block was made and every comparison held; there is no partial result. Then the bytes after the end of the data, up to `k·S`, must be zero (`SetError::Padding`). Fewer than `k` different shards never rebuild a set (`SetError::Shards`), and that holds for a set of no data too: one header says that the data is empty, and with `k` above 1 it is still one file, not a set. With `k` = 1 every file holds the whole data, and one file is a set.
-
-`FileSet::repair` makes the shard file of one number from the files at hand: a lost file again, byte for byte, or a file the set never had. It makes that one shard only. Every further holder is still compared, but the data is not put together and the bytes after its end are not looked at.
-
-What comes back is the data the files agree on. Files that were all replaced agree as well, and with exactly `k` holders no shard is compared at all. When the files state a SHA-256, `FileSet::rebuild` computes the digest of exactly `data_len` bytes, without the zero bytes after them, and gives the data back only when it is the digest stated: `Rebuilt::digest` is then `DigestCheck::Matched` with that digest. Data of another digest is not given back; the error `SetError::Digest` names both digests. Files that state no digest rebuild with `DigestCheck::Unchecked`: nothing was compared, and the program checks the data itself. The digest is computed outside the steps the limit counts; its work follows the length of the data, which the call holds anyway.
-
-`FileSet::repair` puts no data together and compares no digest. The file it makes states the digest the set states, and a rebuild that uses it compares that digest.
-
-**Files larger than memory.** The crate reads a file through the bytes the program gives it: the two ends first, then one block at a time, copying none. A file too large for memory is given as a mapping of it. `FileSet::rebuild_into` writes the data into an output the program gives, exactly `SetFacts::data_len` bytes long, and `FileSet::repairs_into` writes each file into one of `SetFacts::file_len` bytes: the header and its copy and the trailer first, then each block with its checksum where reading looks for it. `SetFacts::files_into` writes the files of a set from its data the same way, and `Header::file_into` one file from its shard, without an allocator. `rebuild`, `repairs`, `files` and `file` are these calls with outputs in `Buffer`s. Besides its lists, a call holds the block it makes, in a `Buffer`, and a writer also a block of each data shard that the data ends in. An output counts only when the call succeeds. A wrong length, a set that does not rebuild, a limit below the work, for a writer the data, its digest and an index, and the buffers and lists a call asks for before its first byte, memory refused or, in the strict mode, not protected, are refused before anything is written, and the output stays as it was. A refusal during the work or by the checks after it (a disagreement, the padding, the digest, the list of a block's sources that a writer asks for with the block) fills it with zeros.
-
-A mapping must not change from `Pile::new` until the last call on its sets returns. The checksum of each block is checked once, when the pile reads the file, and the block is used later without a second check; a block changed in between goes into the data as it is now, and a repair writes a valid checksum over a block made from it. Nothing tells the change unless a spare file compares the block or the data has a stated SHA-256. A program that cannot keep its files still copies them first, and a large set should state the digest of its data.
-
-**Several lost files at once.** `FileSet::repairs` makes the files of several numbers in one pass: every block is read and compared once, and its sources are prepared once, for all of them. Each file is the one `repair` makes for its number, and they come back in the order asked. A number asked for twice gives the same file twice; an empty list gives no file and costs nothing. `FileSet::repairs_work` counts the steps by the rule below. For `k` = 3, two blocks of four symbols, four files left of seven and the three others asked for, the pass costs 9 + 2 · 4 · 204 = 1,641 steps: per block one spare holder compared and three shards made. Three separate repairs would cost 3 · (9 + 2 · 2 · 204) = 2,475.
-
-**Which file differs.** A rebuild that stops with `SetError::Inconsistent` has shown that the shards are not one set, not which of them is wrong. `FileSet::vote` goes through the blocks and names files wherever the shards at hand can tell. It changes nothing and rebuilds nothing.
-
-The holders of a block vote on it. With `m` holders there are `r = m − k` spare ones. A word that all holders but at most `⌊r/2⌋` share in every column of the block is the only such word: two of them would agree on `k` holders. A shard whose files differ on the block does not vote; each of its files is compared with what the agreeing holders make of the block.
-
-Count as a witness of a word every shard that has a file carrying it in the block, however many of its files do. With `w` holders that differ from the word of the others, and `u` shards in dispute of which no file carries that word, the word is established when
-
-```
-2·w + u ≤ r
-```
-
-Then it is sure to have more witnesses than any other word: another word agrees with fewer than `k` of the agreeing holders, and can gain at most every holder that differs and every shard in dispute. A holder that differs takes two spare shards, a shard in dispute that does not confirm takes one. The rule is on the safe side: a word that is ahead of all others without meeting it is not established.
-
-| A block with                                                             | What the vote says                           |
-| ------------------------------------------------------------------------ | -------------------------------------------- |
-| fewer than `k` holders                                                   | nothing: there is no word                    |
-| `k` holders and no dispute                                               | nothing: there is nothing to compare with    |
-| `k` holders, and every shard in dispute has a file that agrees with them | the other files of those shards are outvoted |
-| `k + 1` holders that differ                                              | undecided: one spare shard cannot say which  |
-| `k + 2` holders of which one differs                                     | the files of that one are outvoted           |
-| holders that differ beyond the rule                                      | undecided                                    |
-
-Every file that holds the block with a checksum that holds and differs from an established word is outvoted there: every file of a holder that differs, and every differing file of a shard in dispute. `Vote::outvoted` lists the files, each with the number of such blocks and the first, and `Vote::outvoted_blocks` gives every block of a file, asked for by the file's place among the files given. The answer is read and not changed: a program that shows the rows in another order sorts its own copy of them. A block whose holders differ and whose word is not established is undecided (`Vote::undecided`, `Vote::undecided_blocks`): a rebuild fails there, and the vote cannot say because of which file.
-
-`FileSet::without` is the set without the files a program names by their places among the files given. Leaving a file out is the program's decision, and the file goes whole: a file that was wrong in one block is then no silent source of another. No block is read again. The files left of each shard are compared anew, so a shard whose files differed holds its blocks again once the files left agree, and the coverage is counted anew: if a block needed the file that is gone, the coverage says so. The set as it was found stays as it was.
-
-A program asks for a vote after `SetError::Inconsistent`, and whenever `FileSet::disputes` is not empty: a rebuild passes over a shard in dispute and can succeed while the vote still tells which of its files the other shards do not confirm. It then shows the files named, takes the set without those the user gives up and rebuilds, which compares the digest when the files state one.
-
-What the vote does not say. It is right when the wrong files are within the rule in every block; beyond it a block is undecided or settled on other files. Files written together from wrong data agree with each other. No undecided block does not mean that every block was confirmed: with `k` holders or fewer there was nothing to compare, which the coverage shows. Being outvoted means differing from what most shards share, not being forged or damaged. That data is the data once written is said only by a digest or an authentication tag the program trusts from elsewhere; the digest the files state shows only that the data fits what those files say of it.
-
-How the holders that differ are found. The syndromes of a block over all its holders are zero when the holders agree. Otherwise the list of holders found starts empty, in every block. A column whose syndromes are not all zero is first held against the list: the syndromes of wrong symbols of those holders alone obey the recurrence of the polynomial `Π (1 − X·z)` over their points, from the syndrome numbered by their count to the last, and the point zero keeps its place in it with a coefficient of zero. A column that obeys it has no wrong symbol elsewhere. Any other column is searched as `Code::correct` searches, and the holders it finds join the list. With more than `⌊r/2⌋` of them, or a search that finds nothing, the block is undecided and its other columns are not looked at. So a file that is wrong in every column costs one search a block, not one a column.
-
-**Work and its limit.** `rebuild`, `repair` and `repairs`, and the calls that write in place, take a limit in steps and refuse before they compute anything, or ask for memory for their output, when the call would take more (`SetError::Work`, with the number needed); `None` sets no limit. `FileSet::rebuild_work`, `FileSet::repair_work` and `FileSet::repairs_work` give the number beforehand. A step is a unit of this count and of nothing else. It grows with the work of making shards; it measures neither time nor operations, and reading the files, their checksums and memory are no part of it:
-
-- Preparing the sources of a block: `k²` steps, for the first block and for every block whose `k` lowest holders are not those of the block before it. Sources that change and come back are prepared again each time. The steps are charged also when nothing of the block has to be made.
-- A block of a shard that no file holds, which is made: `k · (s + 64)` steps for its `s` symbols. The 64 stand for working out the coefficients of the block.
-- A block of every holder beyond the `k` lowest, which is compared: the same.
-- A block that a file holds is copied: nothing.
-
-With `k` = 3, blocks of four symbols and two blocks, the three data files alone cost 9 steps; with one data file lost and one spare file in its place, 9 + 2 · 204; with all three and two spare files, 9 + 4 · 204. The number says what a call costs, not that it succeeds: shards that do not agree and bytes that are not zero after the data show only when the shards are made.
-
-`FileSet::vote` takes the same limit and compares it with `FileSet::vote_work` before anything is computed. That count is a bound and not the exact number, because how many columns disagree shows only when they are looked at; `Vote::steps` is what the call took, never more than the bound. For a block with `m` holders, `r = m − k` spare ones, `t = ⌊r/2⌋` and `s` symbols:
-
-- The syndromes, when `r` is at least 1: `r · m · (s + 64)` steps, and `m²` for the weights of the holders when it is the first such block or its holders are not those of the one before.
-- When `t` is at least 1, a column whose holders disagree: `r · (t + 1)` steps, and `(4 · m + 64) · (r + 1)` more when it is searched. At most `t + 1` columns of a block are searched, and after the column on which a block is given up its columns cost nothing. With `t` = 0 the block is given up at the first such column and no column is charged.
-- A block with `k` or more holders and `d` shards in dispute, unless its holders settle on nothing: `k² + d · k · (s + 64)`.
-
-The bound takes every column to disagree, `t + 1` columns of each block to be searched, or all of them when it has fewer, and every shard in dispute to be judged. Comparing the bytes of files is no part of the count. Five files of a set of three with one block of two symbols, one file wrong in both columns: 25 + 2 · 5 · 66 + 2 · 4 + 252 = 945 steps, of at most 1,197.
-
-To size a limit by: on one core of a 2022 laptop, with blocks of 4,096 bytes, a step took about one nanosecond in `Field::Gf256` and three to five in `Field::Gf65536`, so ten thousand million steps were some ten seconds in the first field. Checking the files of a pile ran at about 220 megabytes of file per second, which is the speed of the checksum, and writing a set of five files with `k` = 3 at about 100 megabytes of data per second. A vote costs about as much as a rebuild of the same files: in one run, five files with `k` = 3 were voted on at half the speed of their rebuild when they agreed and at a quarter with a file of other data among them, which is wrong in every column; forty files with `k` = 30 at five sixths and at three quarters. These are the figures of one machine, not a promise for another.
-
-**What looking at a pile costs.** The work grows with the number of files and the bytes that are in them, whatever their headers say. Every block that is there is checked once. Files of one shard are compared once, each with one other and only for the blocks it reaches. And the walk over the blocks looks, for each block, only at the shards and the files that reach it, so that thousands of files that end early beside one long file cost no more than their own bytes, be they files of other shards or further files of the same one.
-
-Memory: one entry per file and one bit per block that is in a file. The data is asked for only after every block is known to have `k` holders, so it is never longer than what the files hold. Every list these calls keep, like the data itself, is asked for before it is filled: when the machine refuses the memory, `Pile::new`, `SetFacts::files` and the calls of a set answer `Memory` and nothing is half done. Sorting the files takes no memory of its own. A vote keeps the search for the holders of a block, sized by the bytes a block of the set can have and under 8 MiB as in the correction, one block for the shards in dispute, and one bit per block for every file it names and for the undecided blocks.
-
 ## Self-test and tests
 
-The tests are of two kinds. Known answers expect values computed outside the crate, and every one of them matches what the crate computes: a test fails on the first that does not. Comparisons run two ways into the same code on the same input, such as `CyclicWords` and `CyclicCode`, a call that writes in place and the one into buffers, a strict call and the open one: they show that the ways agree, not that the code they share is right. The sources of the known answers:
+The built-in self-test runs 17 checks with an allocator and 11 without one. Its independent fixtures include QR parity, CRC-32C, SHA-256 and reference interpolation. A changed-shard check tests an internal property. Agreement between the allocating, caller-buffer and strict interfaces tests consistency across paths.
 
-| Source                                      | What it gives                                                                                                                                        |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reed-solomon-erasure` 6.0.0                | every shard in `Field::Gf256` and `Field::Gf65536`; its products in the field of pairs                                                               |
-| the parity 45 5E of Backblaze and klauspost | the shards of the data 01 02 03 04                                                                                                                   |
-| interpolation by hand                       | a set grown from three shards to seven                                                                                                               |
-| values computed independently               | products, an inverse, shards and syndromes of `Field::Gf2048`; the votes of five piles                                                               |
-| the published check value of CRC-32C        | E3069283 for "123456789"                                                                                                                             |
-| a bit-by-bit CRC and a long division        | the checksums of the shard files the tests hold                                                                                                      |
-| FIPS 180-4 and Python's `hashlib`           | the SHA-256 of "abc", of no bytes and of the texts of the tests                                                                                      |
-| Lagrange interpolation in Python            | the words a card adds, for the plans of changes                                                                                                      |
-| tables of logarithms in Python              | for every degree from 2 to 16 and two further polynomials: a product, an inverse and two shards of a set; that each standard polynomial is primitive |
-| the shift-and-reduce product and its tables | every product and inverse of `Field::Gf256` and of `Field::Gf2048`, against the mask arithmetic                                                      |
-
-`self_test()` checks 17 known answers in a build with an allocator and 11 in one without, all but one from outside the crate: the published parity 45 5E for the data 01 02 03 04; a set of three shards grown to seven, computed by hand; one shard of the field of pairs, equal to what `reed-solomon-erasure` writes; two words of the field of words computed apart; two shards each of GF(2^4) and GF(2^13) by their standard polynomials, computed apart; a changed shard being told from the right one, the one check that is a property and not an outside answer; the published check value of CRC-32C; a shard file of 86 bytes whose three checksums were computed apart, read back whole and refused in the block where one bit was changed; the SHA-256 of "abc" given in FIPS 180-4; the parity A5 24 D4 C1 ED 36 C7 87 2C 55 of the version 1-M example of ISO/IEC 18004, annex I, from the cyclic code; and a word of a cyclic code of GF(2^11), first root 5 and step 3, put right in place with one wrong and two marked symbols, computed apart. With the `alloc` feature it also corrects two byte words and one word of the field of words whose errors were placed by hand, gives up a word with three wrong symbols of seven for which no valid set lies within two symbols, plans the changes that put right a card of 12 + 4 words with two marked gaps and one wrong word, computed apart, and names, among five files of a set of three, the one that holds other bytes, in the number of steps computed apart; and refuses three files that agree on "abc" and state the SHA-256 of "abd", while the same files stating their own digest rebuild. It asks for no memory of its own: when a call it checks gets none, that check fails, and the program sees `passed()` false instead of stopping. It checks these known answers; it is not a proof that the build has no other fault.
-
-For the fields of a chosen degree, a reference written apart from the crate in Python, with tables of logarithms and Lagrange interpolation, gave for each of the fifteen standard polynomials and for 0x187 and 0x1002D a product, an inverse and two shards of a set; all seventeen fields match it in every value. The tests also scale shards in every degree against single products and write, rebuild, correct and plan a set in every degree.
-
-The tests in `tests/suite` compare every shard with `reed-solomon-erasure` 6.0.0 for all shapes up to 16 shards in its two fields, for large sets and for each of the 65,536 shard numbers. In all three fields they rebuild every shard from each choice of `k` out of up to 10, correct each placement of wrong symbols within the bound for up to 9 shards, check that one wrong symbol too many is never called clean, and compare the decoder with a search over every choice of `k` shards. The field of words has no second implementation to compare with; its products, an inverse, two shards and three sets of syndromes were computed independently and are pinned in the tests.
-
-For the shard file the tests hold four files whose checksums were computed apart from the crate, by a bit-by-bit CRC and by a long division. They write files of several hundred shapes with a writer of their own that shares no code with the crate and expect the same bytes. They change every single bit of a file, cut it at every length, add bytes after its end, exchange headers and blocks between files, put a header of another length in the place of the copy, and write headers of another version, with unread fields and flags and with values out of range; a run of three thousand random damages checks that what is read is the original header or a refusal, and that a block called intact holds the original bytes.
-
-For sets the tests write files and rebuild the data from every choice of `k` of them in both fields; give every file another damaged block so that no `k` files are whole; leave a block with too few holders; give the same shard twice, whole, damaged in different blocks and with other bytes under right checksums; put a file with other bytes among the sources and among the spare shards; fill the bytes after the data with something else; mix three sets, two of them with one identifier, with files that do not read, in several orders; count the steps of several piles by hand, with sources that change and come back; and make every lost file again byte for byte. A file of 92 bytes computed apart pins what the writer makes of data.
-
-For the vote the tests put a file of other data among five; one wrong symbol in a file at the point zero, among the sources and among the spare shards; as many wrong files as the spare shards outvote, and one more; files of one shard that differ, with and without a file the others confirm, beside exactly `k` holders and beside more; and files cut short, so that the holders change from block to block. They count the steps by the rule in two ways, hold five votes worked out apart from the crate with their steps and bounds, compare the set without some files with the remaining files read anew, and give headers that state four thousand million blocks over files of three. The search itself is run over every choice of wrong shards of small sets in all three fields.
-
-The tests run with the buffers in protected pages and again with them in the allocator's memory, and check on Linux that a result lies in pages the kernel lists as kept out of core dumps and given to a child process as zeros, and as locked exactly when the buffer says so. CI runs the gates on Linux for x86-64 and the tests on Linux for AArch64, macOS and Windows at every push. Five fuzz targets lie under `fuzz/`, the first three grown from those the first audit left beside its report: `files`, any bytes as shard files and every call on the sets they make; `sets`, sets written by the crate and then damaged, which must give back the data whose SHA-256 they state or refuse; `plans`, shards with changed and marked symbols in every field, which a plan must put right within its bound; `cyclic`, words of the cyclic code with any roots and errata and whole shards lost holding any bytes, put right within the bound, a word of the code otherwise or nothing changed, the same answers whatever the lost shards hold, and each word put right in place as the plan puts it right; and `calls`, every public call that takes numbers, lengths or bytes, given any of them, with a file written from any header read back as that header. The calls that write in place answer as those into buffers, and leave their outputs as each refusal promises. Each target ran sixty seconds under AddressSanitizer on 2026-11-15 without a finding. CI lints the crate without an operating system as well, for `thumbv7em-none-eabihf`, with and without an allocator. [Test coverage](COVERAGE.md) has the measured lines.
+The integration suite checks the published MHFE repair words and compares GF(256) and composite GF(65,536) shards with reed-solomon-erasure 6.0.0. Small evaluation codes are rebuilt from every k-subset in all three named fields. The nearest-word decoder oracle uses GF(256). For GF(2,048) the long-division test samples products, while a separate exhaustive test checks the field laws and the scaling kernel. Fixed file vectors cover header bytes, trailer precedence, truncation and block checksums. See the [test suite](../tests/suite), [field tests](../src/field) and [coverage report](COVERAGE.md).
 
 ## References
 

@@ -1,7 +1,7 @@
 //! The strict mode, for a secret in the open such as the words of a recovery phrase: its calls
 //! take and give the secret only in memory whose protection the crate can check, and refuse with
 //! an `Unprotected` error before the first secret byte is written where the system does not
-//! protect it. The README shows a card put right; docs/TECHNICAL.md says what is covered.
+//! protect it. The protected-memory example in docs/API.md repairs a card; docs/TECHNICAL.md says what is covered.
 
 mod codes;
 mod files;

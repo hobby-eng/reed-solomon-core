@@ -1,0 +1,71 @@
+name: Release provenance
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Package the tagged crate and verify its build
+        run: |
+          set -euo pipefail
+          version="$(cargo metadata --locked --no-deps --format-version 1 |
+            jq -er '.packages[] | select(.name == "reed-solomon-core") | .version')"
+          test "$GITHUB_REF_NAME" = "v$version"
+          cargo package --locked
+          crate="reed-solomon-core-$version.crate"
+          tar -xOzf "target/package/$crate" "reed-solomon-core-$version/.cargo_vcs_info.json" |
+            jq -e --arg commit "$(git rev-parse HEAD)" '.git.sha1 == $commit and (.git.dirty != true)'
+          mkdir release
+          cp "target/package/$crate" release/
+          cd release
+          sha256sum "$crate" > SHA256SUMS
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-package
+          path: release/
+          if-no-files-found: error
+
+  attest:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-package
+          path: release
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: "release/*.crate"
+
+      - name: Verify the package against the release tag and commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          files=(release/*.crate)
+          test "${#files[@]}" -eq 1
+          gh attestation verify "${files[0]}" --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA"

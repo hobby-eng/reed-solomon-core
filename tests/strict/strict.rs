@@ -572,7 +572,7 @@ fn strict_calls_refuse_memory_the_system_does_not_protect() {
     // calls made now, in pages that are not locked either.
     let loose = WorkArea::new(64 * 1024).unwrap();
     assert!(!Held::guarded(&loose));
-    // The check the README's example makes refuses a secret now, before a byte goes in.
+    // The guard check in the protected-memory example refuses the buffer before it receives a secret.
     assert!(!Held::guarded(&Secret::with_capacity(2)));
     let given: [&dyn Held; 2] = [&data[0], &loose];
     assert_eq!(code.encode(&given, &[2]), Err(CodeError::Unprotected));

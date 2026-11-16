@@ -1,4 +1,4 @@
-//! The README's example of the strict mode, as a test.
+//! The protected-memory example in docs/API.md, as a test.
 
 #[test]
 fn a_card_held_in_protected_memory_is_put_right_in_the_strict_mode()

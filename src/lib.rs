@@ -1,7 +1,7 @@
 //! Reed–Solomon coding for sets of shards: data cut into `k` shards becomes up to 2^m shards in a
 //! field GF(2^m) ([`Field`]), and any `k` of them rebuild it. It can also find and fix wrong
 //! symbols, keep shards in files that survive damage, and check data against its SHA-256. The
-//! crate holds no `unsafe` code; examples are in the README, tests/suite/examples.rs and
+//! crate holds no `unsafe` code; examples are in docs/API.md, tests/suite/examples.rs and
 //! tests/strict/example.rs.
 
 #![cfg_attr(not(test), no_std)]

@@ -43,7 +43,8 @@ files (`pile`, `set`, `writing`), with the vote that names the files that differ
 (`set/vote`); `tests/strict/` the strict mode, in a test process of its own whose lock limit
 no other test uses up; `tests/suite/` the tests against an independent implementation, over every choice
 of shards, of shard files written apart and damaged, and of sets put together from their files.
-`docs/TECHNICAL.md` describes all of it and must change with it.
+Keep `docs/API.md` in sync with public Rust calls and their contracts. Update
+`docs/TECHNICAL.md` when the algorithms, file format or implementation guarantees change.
 
 The crate holds no key; its one cryptographic function is SHA-256 of the data, from the `sha2`
 crate, never written here. It never indexes a table by a byte of a shard and never branches on
