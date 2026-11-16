@@ -15,6 +15,12 @@ pub struct Pile<'a> {
 }
 
 impl<'a> Pile<'a> {
+    /// What was read, file by file, and the sets: for the strict mode, which wraps the sets.
+    #[cfg(feature = "protect")]
+    pub(crate) fn into_parts(self) -> (Vec<Result<ShardFile<'a>, FileError>>, Vec<FileSet<'a>>) {
+        (self.readings, self.sets)
+    }
+
     /// Reads `files` and sorts them into sets. A file that doesn't read is not an error but an entry
     /// of [`Pile::readings`]; only running out of memory fails ([`FileError::Memory`]).
     pub fn new(files: &[&'a [u8]]) -> Result<Self, FileError> {

@@ -1,7 +1,7 @@
 //! Known answers of the code, for a program to run before it relies on the crate: a program that
 //! starts its work only after [`self_test`] passed knows that the build it runs codes as the
-//! references do. Every expected value comes from outside this crate, and each check names its
-//! source.
+//! references do. Every expected value but one comes from outside this crate, and each check
+//! names its source; the one is a property, that a changed shard is told from the right one.
 
 use crate::code::Code;
 use crate::field::Field;
@@ -261,18 +261,33 @@ mod correction {
     use crate::code::Code;
     use crate::correct::Correction;
     use crate::field::Field;
-    use alloc::vec::Vec;
+
+    /// The shards of `word`, numbered from zero: an array, so that a check asks for no memory
+    /// of its own and a refusal of memory fails the check instead of ending the program.
+    fn numbered<const M: usize, T>(
+        word: &mut [T; M],
+        bytes: impl Fn(&mut T) -> &mut [u8],
+    ) -> [(u16, &mut [u8]); M] {
+        let mut index = 0;
+        word.each_mut().map(|shard| {
+            let numbered = (index, bytes(shard));
+            index += 1;
+            numbered
+        })
+    }
+
+    /// Whether `found` corrected exactly `counts` symbols in each shard.
+    fn corrected(found: &Correction, counts: &[usize]) -> bool {
+        matches!(found, Correction::Corrected(each) if each.as_slice() == counts)
+    }
 
     /// Runs the correction on the all-zero code word of threshold 3 with `errors` added, one
     /// one-byte shard per index; returns what it found and the word afterwards.
     fn run<const M: usize>(errors: [u8; M]) -> Option<(Correction, [u8; M])> {
         let code = Code::new(Field::Gf256, 3).ok()?;
         let mut word = errors;
-        let mut shards: Vec<(u16, &mut [u8])> = (0..)
-            .zip(word.iter_mut().map(core::slice::from_mut))
-            .collect();
+        let mut shards = numbered(&mut word, core::slice::from_mut);
         let found = code.correct(&mut shards).ok()?;
-        drop(shards);
         Some((found, word))
     }
 
@@ -287,12 +302,9 @@ mod correction {
         let [first, _, third, ..] = &mut word;
         *first = [0x00, 0x01];
         *third = [0x02, 0xAA];
-        let mut shards: Vec<(u16, &mut [u8])> = (0..)
-            .zip(word.iter_mut().map(<[u8; 2]>::as_mut_slice))
-            .collect();
+        let mut shards = numbered(&mut word, <[u8; 2]>::as_mut_slice);
         let found = code.correct(&mut shards);
-        drop(shards);
-        found == Ok(Correction::Corrected([1, 0, 1, 0, 0, 0, 0].to_vec())) && word == [[0; 2]; 7]
+        found.is_ok_and(|found| corrected(&found, &[1, 0, 1, 0, 0, 0, 0])) && word == [[0; 2]; 7]
     }
 
     /// A card of twelve words and the four words the code adds at the points 12 to 15, computed
@@ -300,10 +312,16 @@ mod correction {
     /// 11 read as 7FF. The plan fills the two and replaces the third, and applied it gives the
     /// card back.
     pub(super) fn card_plan() -> bool {
-        use crate::correct::{Change, ChangeKind, Mark, Plan};
+        use crate::correct::{ChangeKind, Mark, Plan};
         const CARD: [u16; 16] = [
             0x371, 0x6CE, 0x220, 0x11D, 0x2DB, 0x73E, 0x12B, 0x7C6, 0x7D5, 0x7AF, 0x6A9, 0x453,
             0x143, 0x384, 0x313, 0x6DE,
+        ];
+        // Each shard and its place, what it held and becomes, and how.
+        const EXPECTED: [(usize, u16, u16, ChangeKind); 3] = [
+            (2, 0, 0x220, ChangeKind::Filled),
+            (7, 0, 0x7C6, ChangeKind::Filled),
+            (10, 0x7FF, 0x6A9, ChangeKind::Replaced),
         ];
         let Ok(code) = Code::new(Field::Gf2048, 12) else {
             return false;
@@ -311,7 +329,12 @@ mod correction {
         let mut read = CARD.map(u16::to_be_bytes);
         let [_, _, third, _, _, _, _, eighth, _, _, eleventh, ..] = &mut read;
         (*third, *eighth, *eleventh) = ([0, 0], [0, 0], [0x07, 0xFF]);
-        let shards: Vec<(u16, &[u8])> = (0..).zip(read.iter().map(<[u8; 2]>::as_slice)).collect();
+        // Arrays, not lists: a self-test that gets no memory fails, it does not stop the program.
+        let mut index = 0_u16;
+        let shards = read.each_ref().map(|word| {
+            index += 1;
+            (index - 1, word.as_slice())
+        });
         let marks = [
             Mark {
                 shard: 2,
@@ -322,28 +345,25 @@ mod correction {
                 symbol: 0,
             },
         ];
-        let change = |shard, was, becomes, kind| Change {
-            shard,
-            symbol: 0,
-            was,
-            becomes,
-            kind,
+        let Ok(Plan::Changes(changes)) = code.plan(&shards, &marks) else {
+            return false;
         };
-        let expected = [
-            change(2, 0, 0x220, ChangeKind::Filled),
-            change(7, 0, 0x7C6, ChangeKind::Filled),
-            change(10, 0x7FF, 0x6A9, ChangeKind::Replaced),
-        ];
-        let planned =
-            code.plan(&shards, &marks) == Ok(Plan::Changes(expected.into_iter().collect()));
-        drop(shards);
-        let mut buffers: Vec<(u16, &mut [u8])> = (0..)
-            .zip(read.iter_mut().map(<[u8; 2]>::as_mut_slice))
-            .collect();
-        let applied = code
-            .apply(&mut buffers, &expected.into_iter().collect())
-            .is_ok();
-        drop(buffers);
+        let listed = (0..EXPECTED.len())
+            .zip(EXPECTED)
+            .all(|(at, (shard, was, becomes, kind))| {
+                let place = changes.get(at).is_some_and(|change| {
+                    (change.shard, change.symbol, change.kind) == (shard, 0, kind)
+                });
+                let values = changes.values(at, |held, new| held == was && new == becomes);
+                place && values == Some(true)
+            });
+        let planned = listed && changes.len() == EXPECTED.len();
+        let mut index = 0_u16;
+        let mut buffers = read.each_mut().map(|word| {
+            index += 1;
+            (index - 1, word.as_mut_slice())
+        });
+        let applied = code.apply(&mut buffers, &changes).is_ok();
         planned && applied && read == CARD.map(u16::to_be_bytes)
     }
 
@@ -352,11 +372,10 @@ mod correction {
     pub(super) fn within_the_bound() -> bool {
         let one = run([0x01, 0, 0, 0, 0]);
         let two = run([0x01, 0, 0x52, 0, 0, 0, 0]);
-        one.is_some_and(|(found, word)| {
-            found == Correction::Corrected([1, 0, 0, 0, 0].to_vec()) && word == [0; 5]
-        }) && two.is_some_and(|(found, word)| {
-            found == Correction::Corrected([1, 0, 1, 0, 0, 0, 0].to_vec()) && word == [0; 7]
-        })
+        one.is_some_and(|(found, word)| corrected(&found, &[1, 0, 0, 0, 0]) && word == [0; 5])
+            && two.is_some_and(|(found, word)| {
+                corrected(&found, &[1, 0, 1, 0, 0, 0, 0]) && word == [0; 7]
+            })
     }
 
     /// Four spare shards put two wrong symbols right, not three. For the word 01 02 03 00 00 00

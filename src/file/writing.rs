@@ -4,9 +4,8 @@
 use super::FileError;
 use super::facts::{SetFacts, sha256};
 use super::header::Header;
-use super::set::{BySlot, Files, Output, Sizes, fill};
+use super::set::{BySlot, Files, Output, Sink, Sizes, fill};
 use crate::buffer::Buffer;
-use crate::code::COMPARED;
 use alloc::vec::Vec;
 
 /// Room for `more` further items in `list`, or the refusal of the memory.
@@ -22,25 +21,28 @@ impl SetFacts {
     /// an index outside the field, or no memory. [`SetFacts::files_into`] writes into outputs.
     pub fn files(&self, data: &[u8], indexes: &[u16]) -> Result<Vec<Buffer>, FileError> {
         self.check_data(data)?;
-        let headers = self.headers(indexes)?;
+        self.check_indexes(indexes)?;
+        if indexes.is_empty() {
+            return Ok(Vec::new());
+        }
         let length = usize::try_from(self.file_len()).map_err(|_| FileError::Memory)?;
         let mut files = Vec::new();
         room(&mut files, indexes.len())?;
         for _ in indexes {
-            files.push(Buffer::zeros(length).ok_or(FileError::Memory)?);
+            files.push(Buffer::zeros(length)?);
         }
         let mut outs = Vec::new();
         room(&mut outs, files.len())?;
         outs.extend(files.iter_mut().map(|file| file.as_mut_slice()));
-        self.write(data, indexes, &headers, &mut outs)?;
+        self.write(data, indexes, &mut outs)?;
         Ok(files)
     }
 
     /// The files of [`SetFacts::files`] written into `outs`, one for each index and each exactly
     /// [`SetFacts::file_len`] bytes long. The crate holds a block of each data shard the data ends
     /// in and the block it makes, so `data` and the outputs can be mappings of files. The outputs
-    /// are refused first; a refusal of them, the data, its digest or an index leaves them as they
-    /// were, and a later one fills them with zeros.
+    /// are refused first; a refusal before the first frame is written, of them, the data, its
+    /// digest, an index or memory, leaves them as they were, and a later one fills them with zeros.
     pub fn files_into(
         &self,
         data: &[u8],
@@ -56,12 +58,15 @@ impl SetFacts {
             return Err(FileError::Output { needed });
         }
         self.check_data(data)?;
-        let headers = self.headers(indexes)?;
-        let written = self.write(data, indexes, &headers, outs);
-        if written.is_err() {
-            outs.iter_mut().for_each(|out| out.fill(0));
-        }
-        written
+        self.check_indexes(indexes)?;
+        self.write(data, indexes, outs)
+    }
+
+    /// Refuses an index outside the field, before any memory is asked for.
+    fn check_indexes(&self, indexes: &[u16]) -> Result<(), FileError> {
+        indexes
+            .iter()
+            .try_for_each(|&index| Header::new(*self, index).map(|_| ()))
     }
 
     /// Whether `data` is as long as the facts say and has the digest they state.
@@ -85,17 +90,13 @@ impl SetFacts {
         Ok(headers)
     }
 
-    /// The files of `indexes` into `outs`, whose lengths, data and headers were checked: the frame
-    /// of each, then block by block the data shards' blocks, and the blocks the code makes.
-    fn write(
-        &self,
-        data: &[u8],
-        indexes: &[u16],
-        headers: &[Header],
-        outs: &mut [&mut [u8]],
-    ) -> Result<(), FileError> {
-        for (header, out) in headers.iter().zip(outs.iter_mut()) {
-            header.write_frame(out).ok_or(FileError::Memory)?;
+    /// The files of `indexes` into `outs`, whose lengths, data and indexes were checked: the frame
+    /// of each, then block by block the data shards' blocks, and the blocks the code makes. The
+    /// buffers and lists come before the first frame, but for the list of each block's sources,
+    /// asked for with its block; once the first frame is written, a refusal leaves zeros.
+    fn write(&self, data: &[u8], indexes: &[u16], outs: &mut [&mut [u8]]) -> Result<(), FileError> {
+        if indexes.is_empty() {
+            return Ok(());
         }
         let mut targets = Vec::new();
         room(&mut targets, indexes.len())?;
@@ -111,11 +112,6 @@ impl SetFacts {
         );
         let by_slot = BySlot::new(&slots, targets.len()).map_err(|_| FileError::Memory)?;
         let target_headers = self.headers(&targets)?;
-        let mut sink = Files {
-            outs,
-            headers: &target_headers,
-            by_slot: &by_slot,
-        };
         let code = self.code();
         let sizes = Sizes {
             threshold: code.threshold(),
@@ -141,33 +137,48 @@ impl SetFacts {
             .then(|| code.sources(&data_shards, &mut weights))
             .transpose()
             .map_err(|_| FileError::Index)?;
-        let mut scratch = Buffer::zeros(sizes.block.min(sizes.shard)).ok_or(FileError::Memory)?;
-        let mut compare = Buffer::zeros(COMPARED).ok_or(FileError::Memory)?;
-        let mut out = Output {
-            scratch: &mut scratch,
-            compare: &mut compare,
-            sink: &mut sink,
+        let mut scratch = Buffer::zeros(sizes.block.min(sizes.shard))?;
+        let mut sink = Files {
+            outs,
+            headers: &target_headers,
+            by_slot: &by_slot,
+            begun: false,
         };
-        for number in 0..self.blocks() {
-            let holders = blocks.at(number)?;
-            let Some(sources) = &sources else {
-                held(number, &holders, &targets, &sizes, &mut out)?;
-                continue;
+        let count = self.blocks();
+        let mut work = || -> Result<(), FileError> {
+            sink.begin().map_err(|_| FileError::Memory)?;
+            // A writer holds no shard beyond the data shards: nothing is compared.
+            let mut out = Output {
+                scratch: &mut scratch,
+                compare: &mut [],
+                sink: &mut sink,
             };
-            let mut stripes = Vec::new();
-            room(&mut stripes, sizes.threshold)?;
-            let made = fill(
-                number,
-                &holders,
-                sources,
-                &mut stripes,
-                &targets,
-                &sizes,
-                &mut out,
-            );
-            made.map_err(|_| FileError::Memory)?;
+            for number in 0..count {
+                let holders = blocks.at(number)?;
+                let Some(sources) = &sources else {
+                    held(number, &holders, &targets, &sizes, &mut out)?;
+                    continue;
+                };
+                let mut stripes = Vec::new();
+                room(&mut stripes, sizes.threshold)?;
+                let made = fill(
+                    number,
+                    &holders,
+                    sources,
+                    &mut stripes,
+                    &targets,
+                    &sizes,
+                    &mut out,
+                );
+                made.map_err(|_| FileError::Memory)?;
+            }
+            Ok(())
+        };
+        let written = work();
+        if written.is_err() && sink.begun {
+            sink.outs.iter_mut().for_each(|out| out.fill(0));
         }
-        Ok(())
+        written
     }
 }
 
@@ -223,7 +234,7 @@ impl<'d> DataBlocks<'d> {
             shard: sizes.shard,
             block,
             whole,
-            tails: Buffer::zeros(length).ok_or(FileError::Memory)?,
+            tails: Buffer::zeros(length)?,
         })
     }
 

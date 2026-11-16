@@ -261,6 +261,19 @@ fn a_file_is_at_most_two_to_the_64_less_one_bytes_long() {
     assert_eq!(long.file_len(), long.shard_len() + 4 * long.blocks() + 78);
 }
 
+/// SHA-256 takes fewer than 2^64 bits: facts that state a digest stop below 2^61 bytes of data,
+/// and facts that state none go on. Nothing of the data is made.
+#[test]
+fn a_digest_is_stated_only_for_less_than_two_to_the_61_bytes() {
+    let facts = |data_len, digest| SetFacts::new(Field::Gf256, &[1], 1, data_len, 1 << 30, digest);
+    assert!(facts((1 << 61) - 1, Some([0; 32])).is_ok());
+    assert_eq!(
+        facts(1 << 61, Some([0; 32])).map(|_| ()),
+        Err(FileError::Size)
+    );
+    assert!(facts(1 << 61, None).is_ok());
+}
+
 /// A header that counts 2^32 blocks in a file of 43 bytes: the survey ends at the first block
 /// the file does not hold.
 #[test]

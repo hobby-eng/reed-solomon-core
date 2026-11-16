@@ -3,14 +3,15 @@
 //! out of the syndromes, and Berlekamp–Massey finds the remaining wrong symbols as usual. A column
 //! is fixed whenever `2e + s ≤ m − k`.
 
-use super::changes::Changes;
-use super::{Decoder, Lists, NoMemory, roomy, stripe_bytes};
+use super::changes::{Changes, FINGERPRINT};
+use super::{Decoder, Lists, roomy, stripe_bytes};
+use crate::buffer::Shortfall;
 use crate::code::{Code, CodeError};
 use crate::field::Field;
 use alloc::vec::Vec;
-use core::fmt;
 use core::ops::Deref;
-use zeroize::Zeroize;
+use sha2::{Digest as _, Sha256};
+use zeroize::Zeroizing;
 
 /// A symbol known to be unreadable: whatever its bytes hold, it is a gap at this place.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -31,39 +32,29 @@ pub enum ChangeKind {
     Replaced,
 }
 
-/// One symbol that a [`Plan`] changes. What it was and becomes can be a secret, such as a word of
-/// a recovery phrase: they are left out of its `Debug` text, and [`Zeroize`] wipes them.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+/// One symbol that a [`Plan`] changes: its place and how. What it holds and becomes can be a
+/// secret, such as a word of a recovery phrase, so a change does not carry them:
+/// [`Changes::values`] lets a program look at them where the list keeps them, and the strict
+/// mode's `values` does so on a protected stack.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Change {
     /// The place of its shard among the shards given.
     pub shard: usize,
     /// The place of the symbol in the shard, counted in symbols from the first.
     pub symbol: usize,
-    /// What the symbol holds now.
-    pub was: u16,
-    /// What it becomes.
-    pub becomes: u16,
     /// Whether it was marked or found.
     pub kind: ChangeKind,
 }
 
-impl fmt::Debug for Change {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Change")
-            .field("shard", &self.shard)
-            .field("symbol", &self.symbol)
-            .field("kind", &self.kind)
-            .finish_non_exhaustive()
-    }
-}
-
-impl Zeroize for Change {
-    fn zeroize(&mut self) {
-        self.shard.zeroize();
-        self.symbol.zeroize();
-        self.was.zeroize();
-        self.becomes.zeroize();
-    }
+/// A change with what the symbol holds and becomes, as the list keeps it; it never leaves the
+/// crate.
+#[derive(Clone, Copy)]
+pub(crate) struct Record {
+    pub(crate) shard: usize,
+    pub(crate) symbol: usize,
+    pub(crate) was: u16,
+    pub(crate) becomes: u16,
+    pub(crate) kind: ChangeKind,
 }
 
 /// What [`Code::plan`] found. Nothing was changed.
@@ -75,9 +66,9 @@ pub enum Plan {
     /// The shards agree and no symbol was marked.
     Agrees,
     /// Every column can be put right by these changes, in the order of the symbols and, within
-    /// one, of the shards. Every marked symbol is among them. Whether the result is the original
-    /// data is for a digest or an authentication to say. The list wipes itself when it is
-    /// dropped.
+    /// one, of the shards. Every marked symbol is among them. The list is bound to the shards it
+    /// was made for. Whether the result is the original data is for a digest or an
+    /// authentication to say. The list wipes itself when it is dropped.
     Changes(Changes),
     /// In `columns` symbol columns the spare shards cannot put the column right: more wrong and
     /// marked symbols than `2e + s ≤ m − k` allows, or more marks than spare shards.
@@ -115,13 +106,16 @@ impl Code {
         if length == 0 {
             return Ok(Plan::Agrees);
         }
-        let points: Vec<u16> = shards.iter().map(|&(index, _)| index).collect();
+        let mut points = roomy(shards.len()).map_err(CodeError::from)?;
+        points.extend(shards.iter().map(|&(index, _)| index));
         let mut decoder = Decoder::with_room(self.field(), points, spare, length, spare)
-            .map_err(|_| CodeError::Memory)?;
-        let mut changes = Changes::default();
+            .map_err(CodeError::from)?;
+        let reading = shards.iter().map(|&(index, bytes)| (index, bytes));
+        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+        let mut changes = Changes::bound(&print).map_err(CodeError::from)?;
         let unresolved = decoder
             .plan_pass(shards, length, &sorted, &mut changes)
-            .map_err(|_| CodeError::Memory)?;
+            .map_err(CodeError::from)?;
         if unresolved > 0 {
             return Ok(Plan::Unresolved {
                 columns: unresolved,
@@ -133,41 +127,89 @@ impl Code {
         Ok(Plan::Changes(changes))
     }
 
-    /// Makes `changes`: the list [`Code::plan`] found for these shards, or one a program collects
-    /// from changes of its own. Every change is checked first (its place, the value still there,
-    /// the new value), and if one doesn't fit, nothing is changed and it fails with
-    /// [`CodeError::Changes`].
+    /// Makes `changes`, the list [`Code::plan`] found, in these shards. Before anything is
+    /// written, the shards must be those the plan was made for, the same indexes in the same
+    /// order and every byte as it was, and the code this one; otherwise nothing is changed and
+    /// it fails with [`CodeError::Changes`].
     pub fn apply(
         &self,
         shards: &mut [(u16, &mut [u8])],
         changes: &Changes,
     ) -> Result<(), CodeError> {
-        apply_changes(self.field(), shards, changes)
+        let reading = shards.iter().map(|(index, bytes)| (*index, &**bytes));
+        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+        apply_changes(self.field(), shards, changes, &print)
+    }
+
+    /// What names this code in the fingerprint of a plan.
+    fn identity(&self) -> [u8; 14] {
+        let mut identity = [0; 14];
+        let threshold = u64::try_from(self.threshold())
+            .unwrap_or(u64::MAX)
+            .to_le_bytes();
+        let fields = (*b"P")
+            .into_iter()
+            .chain(self.field().tag())
+            .chain(threshold);
+        for (slot, byte) in identity.iter_mut().zip(fields) {
+            *slot = byte;
+        }
+        identity
     }
 }
 
-/// Makes `changes` in `shards`, given by place: every change is checked first, and if one does not
-/// fit, nothing is changed. Both codes apply their plans this way.
+/// The fingerprint of the shards a plan is made for: the SHA-256 of what names the code, then
+/// each shard's index or place, length and bytes. It follows from the data, so it lies only in the
+/// plan's own buffer, and `apply` compares it before it writes.
+pub(crate) fn fingerprint<'a>(
+    code: &[u8],
+    shards: impl Iterator<Item = (u16, &'a [u8])>,
+) -> [u8; FINGERPRINT] {
+    let mut hash = Sha256::new();
+    hash.update(b"reed-solomon-core plan\0");
+    hash.update(code);
+    for (index, bytes) in shards {
+        hash.update(index.to_le_bytes());
+        hash.update(u64::try_from(bytes.len()).unwrap_or(u64::MAX).to_le_bytes());
+        hash.update(bytes);
+    }
+    hash.finalize().into()
+}
+
+/// Makes `changes` in `shards`, given by place, once `fingerprint`, that of these shards, is the
+/// one the plan was made for: then every change is checked as well, and if one does not fit,
+/// nothing is changed. Both codes apply their plans this way.
 pub(crate) fn apply_changes(
     field: Field,
     shards: &mut [(u16, &mut [u8])],
     changes: &Changes,
+    fingerprint: &[u8; FINGERPRINT],
 ) -> Result<(), CodeError> {
+    let bound = changes.fingerprint();
+    let differ = bound
+        .iter()
+        .zip(fingerprint)
+        .fold(0, |differ, (own, given)| differ | (own ^ given));
+    if bound.len() != FINGERPRINT || differ != 0 {
+        return Err(CodeError::Changes);
+    }
     let symbol = field.symbol_bytes();
     let order = field.order();
-    let fits = changes.iter().all(|change| {
-        let held = place(shards, &change, symbol).map(value);
-        held == Some(change.was) && usize::from(change.becomes) < order
+    let fits = (0..changes.len()).all(|at| {
+        changes.record(at).is_some_and(|record| {
+            let held = place(shards, record.shard, record.symbol, symbol).map(value);
+            held == Some(record.was) && usize::from(record.becomes) < order
+        })
     });
     if !fits {
         return Err(CodeError::Changes);
     }
-    for change in changes {
-        let start = change.symbol * symbol;
+    for record in (0..changes.len()).filter_map(|at| changes.record(at)) {
+        let start = record.symbol * symbol;
         let bytes = shards
-            .get_mut(change.shard)
+            .get_mut(record.shard)
             .and_then(|(_, bytes)| bytes.get_mut(start..start + symbol));
-        let new = change.becomes.to_be_bytes();
+        let new = record.becomes.to_be_bytes();
         for (byte, &b) in bytes
             .into_iter()
             .flatten()
@@ -179,10 +221,15 @@ pub(crate) fn apply_changes(
     Ok(())
 }
 
-/// The bytes of the symbol a change names, when the shards have it.
-fn place<'s>(shards: &'s [(u16, &mut [u8])], change: &Change, symbol: usize) -> Option<&'s [u8]> {
-    let start = change.symbol.checked_mul(symbol)?;
-    let (_, bytes) = shards.get(change.shard)?;
+/// The bytes of the symbol at place `at` of the shard at place `shard`, when the shards have it.
+fn place<'s>(
+    shards: &'s [(u16, &mut [u8])],
+    shard: usize,
+    at: usize,
+    symbol: usize,
+) -> Option<&'s [u8]> {
+    let start = at.checked_mul(symbol)?;
+    let (_, bytes) = shards.get(shard)?;
     bytes.get(start..start.checked_add(symbol)?)
 }
 
@@ -279,7 +326,7 @@ impl Decoder {
         length: usize,
         marks: &[Mark],
         changes: &mut Changes,
-    ) -> Result<usize, NoMemory> {
+    ) -> Result<usize, Shortfall> {
         let symbol = self.field.symbol_bytes();
         let stripe = stripe_bytes(self.field, self.spare);
         let mut syndromes = core::mem::take(&mut self.syndromes);
@@ -351,7 +398,7 @@ impl Decoder {
                         .and_then(|(_, bytes)| bytes.get(begin..begin + symbol))
                         .unwrap_or_default();
                     let was = value(bytes);
-                    changes.push(Change {
+                    changes.push(Record {
                         shard: position,
                         symbol: at,
                         was,

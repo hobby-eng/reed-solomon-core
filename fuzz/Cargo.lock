@@ -199,7 +199,8 @@ dependencies = [
 [[package]]
 name = "secret-protection-core"
 version = "0.1.0"
-source = "git+https://github.com/hobby-eng/secret-protection-core?rev=fb2a6d345caf8eb58097f013f12e43985402150f#fb2a6d345caf8eb58097f013f12e43985402150f"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65b07592f705b51ec7cf3948e2bd76a01463c7b415962fba2fbcd42900a1f354"
 dependencies = [
  "landlock",
  "libc",

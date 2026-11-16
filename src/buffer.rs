@@ -15,21 +15,61 @@ use heap::Store;
 #[cfg(feature = "protect")]
 use pages::Store;
 
+#[cfg(feature = "protect")]
+use crate::strict::required;
+
+/// Without protected pages there is no strict mode to ask for them.
+#[cfg(not(feature = "protect"))]
+const fn required() -> bool {
+    false
+}
+
+/// Why the crate made no buffer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Shortfall {
+    /// The system gave no memory.
+    Memory,
+    /// In the strict mode, the system did not protect the pages as that mode requires.
+    Unprotected,
+}
+
+/// Whether pages are protected as the strict mode requires on this system: locked, out of child
+/// processes and, where the system keeps single pages out of dumps, out of dumps. Apple systems
+/// keep no single page out of a dump; there the process's own limit on dumps has to.
+pub(crate) const fn guarded(locked: bool, out_of_dumps: bool, out_of_children: bool) -> bool {
+    let dumps = cfg!(target_vendor = "apple") || out_of_dumps;
+    locked && dumps && out_of_children
+}
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 
 /// Bytes of data the crate made, wiped when dropped: a shard, a shard file, rebuilt data. With the
-/// `protect` feature they lie in pages of their own, which the system is asked to lock
-/// ([`Buffer::is_locked`] says whether it did) and to keep out of core dumps and child processes,
-/// as far as it has a call for each. Its `Debug` text gives the length only, and two buffers
-/// are compared without stopping at the first difference.
+/// `protect` feature they lie in pages of their own (the allocator's in WebAssembly) that the
+/// system is asked to lock and keep out of dumps and child processes; the methods below say what
+/// it did, and a strict call refuses pages that lack what it requires. `Debug` gives the length
+/// only, and two buffers are compared without stopping at a difference.
 #[derive(Default)]
 pub struct Buffer(Store);
 
 impl Buffer {
-    /// `length` zero bytes, or `None` when the system gives no memory for them.
-    pub(crate) fn zeros(length: usize) -> Option<Self> {
-        Store::zeros(length).map(Self)
+    /// `length` zero bytes. In the strict mode the pages must be protected as it requires, which
+    /// is checked before a byte is written; otherwise the buffer goes, wiped, and is refused.
+    pub(crate) fn zeros(length: usize) -> Result<Self, Shortfall> {
+        let buffer = Store::zeros(length).map(Self).ok_or(Shortfall::Memory)?;
+        if required() && !buffer.guarded() {
+            return Err(Shortfall::Unprotected);
+        }
+        Ok(buffer)
+    }
+
+    /// Whether its pages are protected as the strict mode requires on this system.
+    pub(crate) fn guarded(&self) -> bool {
+        guarded(
+            self.is_locked(),
+            self.is_out_of_dumps(),
+            self.is_out_of_children(),
+        )
     }
 
     /// The bytes.
@@ -59,7 +99,8 @@ impl Buffer {
 
     /// Whether a child process gets none of the bytes: no mapping of the pages, or zeros in
     /// their place. A child of `fork` must leave its parent's buffers alone: there a buffer says
-    /// it is not protected, dropping it touches nothing, and reading it ends the child.
+    /// it is not protected, dropping it touches nothing, and asking it for its bytes ends the
+    /// child. A slice taken before the `fork` is not checked again.
     #[must_use]
     pub fn is_out_of_children(&self) -> bool {
         self.0.is_out_of_children()
@@ -121,8 +162,8 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore = "Miri stops at an allocation that a system refuses")]
     fn a_buffer_beyond_the_system_is_refused() {
-        assert!(Buffer::zeros(usize::MAX).is_none());
-        assert!(Buffer::zeros(isize::MAX as usize).is_none());
+        assert_eq!(Buffer::zeros(usize::MAX), Err(Shortfall::Memory));
+        assert_eq!(Buffer::zeros(isize::MAX as usize), Err(Shortfall::Memory));
     }
 
     #[test]

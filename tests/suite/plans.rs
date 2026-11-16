@@ -4,9 +4,7 @@
 //! interpolation in Python.
 
 use crate::support::{FIELDS, bytes, data_in, plain, set};
-use reed_solomon_core::{
-    Change, ChangeKind, Code, CodeError, Correction, Field, Mark, Plan, Redundancy,
-};
+use reed_solomon_core::{ChangeKind, Code, CodeError, Correction, Field, Mark, Plan, Redundancy};
 
 /// The twelve words of a card as numbers of the BIP39 English list, and the four words the code
 /// adds at the points 12 to 15 (chronic identify give swift).
@@ -30,17 +28,54 @@ fn given(shards: &[Vec<u8>]) -> Vec<(u16, &[u8])> {
         .collect()
 }
 
-fn applied(
+/// A change as a test looks at it: its place, what the symbol held and becomes, and how.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Seen {
+    shard: usize,
+    symbol: usize,
+    was: u16,
+    becomes: u16,
+    kind: ChangeKind,
+}
+
+/// Every change of `plan` with its values, or `None` for a plan without a list.
+fn seen(plan: &Plan) -> Option<Vec<Seen>> {
+    let Plan::Changes(changes) = plan else {
+        return None;
+    };
+    let each = |(at, change): (usize, reed_solomon_core::Change)| {
+        let (was, becomes) = changes.values(at, |was, becomes| (was, becomes)).unwrap();
+        Seen {
+            shard: change.shard,
+            symbol: change.symbol,
+            was,
+            becomes,
+            kind: change.kind,
+        }
+    };
+    Some(changes.iter().enumerate().map(each).collect())
+}
+
+/// The shards after `apply` makes the changes of `plan` in them.
+fn applied(code: &Code, shards: &[Vec<u8>], plan: &Plan) -> Vec<Vec<u8>> {
+    assert!(matches!(plan, Plan::Changes(_)), "{plan:?}");
+    let Plan::Changes(changes) = plan else {
+        return shards.to_vec();
+    };
+    applied_changes(code, shards, changes)
+}
+
+/// The shards after `apply` makes `changes` in them.
+fn applied_changes(
     code: &Code,
     shards: &[Vec<u8>],
-    changes: impl IntoIterator<Item = Change>,
+    changes: &reed_solomon_core::Changes,
 ) -> Vec<Vec<u8>> {
     let mut out = shards.to_vec();
     let mut buffers: Vec<(u16, &mut [u8])> = (0..)
         .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
         .collect();
-    code.apply(&mut buffers, &changes.into_iter().collect())
-        .unwrap();
+    code.apply(&mut buffers, changes).unwrap();
     out
 }
 
@@ -66,21 +101,21 @@ fn a_card_with_two_gaps_and_a_wrong_word_is_put_right() {
     let marks = [mark(7, 0), mark(2, 0)];
     let plan = code.plan(&given(&read), &marks).unwrap();
     let expected = [
-        Change {
+        Seen {
             shard: 2,
             symbol: 0,
             was: 0,
             becomes: 0x220,
             kind: ChangeKind::Filled,
         },
-        Change {
+        Seen {
             shard: 7,
             symbol: 0,
             was: 0,
             becomes: 0x7C6,
             kind: ChangeKind::Filled,
         },
-        Change {
+        Seen {
             shard: 10,
             symbol: 0,
             was: 0x7FF,
@@ -88,8 +123,8 @@ fn a_card_with_two_gaps_and_a_wrong_word_is_put_right() {
             kind: ChangeKind::Replaced,
         },
     ];
-    assert_eq!(plan, Plan::Changes(expected.iter().copied().collect()));
-    assert_eq!(applied(&code, &read, expected.iter().copied()), card);
+    assert_eq!(seen(&plan), Some(expected.to_vec()));
+    assert_eq!(applied(&code, &read, &plan), card);
     // One gap more is beyond the four spare words: 2 · 1 + 3 = 5.
     read[0] = word(0);
     let more = [mark(7, 0), mark(2, 0), mark(0, 0)];
@@ -109,7 +144,7 @@ fn a_wrong_word_below_or_between_the_gaps_keeps_its_place_in_the_list() {
         read[1] = word(0);
         read[4] = word(0);
         read[wrong] = word(0x7FF);
-        let change = |shard: usize, kind| Change {
+        let change = |shard: usize, kind| Seen {
             shard,
             symbol: 0,
             was: match kind {
@@ -126,9 +161,8 @@ fn a_wrong_word_below_or_between_the_gaps_keeps_its_place_in_the_list() {
         ];
         expected.sort_by_key(|change| change.shard);
         let plan = code.plan(&given(&read), &[mark(4, 0), mark(1, 0)]).unwrap();
-        let listed = Plan::Changes(expected.iter().copied().collect());
-        assert_eq!(plan, listed, "wrong word {wrong}");
-        assert_eq!(applied(&code, &read, expected), card);
+        assert_eq!(seen(&plan), Some(expected), "wrong word {wrong}");
+        assert_eq!(applied(&code, &read, &plan), card);
     }
 }
 
@@ -161,28 +195,28 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
     // Column 2 has two gaps and a wrong symbol, column 0 a wrong symbol: within four spare.
     let plan = code.plan(&given(&read), &[mark(1, 2), mark(4, 2)]).unwrap();
     let expected = [
-        Change {
+        Seen {
             shard: 6,
             symbol: 0,
             was: 0x78,
             becomes: 0x79,
             kind: ChangeKind::Replaced,
         },
-        Change {
+        Seen {
             shard: 1,
             symbol: 2,
             was: 0x00,
             becomes: 0x67,
             kind: ChangeKind::Filled,
         },
-        Change {
+        Seen {
             shard: 4,
             symbol: 2,
             was: 0x00,
             becomes: 0x73,
             kind: ChangeKind::Filled,
         },
-        Change {
+        Seen {
             shard: 5,
             symbol: 2,
             was: 0x2D,
@@ -190,8 +224,8 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
             kind: ChangeKind::Replaced,
         },
     ];
-    assert_eq!(plan, Plan::Changes(expected.iter().copied().collect()));
-    assert_eq!(applied(&code, &read, expected.iter().copied()), set);
+    assert_eq!(seen(&plan), Some(expected.to_vec()));
+    assert_eq!(applied(&code, &read, &plan), set);
     // Leaving the two shards out instead costs every other column the same two spare shards,
     // and the correction alone still puts this right; with a second wrong symbol in column 0
     // only the marks do.
@@ -209,10 +243,7 @@ fn gaps_inside_long_shards_cost_only_their_symbols() {
         Ok(reed_solomon_core::Correction::Unresolved { .. })
     ));
     let plan = code.plan(&given(&read), &[mark(1, 2), mark(4, 2)]).unwrap();
-    let Plan::Changes(changes) = plan else {
-        panic!("{plan:?}")
-    };
-    assert_eq!(applied(&code, &read, &changes), set);
+    assert_eq!(applied(&code, &read, &plan), set);
 }
 
 #[test]
@@ -221,20 +252,14 @@ fn a_marked_symbol_that_holds_the_right_value_is_still_listed() {
     let set = set(&code, &data_in(Field::Gf256, 2, 3, 7), 4);
     let plan = code.plan(&given(&set), &[mark(3, 1), mark(3, 1)]).unwrap();
     let held = set[3][1].into();
-    assert_eq!(
-        plan,
-        Plan::Changes(
-            [Change {
-                shard: 3,
-                symbol: 1,
-                was: held,
-                becomes: held,
-                kind: ChangeKind::Filled,
-            }]
-            .into_iter()
-            .collect()
-        )
-    );
+    let expected = Seen {
+        shard: 3,
+        symbol: 1,
+        was: held,
+        becomes: held,
+        kind: ChangeKind::Filled,
+    };
+    assert_eq!(seen(&plan), Some(vec![expected]));
     // Without marks the same shards agree; with exactly k shards nothing is checked.
     assert_eq!(code.plan(&given(&set), &[]), Ok(Plan::Agrees));
     assert_eq!(code.plan(&given(&set[..2]), &[]), Ok(Plan::Unchecked));
@@ -323,7 +348,7 @@ fn within_the_bound_the_plan_gives_back_the_set_in_every_field() {
                     panic!("{field:?} {plan:?}")
                 };
                 assert_eq!(
-                    applied(&code, &read, &changes),
+                    applied_changes(&code, &read, &changes),
                     set,
                     "{field:?} k={k} n={n}"
                 );
@@ -367,7 +392,7 @@ fn beyond_the_bound_the_answer_is_unresolved_or_another_set() {
             match code.plan(&given(&read), &marks).unwrap() {
                 Plan::Unresolved { columns } => assert_eq!(columns, 1),
                 Plan::Changes(changes) => {
-                    let out = applied(&code, &read, &changes);
+                    let out = applied_changes(&code, &read, &changes);
                     let shards: Vec<(u16, &[u8])> = given(&out);
                     assert_eq!(code.redundancy(&shards), Ok(Redundancy::Agrees));
                     // Another set, then, but never farther than the bound reaches: every mark
@@ -412,9 +437,7 @@ fn a_column_with_more_marks_than_spare_shards_is_unresolved() {
     let plan = code
         .plan(&given(&set), &[mark(0, 1), mark(3, 1), mark(2, 0)])
         .unwrap();
-    let Plan::Changes(changes) = plan else {
-        panic!("{plan:?}")
-    };
+    let changes = seen(&plan).unwrap();
     assert_eq!(changes.len(), 3);
     assert!(
         changes
@@ -449,39 +472,29 @@ fn marks_are_checked_after_the_lengths_and_before_the_symbols() {
 }
 
 #[test]
-fn apply_checks_every_change_before_it_makes_one() {
+fn apply_refuses_shards_other_than_those_the_plan_was_made_for() {
     let code = Code::new(Field::Gf2048, 2).unwrap();
     let set = set(&code, &data_in(Field::Gf2048, 2, 4, 9), 4);
-    let first = u16::from_be_bytes([set[0][0], set[0][1]]);
-    let good = Change {
-        shard: 0,
-        symbol: 0,
-        was: first,
-        becomes: 0x123,
-        kind: ChangeKind::Replaced,
+    let mut read = set.clone();
+    read[0][1] ^= 1;
+    let plan = code.plan(&given(&read), &[]).unwrap();
+    let Plan::Changes(changes) = &plan else {
+        panic!("{plan:?}")
     };
-    for bad in [
-        Change {
-            was: first ^ 1,
-            ..good
-        },
-        Change {
-            becomes: 0x800,
-            ..good
-        },
-        Change { shard: 4, ..good },
-        Change { symbol: 2, ..good },
-    ] {
-        let mut out = set.clone();
+    // Another symbol changed after the plan, two shards swapped, and another code: nothing is
+    // written. The shards as read are put right.
+    let mut stale = read.clone();
+    stale[2][3] ^= 1;
+    let mut swapped = read.clone();
+    swapped.swap(1, 2);
+    let other = Code::new(Field::Gf2048, 3).unwrap();
+    for (code, shards) in [(&code, &stale), (&code, &swapped), (&other, &read)] {
+        let mut out = shards.clone();
         let mut buffers: Vec<(u16, &mut [u8])> = (0..)
             .zip(out.iter_mut().map(|bytes| bytes.as_mut_slice()))
             .collect();
-        assert_eq!(
-            code.apply(&mut buffers, &[good, bad].into_iter().collect()),
-            Err(CodeError::Changes)
-        );
-        assert_eq!(out, set);
+        assert_eq!(code.apply(&mut buffers, changes), Err(CodeError::Changes));
+        assert_eq!(&out, shards);
     }
-    let out = applied(&code, &set, [good]);
-    assert_eq!(out[0][..2], [0x01, 0x23]);
+    assert_eq!(applied(&code, &read, &plan), set);
 }

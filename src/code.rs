@@ -46,6 +46,9 @@ pub enum CodeError {
     /// or no parity, a field in which x is no generator, or a word longer than the order of its
     /// roots.
     Shape,
+    /// In the strict mode, memory a secret would pass through is not protected as that mode
+    /// requires: given by the caller, or made by the system for the call. Nothing was written.
+    Unprotected,
 }
 
 impl fmt::Display for CodeError {
@@ -56,13 +59,26 @@ impl fmt::Display for CodeError {
             Self::Repeated => "the same shard index was given twice",
             Self::Count => "the number of shards does not fit the threshold",
             Self::Length => "the shards differ in length or are not a whole number of symbols long",
-            Self::Buffer => "the working buffer is shorter than the threshold",
+            Self::Buffer => {
+                "a working buffer is too short: a weight per source, or 256 bytes to compare in"
+            }
             Self::Symbol => "a symbol of a shard is not an element of the field",
             Self::Mark => "a symbol marked unreadable is not among the shards given",
             Self::Changes => "a change does not fit the shards it is applied to",
             Self::Memory => "the system gave no memory for the call",
             Self::Shape => "the lengths, field or roots make no cyclic code",
+            Self::Unprotected => "the strict mode found memory the system does not protect",
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl From<crate::buffer::Shortfall> for CodeError {
+    fn from(shortfall: crate::buffer::Shortfall) -> Self {
+        match shortfall {
+            crate::buffer::Shortfall::Memory => Self::Memory,
+            crate::buffer::Shortfall::Unprotected => Self::Unprotected,
+        }
     }
 }
 
@@ -240,7 +256,7 @@ impl Sources<'_> {
         // The expected bytes follow from the data: with `protect` in pages of their own, without
         // it on the stack; wiped when the call returns either way.
         #[cfg(feature = "protect")]
-        let mut room = crate::buffer::Buffer::zeros(COMPARED).ok_or(CodeError::Memory)?;
+        let mut room = crate::buffer::Buffer::zeros(COMPARED)?;
         #[cfg(not(feature = "protect"))]
         let mut room = Zeroizing::new([0_u8; COMPARED]);
         self.compare(&recipe, stripes, shard, room.as_mut_slice())

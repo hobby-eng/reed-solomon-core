@@ -1,7 +1,7 @@
 //! Room for numbers of two bytes in a [`Buffer`]: the decoders cut their short lists from it, so
 //! that the lists lie in the same pages as the data they follow from, and are wiped with them.
 
-use super::Buffer;
+use super::{Buffer, Shortfall};
 use core::ops::{Deref, DerefMut};
 
 /// `count` numbers in a buffer of their own, seen through `bytemuck`, which needs no `unsafe`
@@ -13,12 +13,15 @@ pub(crate) struct Numbers {
 }
 
 impl Numbers {
-    /// `count` zeros, or `None` when the system gives no memory or the numbers would not fit.
-    pub(crate) fn zeros(count: usize) -> Option<Self> {
+    /// `count` zeros, refused as [`Buffer::zeros`] refuses, and when the numbers would not fit.
+    pub(crate) fn zeros(count: usize) -> Result<Self, Shortfall> {
         let buffer = Buffer::zeros(Self::bytes(count))?;
         let numbers = Self { buffer, count };
         // `align_to` may leave numbers out of its middle; then the room is refused, not short.
-        (numbers.all().len() >= count).then_some(numbers)
+        if numbers.all().len() < count {
+            return Err(Shortfall::Memory);
+        }
+        Ok(numbers)
     }
 
     /// The bytes [`Numbers::zeros`] asks for: one more than the numbers take, so that they can

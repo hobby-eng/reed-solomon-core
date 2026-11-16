@@ -45,7 +45,8 @@ fuzz_target!(|bytes: &[u8]| {
             let _ = sources.build(target, &stripes, &mut out);
             let agrees = sources.agrees(target, &stripes, &out);
             // In a room of any length: a short one is refused, a long one answers as `agrees`.
-            let mut room = vec![0xEE; next() % 300];
+            // Two bytes, so that rooms on both sides of `COMPARED` come.
+            let mut room = vec![0xEE; (next() << 8 | next()) % 512];
             let answer = sources.agrees_in(target, &stripes, &out, &mut room);
             assert!(if room.len() < COMPARED {
                 answer.is_err()

@@ -30,8 +30,9 @@ pub use set::{
 /// Why a shard file was not described, written or read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileError {
-    /// The field has no shard file: only [`crate::Field::Gf256`] and [`crate::Field::Gf65536`]
-    /// have one.
+    /// The field has no shard file: version 1 names only [`crate::Field::Gf256`] and
+    /// [`crate::Field::Gf65536`], so a field of [`crate::Field::binary`] has none, even one whose
+    /// symbols are single bytes.
     Field,
     /// A set identifier that is empty or longer than 32 bytes.
     Id,
@@ -43,7 +44,8 @@ pub enum FileError {
     Block,
     /// A shard would have more than 2^32 blocks: the set needs longer blocks.
     Blocks,
-    /// A file would be longer than 2^64 − 1 bytes.
+    /// A file would be longer than 2^64 − 1 bytes, or data of 2^61 bytes or more would state a
+    /// SHA-256, which takes fewer than 2^64 bits.
     Size,
     /// The bytes given for a shard are not as long as the set's shards are.
     Shard,
@@ -52,8 +54,12 @@ pub enum FileError {
     /// The data given does not have the SHA-256 that the facts of the set state.
     Digest,
     /// This machine has no memory for the file: it is longer than the machine addresses, or the
-    /// memory was not given. The format allows the file; nothing was written.
+    /// memory was not given. The format allows the file. A call that returns a buffer wrote
+    /// nothing; one that writes in place says what its outputs hold after a refusal.
     Memory,
+    /// In the strict mode, memory the file or its data would pass through is not protected as
+    /// that mode requires. A call refused before its work wrote nothing.
+    Unprotected,
     /// The bytes have no mark of a shard file, at the start or at the end.
     Unrecognized,
     /// The marks of a shard file are there, and neither copy of the header passes its checks.
@@ -80,17 +86,18 @@ pub enum FileError {
 impl fmt::Display for FileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
-            Self::Field => "a shard file holds bytes, and the symbols of this field are not bytes",
+            Self::Field => "the shard file names only GF(2^8) by 0x11D and GF(2^16) built over it",
             Self::Id => "the set identifier is empty or longer than 32 bytes",
             Self::Threshold => "the threshold is zero or above the field's number of shards",
             Self::Index => "the field has no shard with this index",
             Self::Block => "the block length is zero or not a whole number of symbols",
             Self::Blocks => "a shard would have more than 2^32 blocks",
-            Self::Size => "a shard file would be longer than 2^64 - 1 bytes",
+            Self::Size => "a shard file or the data with its SHA-256 would be too long",
             Self::Shard => "the bytes are not as long as a shard of this set",
             Self::Data => "the data is not as long as the facts of the set say",
             Self::Digest => "the data does not have the SHA-256 the facts of the set state",
             Self::Memory => "this machine has no memory for the shard file",
+            Self::Unprotected => "the strict mode found memory the system does not protect",
             Self::Unrecognized => "the bytes are not a shard file",
             Self::Damaged => "the header of the shard file is damaged in both copies",
             Self::Version(version) => {
@@ -110,6 +117,16 @@ impl fmt::Display for FileError {
 }
 
 impl core::error::Error for FileError {}
+
+#[cfg(feature = "alloc")]
+impl From<crate::buffer::Shortfall> for FileError {
+    fn from(shortfall: crate::buffer::Shortfall) -> Self {
+        match shortfall {
+            crate::buffer::Shortfall::Memory => Self::Memory,
+            crate::buffer::Shortfall::Unprotected => Self::Unprotected,
+        }
+    }
+}
 
 /// The published check value of CRC-32C, for the self-test.
 pub(crate) fn checksum_known_answer() -> bool {
@@ -131,18 +148,12 @@ pub(crate) fn file_known_answer() -> bool {
     /// The place of the block's first byte.
     const BLOCK_AT: usize = 33;
     let shard = [0xF4, 0x00, 0x00, 0x00];
+    // The writer itself writes the file, into an array: every byte is compared.
+    let mut file = [0; 86];
     let written = SetFacts::new(crate::Field::Gf256, &[1], 3, 10, 4, None)
         .and_then(|set| Header::new(set, 4))
-        .is_ok_and(|header| {
-            header
-                .as_bytes()
-                .iter()
-                .chain(&shard)
-                .chain(&header.block_checksum(0, &shard).to_be_bytes())
-                .chain(header.as_bytes())
-                .chain(&header.trailer())
-                .eq(&FILE)
-        });
+        .and_then(|header| header.file_into(&shard, &mut file))
+        .is_ok_and(|()| file == FILE);
     let read = ShardFile::read(&FILE)
         .is_ok_and(|file| file.survey().whole() && file.block(0) == Some(Block::Intact(&shard)));
     let mut changed = FILE;
@@ -169,17 +180,12 @@ pub(crate) fn digest_known_answer() -> bool {
 /// its own digest rebuilds and says the digest matched.
 #[cfg(feature = "alloc")]
 pub(crate) fn digest_refusal_known_answer() -> bool {
-    use alloc::vec::Vec;
     let field = crate::Field::Gf256;
     let rebuilt = |facts: SetFacts| -> Option<Result<Rebuilt, SetError>> {
-        let files: Vec<crate::Buffer> = (0..3_u8)
-            .map(|index| {
-                let shard = [b"abc".get(usize::from(index)).copied()?];
-                Header::new(facts, index.into()).ok()?.file(&shard).ok()
-            })
-            .collect::<Option<_>>()?;
-        let given: Vec<&[u8]> = files.iter().map(|file| file.as_slice()).collect();
-        let pile = Pile::new(&given).ok()?;
+        let file =
+            |index: u8, symbol: u8| Header::new(facts, index.into()).ok()?.file(&[symbol]).ok();
+        let [a, b, c] = [file(0, b'a')?, file(1, b'b')?, file(2, b'c')?];
+        let pile = Pile::new(&[a.as_slice(), b.as_slice(), c.as_slice()]).ok()?;
         Some(pile.sets().first()?.rebuild(None))
     };
     let other = SetFacts::for_data(field, &[1], 3, b"abd", 1, DataDigest::Sha256);
@@ -203,7 +209,6 @@ pub(crate) fn digest_refusal_known_answer() -> bool {
 /// one block and takes 945 steps.
 #[cfg(feature = "alloc")]
 pub(crate) fn vote_known_answer() -> bool {
-    use alloc::vec::Vec;
     let named = Outvoted {
         position: 0,
         index: 0,
@@ -221,7 +226,10 @@ pub(crate) fn vote_known_answer() -> bool {
     if let Some(first) = files.first_mut() {
         *first = other;
     }
-    let given: Vec<&[u8]> = files.iter().map(|file| file.as_slice()).collect();
+    let [a, b, c, d, e] = files.as_slice() else {
+        return false;
+    };
+    let given = [a, b, c, d, e].map(|file| file.as_slice());
     let vote = Pile::new(&given)
         .ok()
         .and_then(|pile| pile.sets().first()?.vote(None).ok());

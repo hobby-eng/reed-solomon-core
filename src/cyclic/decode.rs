@@ -119,10 +119,11 @@ impl Word {
         let field = self.field;
         work.syndromes.clear();
         work.syndromes.resize(self.parity, 0);
-        for (place, &symbol) in symbols.iter().enumerate() {
+        for (place, symbol) in symbols.iter().enumerate() {
             if erased.binary_search(&place).is_ok() {
                 continue;
             }
+            let symbol = *symbol;
             let x = self.locator(place);
             let mut factor = field.multiply(symbol, power(field, x, self.first));
             for syndrome in work.syndromes.as_mut_slice() {

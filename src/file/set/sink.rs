@@ -7,6 +7,10 @@ use crate::file::header::Header;
 
 /// What takes the blocks a set makes.
 pub(in crate::file) trait Sink {
+    /// Starts the writing, once the work has every buffer and list it needs: from then on a
+    /// refusal leaves zeros in the outputs, before it they stay as they were.
+    fn begin(&mut self) -> Result<(), SetError>;
+
     /// Takes `bytes`, block `number` of the target at `slot`, which starts at byte `start` of its
     /// shard.
     fn put(&mut self, slot: usize, number: u32, start: usize, bytes: &[u8])
@@ -20,9 +24,16 @@ pub(super) struct Data<'o> {
     pub(super) shard: usize,
     /// Every padding byte, or-ed together.
     pub(super) padding: u8,
+    /// Whether the writing started.
+    pub(super) begun: bool,
 }
 
 impl Sink for Data<'_> {
+    fn begin(&mut self) -> Result<(), SetError> {
+        self.begun = true;
+        Ok(())
+    }
+
     fn put(&mut self, slot: usize, _: u32, start: usize, bytes: &[u8]) -> Result<(), SetError> {
         let at = slot
             .checked_mul(self.shard)
@@ -45,9 +56,23 @@ pub(in crate::file) struct Files<'s, 'o> {
     pub(in crate::file) outs: &'s mut [&'o mut [u8]],
     pub(in crate::file) headers: &'s [Header],
     pub(in crate::file) by_slot: &'s BySlot,
+    /// Whether the writing started.
+    pub(in crate::file) begun: bool,
 }
 
 impl Sink for Files<'_, '_> {
+    /// The header of each output, its copy and the trailer.
+    fn begin(&mut self) -> Result<(), SetError> {
+        self.begun = true;
+        for (slot, header) in self.headers.iter().enumerate() {
+            for &position in self.by_slot.of(slot) {
+                let out = self.outs.get_mut(position).ok_or(SetError::Memory)?;
+                header.write_frame(out).ok_or(SetError::Memory)?;
+            }
+        }
+        Ok(())
+    }
+
     fn put(&mut self, slot: usize, number: u32, _: usize, bytes: &[u8]) -> Result<(), SetError> {
         let header = self.headers.get(slot).ok_or(SetError::Memory)?;
         for &position in self.by_slot.of(slot) {
@@ -76,7 +101,8 @@ impl BySlot {
         super::room(&mut order, slots.len())?;
         super::room(&mut starts, count.saturating_add(1))?;
         order.extend(0..slots.len());
-        order.sort_by_key(|&position| slots.get(position).copied());
+        // Unstable, so that sorting asks for no memory; the position keeps equal slots in order.
+        order.sort_unstable_by_key(|&position| (slots.get(position).copied(), position));
         let slot_at = |position: &usize| slots.get(*position).copied().unwrap_or(usize::MAX);
         starts.extend((0..=count).map(|slot| order.partition_point(|p| slot_at(p) < slot)));
         Ok(Self { order, starts })

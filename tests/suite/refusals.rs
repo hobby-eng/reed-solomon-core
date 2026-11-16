@@ -250,6 +250,12 @@ fn a_comparison_in_the_callers_room_answers_as_agrees() {
         sources.agrees_in(2048, &good, &made, &mut short),
         Err(CodeError::Buffer)
     );
+    // With two shards the text still names the room a comparison needs.
+    assert!(
+        CodeError::Buffer
+            .to_string()
+            .contains("256 bytes to compare in")
+    );
     assert_eq!(
         sources.agrees_in(2, &good, &made, &mut []),
         Err(CodeError::Buffer)

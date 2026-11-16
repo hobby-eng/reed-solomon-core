@@ -1,10 +1,11 @@
 //! Data can be a secret: the `Debug` text of what holds it gives lengths, not bytes, and a change
-//! of a plan is wiped by `Zeroize`. Wiping memory that was given back cannot be seen from safe
-//! code; that the results come in a `Buffer` is checked by the types of the calls.
+//! of a plan carries its place, while its values stay in the plan's list. Wiping memory that was
+//! given back cannot be seen from safe code; that the results come in a `Buffer` is checked by
+//! the types of the calls.
 
 use crate::sets::{one_set, slices};
 use reed_solomon_core::{
-    Change, ChangeKind, Code, DataDigest, Field, Mark, Pile, Plan, SetFacts, ShardFile, Zeroize,
+    Change, ChangeKind, Code, DataDigest, Field, Mark, Pile, Plan, SetFacts, ShardFile,
 };
 
 /// Data whose bytes are easy to find in a text: 0xAB is 171.
@@ -99,7 +100,7 @@ fn the_debug_text_of_rebuilt_data_gives_its_length_only() {
 }
 
 #[test]
-fn a_change_shows_its_place_and_kind_and_is_wiped() {
+fn a_change_shows_its_place_and_kind_and_its_values_stay_in_the_list() {
     let code = Code::new(Field::Gf2048, 2).unwrap();
     let data: [&[u8]; 2] = [&[0x00, 0xAB], &[0x00, 0xAB]];
     let set = code.encode(&data, &[0, 1, 2, 3]).unwrap();
@@ -115,23 +116,18 @@ fn a_change_shows_its_place_and_kind_and_is_wiped() {
             }],
         )
         .unwrap();
-    // The list hides itself whole; a change shows its place and kind.
+    // The list hides itself whole; a change carries its place and kind only, and the values are
+    // looked at where the list keeps them.
     let text = format!("{plan:?}");
     assert_eq!(text, "Changes(Changes(1))");
     let Plan::Changes(changes) = plan else {
         panic!("{text}")
     };
-    let mut change: Change = changes.get(0).unwrap();
+    let change: Change = changes.get(0).unwrap();
     let text = format!("{change:?}");
     shows_no_byte(&text);
-    assert_eq!(text, "Change { shard: 1, symbol: 0, kind: Filled, .. }");
-    assert_eq!(
-        (change.was, change.becomes, change.kind),
-        (0xAB, 0xAB, ChangeKind::Filled)
-    );
-    change.zeroize();
-    assert_eq!(
-        (change.shard, change.symbol, change.was, change.becomes),
-        (0, 0, 0, 0)
-    );
+    assert_eq!(text, "Change { shard: 1, symbol: 0, kind: Filled }");
+    assert_eq!(change.kind, ChangeKind::Filled);
+    let values = changes.values(0, |was, becomes| (was, becomes));
+    assert_eq!(values, Some((0xAB, 0xAB)));
 }

@@ -253,6 +253,9 @@ impl<'s, 'a> Poll<'s, 'a> {
         room(&mut wrong, shards.len() / 2)?;
         room(&mut firsts, shards.len())?;
         room(&mut marks, set.members.len())?;
+        // A block has a slot for each file at most: the list never grows, nor leaves a copy.
+        let mut differing = Zeroizing::new(Vec::new());
+        room(&mut differing, set.members.len())?;
         for shard in shards {
             firsts.push(marks.len());
             marks.extend((0..shard.files()).map(|_| Mark::default()));
@@ -269,7 +272,7 @@ impl<'s, 'a> Poll<'s, 'a> {
             weights: Vec::new(),
             stripes: Vec::new(),
             made: Buffer::default(),
-            differing: Zeroizing::new(Vec::new()),
+            differing,
             firsts,
             marks,
             open: Bits::default(),
@@ -348,7 +351,7 @@ impl<'s, 'a> Poll<'s, 'a> {
             self.voters.extend(indexes);
             let field = self.code.field();
             let finder = Finder::new(field, &self.voters, spare, self.block);
-            self.finder = Some(finder.map_err(|_| SetError::Memory)?);
+            self.finder = Some(finder.map_err(SetError::from)?);
             self.steps += rates.weights();
         }
         let finder = self.finder.as_mut().ok_or(SetError::Memory)?;
@@ -390,7 +393,7 @@ impl<'s, 'a> Poll<'s, 'a> {
         }
         let length = self.stripes.first().map_or(0, |stripe| stripe.len());
         if self.made.len() < length {
-            self.made = Buffer::zeros(length).ok_or(SetError::Memory)?;
+            self.made = Buffer::zeros(length)?;
         }
         let made = self.made.get_mut(..length).unwrap_or_default();
         let sources = self.code.sources(&self.lowest, &mut self.weights)?;

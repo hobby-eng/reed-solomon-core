@@ -68,10 +68,11 @@ fuzz_target!(|bytes: &[u8]| {
             // exactly where a mark is, starts from what was read, and every mark is listed.
             let places: Vec<(usize, usize)> = changes.iter().map(|c| (c.symbol, c.shard)).collect();
             assert!(places.windows(2).all(|pair| pair[0] < pair[1]));
-            for change in &changes {
+            for (at, change) in changes.iter().enumerate() {
                 let marked = is_marked(change.shard, change.symbol);
                 assert_eq!(matches!(change.kind, ChangeKind::Filled), marked);
-                assert_eq!(change.was, held(&read, change.shard, change.symbol));
+                let was = changes.values(at, |was, _| was);
+                assert_eq!(was, Some(held(&read, change.shard, change.symbol)));
             }
             assert!(
                 marks

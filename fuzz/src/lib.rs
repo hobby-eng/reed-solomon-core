@@ -29,8 +29,9 @@ pub fn left_as_promised<T>(answer: &Result<T, SetError>, outputs: &[&[u8]]) {
         SetError::Inconsistent { .. }
         | SetError::Padding
         | SetError::Digest { .. }
+        | SetError::DigestDiffers { .. }
         | SetError::Code(_) => all(0),
-        SetError::Memory => all(FILL) || all(0),
+        SetError::Memory | SetError::Unprotected => all(FILL) || all(0),
     };
     assert!(held, "{error:?} left its outputs otherwise");
 }

@@ -2,8 +2,20 @@
 
 use super::{COMPARED, Code, CodeError, in_field, one_length};
 use crate::buffer::Buffer;
-use alloc::vec;
+use crate::correct::roomy;
 use alloc::vec::Vec;
+
+/// An empty list with room for `count` elements, or [`CodeError::Memory`].
+fn listed<T>(count: usize) -> Result<Vec<T>, CodeError> {
+    roomy(count).map_err(CodeError::from)
+}
+
+/// `count` zeros, or [`CodeError::Memory`].
+fn zeroed(count: usize) -> Result<Vec<u16>, CodeError> {
+    let mut list = listed(count)?;
+    list.resize(count, 0);
+    Ok(list)
+}
 
 /// What the shards beyond the threshold say about a set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,7 +55,8 @@ impl Code {
         if count > self.field.order() {
             return Err(CodeError::Repeated);
         }
-        let mut seen: Vec<u16> = indexes.collect();
+        let mut seen = listed(count)?;
+        seen.extend(indexes);
         seen.sort_unstable();
         if seen.windows(2).any(|pair| pair.first() == pair.last()) {
             return Err(CodeError::Repeated);
@@ -66,7 +79,11 @@ impl Code {
     fn chosen<'a>(&self, shards: &[(u16, &'a [u8])]) -> Result<Chosen<'a>, CodeError> {
         let indexes = shards.iter().map(|&(index, _)| index);
         let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
-        let (indexes, stripes) = shards.iter().take(self.threshold).copied().unzip();
+        let (mut indexes, mut stripes) = (listed(self.threshold)?, listed(self.threshold)?);
+        for &(index, bytes) in shards.iter().take(self.threshold) {
+            indexes.push(index);
+            stripes.push(bytes);
+        }
         Ok(Chosen {
             indexes,
             stripes,
@@ -82,7 +99,8 @@ impl Code {
             return Err(CodeError::Count);
         }
         // The threshold is at most 65,536, so every data index fits.
-        let numbered: Vec<(u16, &[u8])> = (0..=u16::MAX).zip(data.iter().copied()).collect();
+        let mut numbered = listed(data.len())?;
+        numbered.extend((0..=u16::MAX).zip(data.iter().copied()));
         self.rebuild(&numbered, targets)
     }
 
@@ -102,11 +120,11 @@ impl Code {
             self.field.point(target).ok_or(CodeError::Index)?;
         }
         self.check_symbols(shards.iter().map(|&(_, bytes)| bytes))?;
-        let mut weights = vec![0; self.threshold];
+        let mut weights = zeroed(self.threshold)?;
         let sources = self.sources(&chosen.indexes, &mut weights)?;
-        let mut made = Vec::with_capacity(targets.len());
+        let mut made = listed(targets.len())?;
         for &target in targets {
-            let mut shard = Buffer::zeros(chosen.length).ok_or(CodeError::Memory)?;
+            let mut shard = Buffer::zeros(chosen.length)?;
             sources.build(target, &chosen.stripes, &mut shard)?;
             made.push(shard);
         }
@@ -122,10 +140,10 @@ impl Code {
         if spare.is_empty() {
             return Ok(Redundancy::None);
         }
-        let mut weights = vec![0; self.threshold];
+        let mut weights = zeroed(self.threshold)?;
         let sources = self.sources(&chosen.indexes, &mut weights)?;
         // One room for the expected bytes of every shard compared.
-        let mut room = Buffer::zeros(COMPARED).ok_or(CodeError::Memory)?;
+        let mut room = Buffer::zeros(COMPARED)?;
         for &(index, bytes) in spare {
             if !sources.agrees_in(index, &chosen.stripes, bytes, &mut room)? {
                 return Ok(Redundancy::Differs);

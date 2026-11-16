@@ -13,7 +13,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use reed_solomon_core::{
-    Change, ChangeKind, CodeError, Correction, CyclicCode, CyclicWords, Field, Mark, Plan,
+    Change, ChangeKind, Changes, CodeError, Correction, CyclicCode, CyclicWords, Field, Mark, Plan,
 };
 use reed_solomon_core_fuzz::{damage, symbol, within};
 
@@ -231,8 +231,14 @@ fuzz_target!(|bytes: &[u8]| {
     );
     match (&plan, &code.plan(&views(&other), &lost, &marks).unwrap()) {
         (Plan::Changes(one), Plan::Changes(two)) => {
-            let made = |c: Change| (c.shard, c.symbol, c.becomes, c.kind);
-            assert!(one.iter().map(made).eq(two.iter().map(made)));
+            let made = |list: &Changes| {
+                let each = |(at, c): (usize, Change)| {
+                    let becomes = list.values(at, |_, becomes| becomes);
+                    (c.shard, c.symbol, becomes, c.kind)
+                };
+                list.iter().enumerate().map(each).collect::<Vec<_>>()
+            };
+            assert_eq!(made(one), made(two));
         }
         (one, two) => assert_eq!(one, two),
     }

@@ -7,7 +7,7 @@
 [![RustSec audit](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml/badge.svg)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 2^m shards in a field GF(2^m) the program chooses, from 4 to 65,536, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. It depends on `sha2` and `zeroize`, and by default on `secret-protection-core`, which keeps data in protected memory pages and brings the standard library. The crate holds no `unsafe` code, and without its default features it works without an allocator.
+reed-solomon-core is a Reed–Solomon library for sets of shards. Data cut into `k` shards becomes a set of up to 2^m shards in a field GF(2^m) the program chooses, from 4 to 65,536, and any `k` of them rebuild it. A lost shard can be made again, a set can be given more shards later, and wrong bytes at unknown places can be found and corrected, together with gaps a reader marks. A shard can be kept in a shard file, which names its set and checks itself block by block. For a secret, such as the words of a recovery phrase, the strict mode works only in protected memory and refuses where the system does not protect it. It depends on `sha2` and `zeroize`; with an allocator also on `bytemuck`, which shows the bytes of a buffer as numbers; and by default on `secret-protection-core`, which keeps data in protected memory pages and brings the standard library. The crate holds no `unsafe` code, and without its default features it works without an allocator.
 
 The [documentation index](docs/README.md) lists the guides; [How it works](docs/TECHNICAL.md) has the mathematics and the guarantees.
 
@@ -20,6 +20,7 @@ Line coverage on Linux x86-64, measured on 2026-11-15 with the default features,
 - [Two constructions](#two-constructions)
 - [Fields](#fields)
 - [Shard files](#shard-files)
+- [Secrets in memory](#secrets-in-memory)
 - [What it does not do](#what-it-does-not-do)
 - [Limits](#limits)
 - [Use from Rust](#use-from-rust)
@@ -78,6 +79,7 @@ A set is written from `k` data shards of equal length. The first `k` shards of t
 | Add check symbols after data, as QR codes do  | `CyclicCode::encode`                                            | the data                           |
 | Put such words right, with marked gaps        | `CyclicCode::plan`, then `CyclicCode::apply`                    | every shard of the word            |
 | Do the same without an allocator              | `CyclicWords::encode`, `agrees`, `correct_word`                 | the caller's own buffers           |
+| Handle a secret, such as a recovery phrase    | the calls of `reed_solomon_core::strict`                        | memory the crate can check         |
 
 Correction finds wrong symbols without being told where they are. With `m` shards at hand it puts right up to `(m − k) / 2` wrong symbols at every position of the shards; shards that are missing are simply not given. In short, a set of `n` shards survives `e` wrong and `s` missing shards when `2e + s ≤ n − k`. Either every position is corrected or nothing is changed.
 
@@ -228,17 +230,70 @@ assert_eq!((first.as_slice(), second.as_slice()), (&*files[0], &*files[1]));
 
 [How it works](docs/TECHNICAL.md#the-shard-file) has every byte of the format, every rule of reading and the rules for sets.
 
+## Secrets in memory
+
+Data can be a secret, such as the words of a recovery phrase. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate, which the system is asked to keep out of swap, core dumps and child processes. The calls of the crate's root types take what the system gives and go on when it gives less; a buffer says what it got. They are for public data and ciphertext.
+
+A secret in the open goes through the strict mode, `reed_solomon_core::strict`. It has the same calls, but each takes and gives the secret only in memory whose protection the crate can check: its own `Buffer`, `protect::Secret` and `protect::WorkArea`. A `Vec` or an array given to a strict call does not compile, and the headers and facts a strict call gives stay strict types; `as_portable` is the explicit step to the root calls, for public data. The system may give such memory less protection than asked for, so the program checks a buffer (`strict::Held::guarded`) before it puts a secret in, as the example does. Before the first secret byte is written, a strict call checks every buffer the program gives and every one it makes, its results included: each must be locked against swap, kept out of child processes and, where the system keeps single pages out of dumps, out of dumps. If one is not, the call answers `Unprotected`, and nothing falls back to other memory. The call itself runs on a stack of its own in such pages, wiped afterwards, so that the temporaries of the arithmetic and of SHA-256 stay out of swap as well. Linux, Android, macOS and iOS give one. Windows gives a thread no stack of the program's choosing, so there, as in WebAssembly and on other systems, every strict call on the bytes of a secret refuses: `strict::Code::new` and the public facts work, `encode` answers `Unprotected`. The root calls work there as they do everywhere.
+
+```rust
+use reed_solomon_core::protect::Secret;
+use reed_solomon_core::strict::{self, CyclicCode, Held, HeldMut};
+use reed_solomon_core::{Field, Mark, Plan};
+
+// The system may protect less than it is asked to: memory is checked before a byte goes in.
+let protected = |length| match Secret::with_capacity(length) {
+    secret if Held::guarded(&secret) => Ok(secret),
+    _ => Err("the system does not protect this memory"),
+};
+// Each word of a card in protected memory of its own, as a program reads it in; the numbers
+// stand in the open here only to keep the example short.
+let code = CyclicCode::new(Field::Gf2048, 12, 4, 1, 1)?;
+let card: [u16; 12] = [
+    0x371, 0x6CE, 0x220, 0x11D, 0x2DB, 0x73E, 0x12B, 0x7C6, 0x7D5, 0x7AF, 0x6A9, 0x453,
+];
+let mut words = Vec::new();
+for word in card {
+    let mut held = protected(2)?;
+    held.push(&word.to_be_bytes())?;
+    words.push(held);
+}
+let data: Vec<&dyn Held> = words.iter().map(|word| word as &dyn Held).collect();
+let mut repair = code.encode(&data)?;
+assert!(repair.iter().all(|word| word.is_locked()));
+
+// Word 3 is smudged and marked. The plan keeps what it read and what it writes in protected
+// pages and fits only these words; `strict::values` hands a value over on the protected
+// stack, here straight into protected memory of the program's.
+words[2].as_mut_bytes().fill(0);
+let mut read: Vec<&dyn Held> = words.iter().map(|word| word as &dyn Held).collect();
+read.extend(repair.iter().map(|word| word as &dyn Held));
+let Plan::Changes(changes) = code.plan(&read, &[], &[Mark { shard: 2, symbol: 0 }])? else {
+    return Err("the card is within 2e + s ≤ 4".into());
+};
+let mut shown = protected(2)?;
+let pushed = strict::values(&changes, 0, |_, becomes| shown.push(&becomes.to_be_bytes()))?;
+assert!(matches!(pushed, Some(Ok(()))) && shown.as_bytes() == 0x220_u16.to_be_bytes());
+let mut shards: Vec<&mut dyn HeldMut> = words.iter_mut().map(|w| w as &mut dyn HeldMut).collect();
+shards.extend(repair.iter_mut().map(|w| w as &mut dyn HeldMut));
+code.apply(&mut shards, &changes)?;
+assert_eq!(words[2].as_bytes(), 0x220_u16.to_be_bytes());
+```
+
+The crate never reads or writes a disk. A strict call reads shard files only from memory it can check, so a program reads a file straight into a `protect::Secret` or `WorkArea`, and it puts the data of a set together and writes files only into such memory, never into a mapping of a file. Saving a file or the data to a disk is a separate act of the program, and the protection of memory does not reach the disk.
+
+A strict call costs, on top of its buffers, a thread with 512 KiB of locked stack, and everything it holds at once must fit under the system's limit on locked memory, 8 MiB by default on Linux; beyond it the call answers `Unprotected`. A card takes a few pages. The crate passes the protection crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
+
 ## What it does not do
 
-reed-solomon-core holds no secret, and its one cryptographic function, SHA-256 from the `sha2` crate, checks data, not people. Its checks say whether shards belong together and whether the data has the digest its files state, never who made them: someone who can change every shard can make a consistent set of other data and state its digest. Beyond the correction limit the answer is either "unresolved" or a different valid set. A program that needs to know it got the original data back compares a digest or an authentication tag it trusts from elsewhere. The checksums of a shard file find accidental damage and are no signature.
-
-Data can be a secret. The crate wipes every buffer it filled with data when it lets go of it, keeps the bytes of data out of every `Debug` text, and multiplies symbols without tables or branches on their values. Every result that holds data comes in a `Buffer`, and so does every working buffer of bytes that follow from data; the outputs of `FileSet::rebuild_into` and `FileSet::repairs_into` are the program's own memory, for the program to protect. With the `protect` feature, which is on by default, a `Buffer` lies in memory pages of its own from the `secret-protection-core` crate, which keeps them out of swap, core dumps and child processes as far as each system allows. The crate passes that crate on as `reed_solomon_core::protect`, so that a program can also close its whole process against a secret leaving it (`protect::Isolation`), which only the program can decide. [How it works](docs/TECHNICAL.md#secrets-in-memory) says what is covered and what is not.
+reed-solomon-core holds no key, and its one cryptographic function, SHA-256 from the `sha2` crate, checks data, not people. Its checks say whether shards belong together and whether the data has the digest its files state, never who made them: someone who can change every shard can make a consistent set of other data and state its digest. Beyond the correction limit the answer is either "unresolved" or a different valid set. A program that needs to know it got the original data back compares a digest or an authentication tag it trusts from elsewhere. The checksums of a shard file find accidental damage and are no signature. Nothing is encrypted: the first `k` shards of a set are the data itself.
 
 ## Limits
 
 - Shards of one set have one length, a whole number of symbols.
 - Correction asks for at most `Code::correction_memory` bytes of working memory, under 8 MiB for any set, whatever the length of the shards, and `CyclicCode::correct` for at most 4 MiB of syndromes and a few elements per shard, while `CyclicWords` works in the room the caller gives; with `protect` the system maps whole pages for the syndromes and for the room of a search's short lists. A plan of either code holds every change it lists.
-- A file is read through the bytes a program gives: one larger than memory is given as a mapping of it, which must not change from `Pile::new` until the last call on its set returns, and the calls that end in `_into` write into mappings as well. Where a system has no mappings, as in a browser, the files and the data have to fit in memory. `Field::Gf2048` has no shard file, because its symbols are not the bytes of a file.
+- A file is read through the bytes a program gives: one larger than memory is given as a mapping of it, which must not change from `Pile::new` until the last call on its set returns, and the calls that end in `_into` write into mappings as well. Where a system has no mappings, as in a browser, the files and the data have to fit in memory. Version 1 of the shard file names two fields, `Field::Gf256` and `Field::Gf65536`; the others have no shard file, the fields of `Field::binary` with one-byte symbols included.
+- The strict mode needs the `protect` feature and a system that protects pages and a stack as it requires: Linux, Android, macOS and iOS. On Windows, in WebAssembly and on other systems every strict call on the bytes of a secret refuses; making a code and reading public facts work. What one call holds at once must fit under the system's limit on locked memory.
 - A rebuild compares the SHA-256 only when the files state one; files written without it rebuild with nothing compared, and with exactly `k` files no shard is compared either. Making one lost file again compares no digest.
 - The vote names the files that differ from what most shards share, within a stated bound: a wrong file takes two spare files in every block it is wrong in. It does not say that the files left hold the data once written; a digest the program trusts does.
 - A step of the work limit took about one and a half nanoseconds in GF(2^8) and four and a half in GF(2^16) on one laptop, natively and in a browser's engine ([measured time](docs/TECHNICAL.md#measured-time)); a phone was not measured.
@@ -268,11 +323,13 @@ assert_eq!(code.correct(&mut given)?, Correction::Corrected(vec![0, 0, 1, 0, 0])
 assert_eq!(*set[2], *b"ijkl");
 ```
 
-The features: `protect`, on by default, keeps the crate's buffers in protected pages and brings the standard library; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system; without either the crate allocates nothing, and `Code::sources`, `Sources::build`, `Sources::agrees_in`, `Header::file_into` and the calls of `CyclicWords` work on buffers the caller provides; `Sources::agrees` makes its own room, a buffer with `protect`.
+The features: `protect`, on by default, keeps the crate's buffers in protected pages, brings the standard library and the strict mode; `alloc` alone keeps them in the allocator's memory, wiped all the same, for a build without an operating system, and adds `bytemuck`; without either the crate allocates nothing, and `Code::sources`, `Sources::build`, `Sources::agrees_in`, `Header::file_into` and the calls of `CyclicWords` work on buffers the caller provides; `Sources::agrees` makes its own room, a buffer with `protect`.
 
 ## Self-test
 
-`self_test()` checks the build against answers from outside the crate: published parity bytes, shards computed by hand in each field, the bytes of an independent implementation, two words whose errors must be found, a card with marked gaps whose plan must put it right, a word of the cyclic code put right in place, a shard file whose checksums were computed apart, a vote among five files whose answer was computed apart, the published SHA-256 of "abc", and files that state a digest their data does not have. A program runs it at start and goes on only when `passed()` is true.
+`self_test()` checks the build against known answers: published parity bytes, shards computed by hand in each field and in two fields of a chosen degree, the bytes of an independent implementation, a changed shard told from the right one, words whose errors must be found, a card with marked gaps whose plan must put it right, a word of the cyclic code put right in place, a shard file whose checksums were computed apart, a vote among five files whose answer was computed apart, the published SHA-256 of "abc", and files that state a digest their data does not have. Every answer but that of the changed shard comes from outside the crate. A build with an allocator runs 17 checks; one without runs 11 and leaves out the correction, the plan, the vote and the refused digest. A program runs it at start and goes on only when `passed()` is true; a refusal of memory fails a check and does not stop the program. It checks these answers, not every path of the crate.
+
+The tests compare with outside answers and an independent implementation as well. Some of them compare two ways into the same code instead, such as `CyclicWords` with `CyclicCode`, the calls that write in place with those into buffers, and the strict calls with the open ones: they show that the ways agree, not that the code is right. [How it works](docs/TECHNICAL.md#self-test-and-tests) tells the two kinds apart.
 
 ## License
 

@@ -81,6 +81,10 @@ impl SetFacts {
             *slot = *byte;
         }
         let code = Code::new(field, threshold).map_err(|_| FileError::Threshold)?;
+        // SHA-256 takes fewer than 2^64 bits of input.
+        if digest.is_some() && data_len >= 1 << 61 {
+            return Err(FileError::Size);
+        }
         let header_len = header::length(id.len(), digest.is_some());
         let sizes = Sizes::of(&code, data_len, block_len, header_len)?;
         Ok(Self {
@@ -105,18 +109,13 @@ impl SetFacts {
         digest: DataDigest,
     ) -> Result<Self, FileError> {
         let data_len = u64::try_from(data.len()).map_err(|_| FileError::Size)?;
-        let facts = Self::new(field, id, threshold, data_len, block_len, None)?;
-        match digest {
-            DataDigest::None => Ok(facts),
-            DataDigest::Sha256 => Self::new(
-                field,
-                id,
-                threshold,
-                data_len,
-                block_len,
-                Some(sha256(data)),
-            ),
+        // The facts are checked with a stand-in digest, so that a refusal comes before the hash.
+        let stand_in = matches!(digest, DataDigest::Sha256).then_some([0; DIGEST]);
+        let mut facts = Self::new(field, id, threshold, data_len, block_len, stand_in)?;
+        if facts.digest.is_some() {
+            facts.digest = Some(sha256(data));
         }
+        Ok(facts)
     }
 
     /// The code of the set: its field and its threshold.

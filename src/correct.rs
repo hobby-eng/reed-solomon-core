@@ -7,7 +7,7 @@ mod changes;
 mod errors;
 mod plan;
 
-use crate::buffer::{Buffer, Numbers};
+use crate::buffer::{Buffer, Numbers, Shortfall};
 use crate::code::{Code, CodeError};
 use crate::field::Field;
 use crate::list::List;
@@ -19,11 +19,7 @@ use zeroize::Zeroize;
 
 pub use changes::{Changes, ChangesIter};
 pub use plan::{Change, ChangeKind, Mark, Plan};
-pub(crate) use plan::{apply_changes, sorted_marks, value};
-
-/// The system gave no memory for a search.
-#[derive(Debug)]
-pub(crate) struct NoMemory;
+pub(crate) use plan::{Record, apply_changes, fingerprint, sorted_marks, value};
 
 /// Most bytes of syndromes held at a time, whatever the size of the shards.
 pub(crate) const SYNDROME_BYTES: usize = 1 << 22;
@@ -66,10 +62,11 @@ impl Code {
         if length == 0 {
             return Ok(Correction::Agrees);
         }
-        let points: Vec<u16> = shards.iter().map(|&(index, _)| index).collect();
+        let mut points = roomy(shards.len()).map_err(CodeError::from)?;
+        points.extend(shards.iter().map(|&(index, _)| index));
         // The memory of the search has a published bound; a refusal of it is an answer.
         let mut decoder =
-            Decoder::new(self.field(), points, spare, length).map_err(|_| CodeError::Memory)?;
+            Decoder::new(self.field(), points, spare, length).map_err(CodeError::from)?;
         // First find every wrong symbol without touching the shards, then correct them. Both
         // passes work in the decoder's own buffers, so the second takes no memory of its own.
         let unresolved = decoder.pass(shards, length, false);
@@ -199,7 +196,7 @@ impl Decoder {
     /// The decoder of the shards at `points`, `spare` (at least one) of them beyond the
     /// threshold, for shards of `length` bytes. Everything a search needs is allocated here,
     /// and a refusal of the memory is the answer.
-    fn new(field: Field, points: Vec<u16>, spare: usize, length: usize) -> Result<Self, NoMemory> {
+    fn new(field: Field, points: Vec<u16>, spare: usize, length: usize) -> Result<Self, Shortfall> {
         Self::with_room(field, points, spare, length, Self::most_errors(spare))
     }
 
@@ -211,7 +208,7 @@ impl Decoder {
         spare: usize,
         length: usize,
         most: usize,
-    ) -> Result<Self, NoMemory> {
+    ) -> Result<Self, Shortfall> {
         let shards = points.len();
         let marked = most > Self::most_errors(spare);
         let mut weights = roomy(shards)?;
@@ -232,11 +229,10 @@ impl Decoder {
             weights,
             spare,
             most,
-            room: Numbers::zeros(Lists::room(spare, most)).ok_or(NoMemory)?,
+            room: Numbers::zeros(Lists::room(spare, most))?,
             erased: roomy(if marked { spare } else { 0 })?,
             erasure: roomy(if marked { spare + 1 } else { 0 })?,
-            syndromes: Buffer::zeros(spare * stripe_bytes(field, spare).min(length))
-                .ok_or(NoMemory)?,
+            syndromes: Buffer::zeros(spare * stripe_bytes(field, spare).min(length))?,
             factors: zeros(shards)?,
             changed: zeros(shards)?,
         })
@@ -492,7 +488,7 @@ impl Finder {
         points: &[u16],
         spare: usize,
         length: usize,
-    ) -> Result<Self, NoMemory> {
+    ) -> Result<Self, Shortfall> {
         let mut own = roomy(points.len())?;
         own.extend_from_slice(points);
         let most = Decoder::most_errors(spare);
@@ -614,16 +610,17 @@ impl Finder {
 }
 
 /// `count` elements of zero, or the refusal of the memory.
-fn zeros<T: Clone + Default>(count: usize) -> Result<Vec<T>, NoMemory> {
+fn zeros<T: Clone + Default>(count: usize) -> Result<Vec<T>, Shortfall> {
     let mut list = roomy(count)?;
     list.resize(count, T::default());
     Ok(list)
 }
 
 /// An empty list with room for `count` elements, or the refusal of the memory.
-pub(crate) fn roomy<T>(count: usize) -> Result<Vec<T>, NoMemory> {
+pub(crate) fn roomy<T>(count: usize) -> Result<Vec<T>, Shortfall> {
     let mut list = Vec::new();
-    list.try_reserve_exact(count).map_err(|_| NoMemory)?;
+    list.try_reserve_exact(count)
+        .map_err(|_| Shortfall::Memory)?;
     Ok(list)
 }
 

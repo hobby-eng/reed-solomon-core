@@ -49,7 +49,7 @@ jobs:
       - name: Run the tests, buffers in the allocator's memory
         run: cargo test --locked --no-default-features --features alloc
       - name: Run the unit tests and the self-test without an allocator
-        run: cargo test --locked --no-default-features --lib
+        run: cargo test --locked --no-default-features
       - name: Check the documentation with and without an allocator
         env:
           RUSTDOCFLAGS: -D warnings

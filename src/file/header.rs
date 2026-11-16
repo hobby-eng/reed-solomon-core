@@ -190,7 +190,7 @@ impl Header {
         let length = usize::try_from(self.set.file_len()).map_err(|_| FileError::Memory)?;
         // The bytes given do not promise memory for a second copy of them: the memory is asked
         // for once, and a refusal is an answer of its own.
-        let mut file = Buffer::zeros(length).ok_or(FileError::Memory)?;
+        let mut file = Buffer::zeros(length)?;
         self.file_into(shard, &mut file)?;
         Ok(file)
     }

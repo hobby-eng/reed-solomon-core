@@ -7,6 +7,7 @@
 use super::Binary;
 use super::gf256;
 use super::gf65536::{CONSTANT, MIDDLE};
+use zeroize::Zeroize;
 
 /// The bytes of a word that hold the high and the low byte of a two-byte symbol, the word read
 /// big-endian.
@@ -58,14 +59,17 @@ fn add_products(out: &mut [u8], source: &[u8], product: impl Fn(u64) -> u64) {
     for (out, source) in out_words.iter_mut().zip(source_words) {
         *out = (u64::from_be_bytes(*out) ^ product(u64::from_be_bytes(*source))).to_be_bytes();
     }
+    // The tail and its product are bytes of a shard: wiped once added.
     let mut last = [0; 8];
     for (padded, byte) in last.iter_mut().zip(source_rest) {
         *padded = *byte;
     }
-    let last = product(u64::from_be_bytes(last)).to_be_bytes();
-    for (out, byte) in out_rest.iter_mut().zip(last) {
+    let mut made = product(u64::from_be_bytes(last)).to_be_bytes();
+    for (out, byte) in out_rest.iter_mut().zip(made) {
         *out ^= byte;
     }
+    last.zeroize();
+    made.zeroize();
 }
 
 /// `out ^= factor · source` in GF(2^8), byte by byte.

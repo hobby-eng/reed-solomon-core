@@ -56,6 +56,20 @@ impl Field {
         })
     }
 
+    /// What names the field in the fingerprint of a plan: its degree and polynomial, low byte
+    /// first; [`Field::Gf65536`], built over [`Field::Gf256`], has no polynomial of its own.
+    #[cfg(feature = "alloc")]
+    pub(crate) const fn tag(self) -> [u8; 5] {
+        let (degree, polynomial) = match self {
+            Self::Gf256 => (8, 0x11D),
+            Self::Gf2048 => (11, 0x805),
+            Self::Gf65536 => (16, u32::MAX),
+            Self::Binary(binary) => (binary.degree(), binary.polynomial()),
+        };
+        let [a, b, c, d] = polynomial.to_le_bytes();
+        [degree, a, b, c, d]
+    }
+
     /// The number of elements: the most shards a set can have, with the indexes 0 to
     /// `order() - 1`.
     #[must_use]

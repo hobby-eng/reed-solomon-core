@@ -6,8 +6,8 @@ use super::decode::{Word, Work};
 use super::words::CyclicWords;
 use crate::buffer::{Buffer, Numbers};
 use crate::code::CodeError;
-use crate::correct::{Change, ChangeKind, Changes, Correction, Mark, Plan};
-use crate::correct::{remove_error, roomy, sorted_marks, stripe_bytes, value};
+use crate::correct::{ChangeKind, Changes, Correction, Mark, Plan, Record};
+use crate::correct::{fingerprint, remove_error, roomy, sorted_marks, stripe_bytes, value};
 use crate::field::Field;
 use alloc::vec::Vec;
 use core::ops::Deref;
@@ -90,7 +90,7 @@ impl CyclicCode {
         words.canonical(data, &[])?;
         let mut parity = roomy(self.parity()).map_err(|_| CodeError::Memory)?;
         for _ in 0..self.parity() {
-            parity.push(Buffer::zeros(length).ok_or(CodeError::Memory)?);
+            parity.push(Buffer::zeros(length)?);
         }
         let mut remainder = roomy(self.parity()).map_err(|_| CodeError::Memory)?;
         remainder.resize(self.parity(), 0);
@@ -131,7 +131,9 @@ impl CyclicCode {
             }
             Ok(())
         };
-        let columns = self.each_word(shards, lost, &[], count)?;
+        // Both passes work in the memory the first asks for.
+        let mut scratch = None;
+        let columns = self.each_word(shards, (lost, &[]), &mut scratch, count)?;
         if columns > 0 {
             return Ok(Correction::Unresolved { columns });
         }
@@ -152,7 +154,7 @@ impl CyclicCode {
             }
             Ok(())
         };
-        self.each_word(shards, lost, &[], make)?;
+        self.each_word(shards, (lost, &[]), &mut scratch, make)?;
         Ok(Correction::Corrected(core::mem::take(&mut *changed)))
     }
 
@@ -172,11 +174,13 @@ impl CyclicCode {
         }
         let mut view = roomy(shards.len()).map_err(|_| CodeError::Memory)?;
         view.extend_from_slice(shards);
-        let mut changes = Changes::default();
+        let reading = (0..=u16::MAX).zip(shards.iter().copied());
+        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+        let mut changes = Changes::bound(&print).map_err(CodeError::from)?;
         let list = |shards: &mut [&[u8]], column: usize, erased: &[usize], work: &Work<'_>| {
             record(shards, column, erased, work, &mut changes, self.field())
         };
-        let columns = self.each_word(&mut view, lost, marks, list)?;
+        let columns = self.each_word(&mut view, (lost, marks), &mut None, list)?;
         Ok(if columns > 0 {
             Plan::Unresolved { columns }
         } else if changes.is_empty() {
@@ -186,13 +190,33 @@ impl CyclicCode {
         })
     }
 
-    /// Makes `changes`, as [`crate::Code::apply`] does: every change is checked first, and if one
-    /// does not fit, nothing is changed and it fails with [`CodeError::Changes`]; with
-    /// [`CodeError::Memory`] when the list of the shards gets no memory.
+    /// Makes `changes`, the list [`CyclicCode::plan`] found, as [`crate::Code::apply`] does: the
+    /// shards must be those the plan was made for, in the same order with every byte as it was,
+    /// and the code this one; otherwise nothing is changed and it fails with
+    /// [`CodeError::Changes`]. Fails with [`CodeError::Memory`] when the list of the shards gets
+    /// no memory.
     pub fn apply(&self, shards: &mut [&mut [u8]], changes: &Changes) -> Result<(), CodeError> {
+        let reading = (0..=u16::MAX).zip(shards.iter().map(|shard| &**shard));
+        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
         let mut places = roomy(shards.len()).map_err(|_| CodeError::Memory)?;
         places.extend((0..=u16::MAX).zip(shards.iter_mut().map(|shard| &mut **shard)));
-        crate::correct::apply_changes(self.field(), &mut places, changes)
+        crate::correct::apply_changes(self.field(), &mut places, changes, &print)
+    }
+
+    /// What names this code in the fingerprint of a plan.
+    fn identity(&self) -> [u8; 32] {
+        let word = &self.word;
+        let number = |n: usize| u64::try_from(n).unwrap_or(u64::MAX).to_le_bytes();
+        let fields = (*b"C").into_iter().chain(word.field.tag());
+        let fields = fields.chain(number(word.length)).chain(number(word.parity));
+        let fields = fields
+            .chain(number(word.first))
+            .chain(word.beta.to_le_bytes());
+        let mut identity = [0; 32];
+        for (slot, byte) in identity.iter_mut().zip(fields) {
+            *slot = byte;
+        }
+        identity
     }
 
     /// How many words a stripe takes, and the protected buffer for its syndromes: a few MiB at
@@ -200,8 +224,28 @@ impl CyclicCode {
     fn stripes(&self, columns: usize) -> Result<(usize, Buffer), CodeError> {
         let symbol = self.field().symbol_bytes();
         let width = (stripe_bytes(self.field(), self.parity()) / symbol).min(columns.max(1));
-        let syndromes = Buffer::zeros(self.parity() * width * symbol).ok_or(CodeError::Memory)?;
+        let syndromes = Buffer::zeros(self.parity() * width * symbol)?;
         Ok((width, syndromes))
+    }
+
+    /// The memory a pass over `columns` words works in, asked for once for both passes of a
+    /// correction.
+    fn scratch(&self, columns: usize) -> Result<Scratch, CodeError> {
+        let (width, syndromes) = self.stripes(columns)?;
+        // The lists of the search follow from the data: numbers in a buffer of their own.
+        let room = Numbers::zeros(Work::room(self.parity()))?;
+        let (mut erased, mut read) = (Vec::new(), Vec::new());
+        for list in [&mut erased, &mut read] {
+            list.try_reserve_exact(self.length())
+                .map_err(|_| CodeError::Memory)?;
+        }
+        Ok(Scratch {
+            width,
+            syndromes,
+            room,
+            erased,
+            read,
+        })
     }
 
     /// Puts each word of `shards` right in turn, with the shards `lost` and the symbols `marks`
@@ -211,8 +255,8 @@ impl CyclicCode {
     fn each_word<S: Deref<Target = [u8]>>(
         &self,
         shards: &mut [S],
-        lost: &[usize],
-        marks: &[Mark],
+        (lost, marks): (&[usize], &[Mark]),
+        scratch: &mut Option<Scratch>,
         mut found: impl FnMut(&mut [S], usize, &[usize], &Work<'_>) -> Result<(), CodeError>,
     ) -> Result<usize, CodeError> {
         let words = self.words();
@@ -221,21 +265,30 @@ impl CyclicCode {
         let lost = sorted_places(lost, self.length())?;
         let marked = sorted_marks(marks, self.length(), columns)?;
         words.canonical(shards, &lost)?;
-        let (width, mut syndromes) = self.stripes(columns)?;
-        // The lists of the search follow from the data: numbers in a buffer of their own.
-        let mut room = Numbers::zeros(Work::room(self.parity())).ok_or(CodeError::Memory)?;
-        let mut work = Work::new(self.parity(), &mut room).ok_or(CodeError::Memory)?;
-        let (mut erased, mut read) = (Vec::new(), Vec::new());
-        for list in [&mut erased, &mut read] {
-            list.try_reserve_exact(self.length())
-                .map_err(|_| CodeError::Memory)?;
-        }
+        let scratch = match scratch {
+            Some(scratch) => scratch,
+            None => scratch.insert(self.scratch(columns)?),
+        };
+        let Scratch {
+            width,
+            syndromes,
+            room,
+            erased,
+            read,
+        } = scratch;
+        let width = *width;
+        let mut work = Work::new(self.parity(), room).ok_or(CodeError::Memory)?;
         let (mut unresolved, mut next) = (0, 0);
         for start in (0..columns).step_by(width) {
             let end = (start + width).min(columns);
             let span = (end - start) * symbol;
-            self.word
-                .stripe(shards, &lost, start * symbol, &mut syndromes, span);
+            self.word.stripe(
+                shards,
+                &lost,
+                start * symbol,
+                syndromes.as_mut_slice(),
+                span,
+            );
             for column in start..end {
                 // The marked symbols of shards not lost are read and taken out of the syndromes.
                 erased.clear();
@@ -250,11 +303,11 @@ impl CyclicCode {
                 }
                 erased.sort_unstable();
                 let offset = (column - start) * symbol;
-                let syndromes = (&*syndromes, span, offset);
-                match self.column(shards, syndromes, column, &read, &erased, &mut work) {
+                let syndromes = (syndromes.as_slice(), span, offset);
+                match self.column(shards, syndromes, column, read, erased, &mut work) {
                     None => unresolved += 1,
                     Some(()) if work.places().next().is_none() => {}
-                    Some(()) => found(shards, column, &erased, &work)?,
+                    Some(()) => found(shards, column, erased, &work)?,
                 }
             }
         }
@@ -297,6 +350,16 @@ impl CyclicCode {
     }
 }
 
+/// The memory a pass over the words works in: the syndromes of a stripe of `width` words, the
+/// room of the search, and the places of a word that are unreadable and that are read.
+struct Scratch {
+    width: usize,
+    syndromes: Buffer,
+    room: Numbers,
+    erased: Vec<usize>,
+    read: Vec<usize>,
+}
+
 /// `lost` in rising order, each once; a place outside a word of `length` is refused. A flag per
 /// place sorts them, so a long list with repeats takes no more memory than the shards.
 fn sorted_places(lost: &[usize], length: usize) -> Result<Vec<usize>, CodeError> {
@@ -333,14 +396,14 @@ fn record<S: Deref<Target = [u8]>>(
             true => (value, ChangeKind::Filled),
             false => (was ^ value, ChangeKind::Replaced),
         };
-        let change = Change {
+        let record = Record {
             shard: place,
             symbol: column,
             was,
             becomes,
             kind,
         };
-        changes.push(change).map_err(|_| CodeError::Memory)?;
+        changes.push(record).map_err(CodeError::from)?;
     }
     Ok(())
 }

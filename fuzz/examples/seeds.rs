@@ -12,6 +12,8 @@ fn main() {
     let folder = std::env::args()
         .nth(1)
         .expect("the corpus folder of the `files` target");
+    // A fresh checkout has no corpus folder: the folder is not kept in Git.
+    std::fs::create_dir_all(&folder).unwrap();
     let sets = [
         (Field::Gf256, 2, 4_u16, 4, DataDigest::None),
         (Field::Gf256, 3, 4, 8, DataDigest::Sha256),
