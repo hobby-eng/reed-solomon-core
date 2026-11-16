@@ -1,0 +1,33 @@
+# Security
+
+reed-solomon-core repairs lost or damaged data. The first data shards contain pieces of the original input, and parity shards reveal relationships between those pieces. Anyone with enough intact shards can recover the input. For confidential backups, encrypt and authenticate the data before encoding it. A recovery threshold alone provides no secrecy.
+
+## Protecting secrets in memory
+
+An application that handles plaintext seeds, keys or repair words should use the strict API with the default `protect` feature. reed-solomon-core uses [secret-protection-core](https://github.com/hobby-eng/secret-protection-core) to isolate those bytes in OS-backed buffers and to run secret-bearing operations on a dedicated protected stack. This protects memory inside the caller’s process. The library does not start an isolated worker or sandbox the application.
+
+Strict operations check the protection of caller-supplied inputs and outputs. They check each new internal data buffer before writing secret bytes into it. If a required protection is unavailable, the operation returns an error. An exhausted OS limit on locked memory can cause this even when plenty of ordinary RAM is free. Treat that error as a refusal to process plaintext under the requested protections.
+
+| Build or API                             | What an application can rely on                                                                                                                                                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strict API on Linux or Android           | Data pages and the working stack must be locked, excluded from core dumps and kept out of a continuing child process.                                                                                                               |
+| Strict API on macOS or iOS               | The same lock and fork requirements apply. An application that requires dump protection must also arrange it for the process.                                                                                                       |
+| Windows or WebAssembly                   | The strict protected stack is unavailable. Ordinary Reed–Solomon operations remain available where their build features permit them.                                                                                                |
+| Ordinary API with `protect`              | On supported native platforms the crate requests OS protections for its own buffers. WebAssembly uses allocator memory. Ordinary calls accept caller-owned slices and can proceed with fewer protections than strict calls require. |
+| `alloc` alone or caller-supplied storage | Crate-owned data buffers are wiped on normal drop. The caller controls the lifetime and cleanup of its own inputs, scratch space and outputs.                                                                                       |
+
+The caller must keep every thread from forking while a strict call is running. A continuing child must reopen the files it needs. Memory protection cannot erase a phrase that an application previously copied into a text field, log or clipboard. A disk export, hibernation image, privileged debugger or compromised host lies outside this guarantee. A process abort can skip normal cleanup. [Strict API and buffer requirements](docs/API.md#handle-protected-data).
+
+## Damaged and untrusted shards
+
+Count distinct shard indexes. Duplicating a file provides another copy of the same evidence. With exactly the recovery threshold of intact indexes, the decoder can reconstruct the data but has no extra shard with which to check it. Beyond the correction bound it can return a different valid result. Verify a trusted digest, signature or authentication tag before relying on a recovery from untrusted sources.
+
+Per-block CRC-32C catches accidental damage. An optional SHA-256 verifies the reconstructed bytes against the digest stored in the set. A party who replaces the shards can also replace both checks. For files from outside the application, use the work limits for reconstruction and voting, and keep mapped input bytes unchanged from the creation of a `Pile` until the last use of that pile and every derived `FileSet`. Block checksums are cached between calls. Decoding time can vary with the error pattern. [File handling, correction bounds and work limits](docs/TECHNICAL.md).
+
+## Reporting a problem
+
+Report a suspected defect in the public issue tracker. Include the version or commit, enabled Cargo features, operating system, affected operation and what you expected to happen. Use synthetic inputs. Keep real seed phrases, passwords, keys, shards and memory dumps out of public reports. [GitHub Issues](https://github.com/hobby-eng/reed-solomon-core/issues).
+
+## Security reviews
+
+Five AI-assisted reviews covered the crate and cross-checked fixes, including the strict memory checks. Each report identifies the revision and the findings it examined. An independent human security audit is still outstanding. [Audit reports](docs/audits/README.md).
