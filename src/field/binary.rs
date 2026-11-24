@@ -77,9 +77,11 @@ impl Binary {
     }
 }
 
-/// All ones when `bit` is 1, all zeros when it is 0.
+/// All ones when `bit` is 1, all zeros when it is 0. `black_box` keeps the optimiser from turning
+/// the mask into a jump on the bit: with the degree chosen at run time it did, and the time of a
+/// product then followed the bits of an element (AUD-006-SEC001).
 const fn mask(bit: u32) -> u32 {
-    0_u32.wrapping_sub(bit & 1)
+    core::hint::black_box(0_u32.wrapping_sub(bit & 1))
 }
 
 /// Whether `polynomial` is a primitive polynomial of degree `degree`: x^degree is its highest

@@ -31,8 +31,9 @@ pub use set::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileError {
     /// The field has no shard file: version 1 names only [`crate::Field::Gf256`] and
-    /// [`crate::Field::Gf65536`], so a field of [`crate::Field::binary`] has none, even one whose
-    /// symbols are single bytes.
+    /// [`crate::Field::Gf65536`], so [`crate::Field::Gf2048`] and the `Binary` fields of
+    /// [`crate::Field::binary`] have none, even those whose symbols are single bytes;
+    /// `Field::binary(8, None)` is `Gf256` itself and has one.
     Field,
     /// A set identifier that is empty or longer than 32 bytes.
     Id,

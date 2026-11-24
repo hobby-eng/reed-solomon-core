@@ -32,6 +32,8 @@ pub use file::{
     Block, Condition, DataDigest, FileError, Frame, Header, Length, SetFacts, ShardFile, Survey,
 };
 pub use self_test::{Check, SelfTest, self_test};
+/// Re-exported so that a program can wipe the buffers it lends to the calls, such as a `Vec<u8>`,
+/// with the same version of zeroize as the crate.
 pub use zeroize::Zeroize;
 
 #[cfg(feature = "alloc")]

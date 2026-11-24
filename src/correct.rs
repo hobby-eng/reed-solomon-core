@@ -212,17 +212,7 @@ impl Decoder {
         let shards = points.len();
         let marked = most > Self::most_errors(spare);
         let mut weights = roomy(shards)?;
-        weights.extend(points.iter().enumerate().map(|(position, &point)| {
-            let product = points
-                .iter()
-                .enumerate()
-                .filter(|&(other, _)| other != position)
-                .fold(1, |product, (_, &other)| {
-                    field.multiply(product, point ^ other)
-                });
-            // The points differ, so the product is not zero.
-            field.inverse(product).unwrap_or(0)
-        }));
+        fill_weights(field, &points, &mut weights);
         Ok(Self {
             field,
             points,
@@ -236,6 +226,17 @@ impl Decoder {
             factors: zeros(shards)?,
             changed: zeros(shards)?,
         })
+    }
+
+    /// Makes this decoder the one of the shards at `points`, as many as before: the points and
+    /// weights are written again in their own memory, and the room and the syndromes are kept,
+    /// as every pass writes them before it reads them.
+    fn refit(&mut self, points: &[u16]) {
+        self.points.clear();
+        self.points.extend_from_slice(points);
+        fill_weights(self.field, points, &mut self.weights);
+        self.factors.fill(0);
+        self.changed.fill(0);
     }
 
     /// The most wrong symbols a column can be cleared of: half the spare shards.
@@ -452,6 +453,21 @@ impl Drop for Decoder {
     }
 }
 
+/// Writes into `weights` the weight of each shard at `points`, `1 / Π_{l≠i} (x_i − x_l)`, in
+/// their memory: it holds room for as many as there are points.
+fn fill_weights(field: Field, points: &[u16], weights: &mut Vec<u16>) {
+    weights.clear();
+    weights.extend(points.iter().enumerate().map(|(position, &point)| {
+        let product = points
+            .iter()
+            .enumerate()
+            .filter(|&(other, _)| other != position)
+            .fold(1, |product, (_, &other)| field.multiply(product, point ^ other));
+        // The points differ, so the product is not zero.
+        field.inverse(product).unwrap_or(0)
+    }));
+}
+
 /// What [`Finder::look`] saw in one block.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Look {
@@ -496,6 +512,18 @@ impl Finder {
             decoder: Decoder::new(field, own, spare, length)?,
             found: roomy(most)?,
         })
+    }
+
+    /// Makes this finder the one of the shards at `points` when they are as many as its own, and
+    /// so have the same spare shards: its buffers are kept, and a pile whose holders change from
+    /// block to block asks the system for no new pages. False when their number differs.
+    pub(crate) fn refit(&mut self, points: &[u16]) -> bool {
+        if points.len() != self.decoder.points.len() {
+            return false;
+        }
+        self.decoder.refit(points);
+        self.found.zeroize();
+        true
     }
 
     /// The points of the shards this finder was made for, in their order.

@@ -22,8 +22,12 @@ The caller must keep every thread from forking while a strict call is running. A
 
 Count distinct shard indexes. Duplicating a file provides another copy of the same evidence. With exactly the recovery threshold of intact indexes, the decoder can reconstruct the data but has no extra shard with which to check it. Beyond the correction bound it can return a different valid result. Verify a trusted digest, signature or authentication tag before relying on a recovery from untrusted sources.
 
-Per-block CRC-32C catches accidental damage. An optional SHA-256 verifies the reconstructed bytes against the digest stored in the set. A party who replaces the shards can also replace both checks. For files from outside the application, use the work limits for reconstruction and voting, and keep mapped input bytes unchanged from the creation of a `Pile` until the last use of that pile and every derived `FileSet`. Block checksums are cached between calls. Decoding time can vary with the error pattern. [File handling, correction bounds and work limits](docs/TECHNICAL.md).
+Per-block CRC-32C catches accidental damage. An optional SHA-256 verifies the reconstructed bytes against the digest stored in the set. A party who replaces the shards can also replace both checks. For files from outside the application, use the work limits for reconstruction and voting, and keep mapped input bytes unchanged from the creation of a `Pile` until the last use of that pile and every derived `FileSet`. Block checksums are cached between calls. Decoding time can vary with the error pattern. Memory is not counted as steps: a vote whose number of holders changes from block to block maps two protected buffers at each change. [File handling, correction bounds and work limits](docs/TECHNICAL.md).
+
+## Reporting a problem
+
+Report a suspected defect in the public issue tracker. Include the version or commit, enabled Cargo features, operating system, affected operation and what you expected to happen. Use synthetic inputs. Keep real seed phrases, passwords, keys, shards and memory dumps out of public reports. [GitHub Issues](https://github.com/hobby-eng/reed-solomon-core/issues).
 
 ## Security reviews
 
-AI-assisted reviews cross-checked findings about secret handling and verified fixes against the strict memory requirements. The audit records identify the revisions and tests used. An independent human security audit is still outstanding. [Audit reports](docs/audits/README.md).
+AI-assisted reviews cross-checked findings about secret handling and verified fixes against the strict memory requirements. The audit records identify the revisions and tests used. An independent human security audit is still outstanding. [Audit reports](https://github.com/hobby-eng/reed-solomon-core/blob/main/docs/audits/README.md).

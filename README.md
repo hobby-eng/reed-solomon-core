@@ -7,7 +7,18 @@
 
 reed-solomon-core is a Rust library for recovering data when pieces of a backup go missing or arrive damaged. It works with numbered shards spread across several drives and with short records that people copy by hand. The decoder can also locate a wrong symbol when the reader has no way to tell which one was copied incorrectly.
 
-[Documentation index](docs/README.md)
+[Documentation index](docs/README.md) · [API description](docs/API.md) · [How it works](docs/TECHNICAL.md)
+
+| Section                                                               | Description                                                                       |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Recover a missing shard](#recover-a-missing-shard)                   | Rebuild a lost drive's shard from the others, in a few lines.                     |
+| [Recovery](#recovery)                                                 | Choose a threshold for missing shards and incorrect symbols.                      |
+| [Shard files](#shard-files)                                           | Recover a backup when different parts of its files are damaged.                   |
+| [Printed records and repair words](#printed-records-and-repair-words) | Add check words to a record that someone will copy by hand.                       |
+| [Secrets in memory](#secrets-in-memory)                               | Choose the memory protections for plaintext and see which platforms support them. |
+| [Verification](#verification)                                         | Find the measured coverage and the built-in self-test.                            |
+| [License](#license)                                                   | Check the license options and dependency notices.                                 |
+| [Security reviews](#security-reviews)                                 | Read the findings and follow-up checks.                                           |
 
 ## Recover a missing shard
 
@@ -37,17 +48,17 @@ A backup starts with `k` equal-sized data shards. You choose how many extra shar
 | 3 data shards, no extras (3 of 3) | You need all three. The code has no spare information to repair a loss or check a symbol.                                                              |
 | 3 data shards, 2 extras (3 of 5)  | Any three intact shards suffice. With all five present, the decoder can locate and repair one incorrect symbol at each position.                       |
 
-A known gap uses one spare symbol. An error at an unknown location uses two. The decoder applies that budget independently at each position across the shards, so damage at different offsets can be repaired even when several files are affected. Beyond the correction bound, the decoder can return a different valid result. If you need to verify which original was intended, keep a trusted digest or authentication tag.
+A known gap uses one spare symbol. An error at an unknown location uses two. The decoder applies that budget independently at each position across the shards, so damage at different offsets can be repaired even when several files are affected. Beyond the correction bound, the decoder can return a different valid result. If you need to verify which original was intended, keep a trusted digest or authentication tag. [Correction bounds](docs/TECHNICAL.md#correcting-wrong-symbols).
 
 ## Shard files
 
 Suppose you have three files from a 2-of-3 backup. The beginning of one file is unreadable, the middle of another was overwritten and the third is truncated. Recovery can still succeed if **each block** survives at two distinct shard indexes. The reader checks blocks with CRC-32C and can use a different pair of files for each block. A second header at the end lets it identify a file whose first header was damaged.
 
-You can inspect which blocks have enough copies before rebuilding. Where readable copies disagree, the library can report which files the remaining evidence contradicts and which blocks are still undecided. An optional SHA-256 in the header checks the reconstructed data for accidental corruption. Someone able to replace a backup can also replace its stored hash.
+You can inspect which blocks have enough copies before rebuilding. Where readable copies disagree, the library can report which files the remaining evidence contradicts and which blocks are still undecided. An optional SHA-256 in the header checks the reconstructed data for accidental corruption. Someone able to replace a backup can also replace its stored hash. [The shard file and voting](docs/TECHNICAL.md#the-shard-file).
 
 ## Printed records and repair words
 
-The cyclic code appends check symbols to a fixed-length record. In the 2,048-element field, each symbol can be an index into a 2,048-word list. For example, four repair words can recover four words left blank, two words copied incorrectly, or two blanks and one incorrect word. An application can show the proposed changes before applying them. This is the construction used in MHFE repair cards. The library also supports the byte-field parameters used for QR error correction.
+The cyclic code appends check symbols to a fixed-length record. In the 2,048-element field, each symbol can be an index into a 2,048-word list. For example, four repair words can recover four words left blank, two words copied incorrectly, or two blanks and one incorrect word. An application can show the proposed changes before applying them. This is the construction used in MHFE repair cards. The library also supports the byte-field parameters used for QR error correction. [The cyclic code](docs/TECHNICAL.md#the-cyclic-code).
 
 ## Secrets in memory
 
@@ -65,4 +76,4 @@ MIT or Apache-2.0, at your option. [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Security reviews
 
-AI reviewers examined the decoder and the protected-memory API, then retested fixes against the reported failures. An independent human security audit is still outstanding. [Audit records](docs/audits/README.md).
+AI reviewers examined the decoder and the protected-memory API, then retested fixes against the reported failures. An independent human security audit is still outstanding. [Audit records](https://github.com/hobby-eng/reed-solomon-core/blob/main/docs/audits/README.md).

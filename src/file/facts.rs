@@ -59,8 +59,8 @@ impl SetFacts {
     /// The facts of a set: field, threshold, an identifier of 1 to 32 bytes, data length, block length
     /// and optionally the data's SHA-256. A block is the unit of damage: a wrong byte loses its block.
     /// A program that has the data should use [`SetFacts::for_data`]; this is for facts read from a
-    /// header. Fails for GF(2^11), a bad identifier, threshold or block length, or files that would be
-    /// too large.
+    /// header. Fails for a field other than Gf256 and Gf65536, a bad identifier, threshold or block
+    /// length, or files that would be too large.
     pub fn new(
         field: Field,
         id: &[u8],

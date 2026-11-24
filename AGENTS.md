@@ -30,7 +30,9 @@ fuzz run --fuzz-dir fuzz --target x86_64-unknown-linux-gnu <target> -- -max_tota
 -rss_limit_mb=3000 -max_len=4096`, after `cargo +nightly run --manifest-path fuzz/Cargo.toml
 --example seeds --target x86_64-unknown-linux-gnu -- fuzz/corpus/files` gives `files` whole sets to
 start from; and the proof that each field is one checks its largest fields, `cargo test --release
---lib field::proof -- --ignored` (minutes).
+--lib field::proof -- --ignored` (minutes). A change of the field arithmetic, and every release, also runs the timing probe of
+`docs/audits/AUD-006-harnesses/timing`: a product must take the same time whatever its elements,
+which only the compiled code shows (exit code 0).
 
 Layout: `src/buffer*` the memory every result and working buffer of data lies in, protected
 pages or the allocator's; `src/strict*` the strict mode, the calls for a secret in the open;

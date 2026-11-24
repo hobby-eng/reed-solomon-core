@@ -145,7 +145,7 @@ For a vote write r = m − k, t = ⌊r/2⌋ and d for the number of disputed sha
 - With t ≥ 1, a disagreeing column costs r(t + 1). Searching it costs a further (4m + 64)(r + 1). At most min(s, t + 1) columns need searching. With t = 0 the first disagreement ends the block without a column charge.
 - Comparing disputed indexes costs k² + dk(s + 64) when d > 0, m ≥ k and the holders establish a candidate.
 
-The estimate assumes every column disagrees and all possible searches and dispute checks are needed. The actual count can be lower. In the five-file test with k = 3 and a two-symbol block, one wrong file costs 945 steps against a bound of 1,197. CRC scans, copying and SHA-256 take time outside this count.
+The estimate assumes every column disagrees and all possible searches and dispute checks are needed. The actual count can be lower. In the five-file test with k = 3 and a two-symbol block, one wrong file costs 945 steps against a bound of 1,197. CRC scans, copying and SHA-256 take time outside this count, and so does memory. A vote keeps one search while the number of holders stays the same, and when the holders change it computes only their weights again. When their number changes it makes a new search with two buffers of its own, which with `protect` are pages that system calls map, lock and unmap: a pile whose number of holders changes at every block pays those calls at every block. Every `Buffer` with `protect` is a mapping of its own, so a call that makes tens of thousands of them, as a set of that many shards does, can reach the system's limit on mappings and then answers `Memory`.
 
 ## Secrets in memory
 

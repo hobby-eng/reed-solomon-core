@@ -1,6 +1,6 @@
 [package]
 name = "reed-solomon-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.99"
 description = "Reed-Solomon coding for sets of shards: any k of n rebuild the data; repair, extend, check and correct a set"
@@ -11,7 +11,7 @@ readme = "README.md"
 keywords = ["reed-solomon", "erasure-coding", "error-correction", "shards", "no-std"]
 categories = ["algorithms", "encoding", "no-std"]
 # The audit records, CI and the fuzz targets stay in the repository.
-exclude = ["/docs/audits/", "/.github/", "/fuzz/"]
+exclude = ["/docs/audits/", "/.github/", "/fuzz/", "/AGENTS.md"]
 
 [features]
 default = ["protect"]
@@ -25,8 +25,11 @@ alloc = ["zeroize/alloc", "dep:bytemuck"]
 protect = ["alloc", "dep:secret-protection-core"]
 
 [dependencies]
-# Compatible requirements, as a library on crates.io takes them, so that a program gets one copy of
-# each crate and their fixes; Cargo.lock holds the versions the tests ran with.
+# Compatible requirements, as a library on crates.io takes them: a program can resolve the later
+# patch releases of these crates and their fixes, with the versions its other dependencies need.
+# Cargo.lock holds the versions the tests ran with. A program that takes secret-protection-core
+# from crates.io, as this crate does, shares one copy of it (and one from a path or git only when
+# it patches crates-io to that source).
 # SHA-256 of the data: computed when a set is written and compared when it is rebuilt. RustCrypto,
 # without its default features: no allocation, no OID tables; its state is wiped when dropped.
 sha2 = { version = "0.11.1", default-features = false, features = ["zeroize"] }
@@ -34,8 +37,11 @@ sha2 = { version = "0.11.1", default-features = false, features = ["zeroize"] }
 # results come in, which wipes itself when dropped.
 zeroize = { version = "1.9.1", default-features = false }
 # Pages for data that may be a secret, and the isolation of the process that holds it, which the
-# program enters once, with the same copy of the crate (`reed_solomon_core::protect`).
-secret-protection-core = { version = "0.1.0", optional = true }
+# program enters once, with the same copy of the crate (`reed_solomon_core::protect`). At least
+# 0.1.1, whose own dependencies take compatible requirements too. The strict mode rests on it, yet
+# it is not pinned exactly: its patch releases come from the same workspace with audits of their
+# own, and an exact pin would keep their fixes from every program that uses this crate.
+secret-protection-core = { version = "0.1.1", optional = true }
 # The bytes of a buffer seen as the numbers of two bytes the decoders keep, so that their lists lie
 # in the same pages as the data, without unsafe code of this crate's own.
 bytemuck = { version = "1.25.2", optional = true }

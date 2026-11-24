@@ -345,13 +345,18 @@ impl<'s, 'a> Poll<'s, 'a> {
         let indexes = holders.iter().map(|&(index, _)| index);
         let kept = self.finder.as_ref();
         if !kept.is_some_and(|finder| finder.points().iter().copied().eq(indexes.clone())) {
-            // The search of the holders before goes before the next one is asked for.
-            self.finder = None;
             self.voters.clear();
             self.voters.extend(indexes);
-            let field = self.code.field();
-            let finder = Finder::new(field, &self.voters, spare, self.block);
-            self.finder = Some(finder.map_err(SetError::from)?);
+            // As many holders as before keep the search and its buffers; only their weights are
+            // computed again.
+            let refitted = self.finder.as_mut().is_some_and(|finder| finder.refit(&self.voters));
+            if !refitted {
+                // The search of the holders before goes before the next one is asked for.
+                self.finder = None;
+                let field = self.code.field();
+                let finder = Finder::new(field, &self.voters, spare, self.block);
+                self.finder = Some(finder.map_err(SetError::from)?);
+            }
             self.steps += rates.weights();
         }
         let finder = self.finder.as_mut().ok_or(SetError::Memory)?;

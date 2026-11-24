@@ -12,11 +12,11 @@ What the figure leaves out:
 - The systems other than Linux for x86-64. The tests run on Linux for AArch64, macOS and Windows at every push, without a measurement of their lines.
 - The large fields of the field proof, which run before a release with `--ignored`; doctests; files under `tests/`; and the fuzz targets.
 
-Each audit under [audits](audits/README.md) records the coverage of the tree it reviewed.
+Each audit under [audits](https://github.com/hobby-eng/reed-solomon-core/blob/main/docs/audits/README.md) records the coverage of the tree it reviewed.
 
 ## Reproduce on Linux
 
-From the repository root, with the pinned toolchain. The workspace laptop runs each Cargo command through `run-capped --`.
+From the repository root, with the pinned toolchain.
 
 ```sh
 cargo llvm-cov --locked --json --summary-only --output-path coverage.json -- --test-threads=4

@@ -13,7 +13,9 @@ use core::ops::Deref;
 use sha2::{Digest as _, Sha256};
 use zeroize::Zeroizing;
 
-/// A symbol known to be unreadable: whatever its bytes hold, it is a gap at this place.
+/// A symbol known to be unreadable: a gap at this place, whatever element of the field its bytes
+/// hold. They must still hold one, such as zero: a value outside the field is refused with
+/// [`crate::CodeError::Symbol`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Mark {
     /// The place of its shard among the shards given.

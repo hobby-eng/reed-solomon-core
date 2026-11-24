@@ -7,6 +7,8 @@ on:
     branches: ["**"]
   pull_request:
   workflow_dispatch:
+  # The release workflow runs these checks on the tagged commit before it packages it.
+  workflow_call:
 
 # A newer push to the same branch or pull request makes a running check pointless.
 concurrency:
