@@ -23,7 +23,7 @@ The crate uses Rust 2024 and requires Rust 1.99 or later. Add this dependency to
 
 ```toml
 [dependencies]
-reed-solomon-core = "0.1.0"
+reed-solomon-core = "0.1"
 ```
 
 The default feature, `protect`, enables `alloc` and the standard library. Select `default-features = false, features = ["alloc"]` for owned results without OS page protection. With `default-features = false` alone, callers supply the buffers. The signature tables mark calls that need an optional feature.

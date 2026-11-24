@@ -7,6 +7,7 @@
 | [AUD-003](AUD-003-2026-11-15.md) · [JSON](AUD-003-2026-11-15.json) | 2026-11-15 | `73771bfb6232` + working-tree diff `158b257d0d2d` | Verification of AUD-002 with secret-protection-core 0.1.0 | 6: 5 medium, 1 low; 5 blocking the strict-mode release |
 | [AUD-004](AUD-004-2026-11-16.md) · [JSON](AUD-004-2026-11-16.json) | 2026-11-16 | `73771bfb6232` + working-tree diff `c2777f00d683` | Verification of the AUD-003 fixes | 3 low; 1 blocking the strict-mode release |
 | [AUD-005](AUD-005-2026-11-16.md) · [JSON](AUD-005-2026-11-16.json) | 2026-11-16 | `73771bfb6232` + working-tree diff `2d41af8fdfe4` | Verification of the AUD-004 fixes and release readiness | 3 low; none blocking |
+| [AUD-006](AUD-006-2026-11-24.md) · [JSON](AUD-006-2026-11-24.json) | 2026-11-24 | `b0971436e418` + working-tree diff `38d896bee64f` | Full audit before the crates.io publication, with the dependency requirements made compatible | 15: 1 high, 1 medium, 13 low; 1 blocking the publication as 0.1.0 |
 
 The coverage of the current tree is in [Test coverage](../COVERAGE.md); each audit records the coverage of the tree it reviewed.
 
@@ -70,6 +71,21 @@ The report records the findings as they stood at the reviewed commit; the table 
 | AUD-005-DOC001 | fixed | not yet committed | none | The AUD-004 record in the repository is its public edition, with the commands' paths written as `<audit-dir>`; the logs and their digests stay in the local evidence folder. No record under `docs/audits` names a local path or account. |
 | AUD-005-DOC002 | fixed | not yet committed | none | The AUD-004 report links to its small `AUD-004-harnesses` folder and its JSON; every relative link of every report and of this register resolves inside the repository, the ignored evidence folders aside, which no report links. |
 | AUD-005-DOC003 | fixed | not yet committed | none | README and docs/COVERAGE.md give the coverage of the release tree, 98.23 % (5,984 of 6,092 lines) for every test of the default build, with the method, the source fingerprint and the figures per file. The strict tests run in a process of their own, so that the suite's long tests no longer use up their lock limit, which had failed the README's example under the slower instrumented run. |
+| AUD-006-SEC001 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-BLD001 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-BLD002 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-BLD003 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC001 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC002 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC003 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC004 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC005 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC006 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC007 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC008 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC009 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-DOC010 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
+| AUD-006-ARC001 | open | not fixed | none | [AUD-006](AUD-006-2026-11-24.md). |
 
 ## Errata
 

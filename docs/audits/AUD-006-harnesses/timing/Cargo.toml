@@ -1,0 +1,16 @@
+[package]
+name = "probe-lto"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+reed-solomon-core = { path = "../../../.." }
+
+# As a program built by RUST-12 (mhfe's release profile).
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1

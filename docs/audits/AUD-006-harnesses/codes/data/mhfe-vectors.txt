@@ -1,0 +1,23 @@
+case zero-12 520 1717 1841 1313 946 1465 1859 1593 1501 1479 872 327 140 1332 58 1187 438 661 1383 850 41 325 293 1294
+card zero-12 2 994 648
+card zero-12 4 1575 1391 1288 959
+card zero-12 6 408 252 1247 1813 1521 361
+card zero-12 8 84 915 1948 1158 1910 1807 1657 1531
+case same-length-nonzero-12 881 1742 544 285 731 1854 299 1990 2005 1967 1705 1107
+card same-length-nonzero-12 2 1155 1457
+card same-length-nonzero-12 4 1324 1053 1238 612
+card same-length-nonzero-12 6 1820 1426 1480 1514 593 1207
+card same-length-nonzero-12 8 1808 1216 633 305 427 519 1935 882
+case same-length-nonzero-21 1554 808 1514 1639 705 739 878 1196 1608 1062 1924 1976 1814 1305 832 1913 126 184 1299 194 1951
+card same-length-nonzero-21 2 797 192
+card same-length-nonzero-21 4 1577 1091 1292 426
+card same-length-nonzero-21 6 1633 949 659 298 253 335
+card same-length-nonzero-21 8 1350 591 1607 1170 312 779 732 1585
+case abandon-23-art 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 102
+card abandon-23-art 2 340 816
+card abandon-23-art 4 1028 1985 208 255
+card abandon-23-art 6 334 1871 1035 1572 932 771
+card abandon-23-art 8 1132 361 298 1205 1378 2044 162 150
+repair two-erasures zero-12 4 unreadable 3 17 ; replaced  ; restored 3=1841 17=438
+repair one-error-one-erasure zero-12 4 unreadable 5 ; replaced 10=2047 ; restored 5=946 10=1479
+repair two-errors-at-the-bound zero-12 4 unreadable  ; replaced 3=2047 17=0 ; restored 3=1841 17=438

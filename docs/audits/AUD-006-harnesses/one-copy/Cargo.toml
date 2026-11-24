@@ -1,0 +1,13 @@
+[package]
+name = "probe-one-copy"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+# The crate under review, working tree (caret requirements), default features: `protect`.
+reed-solomon-core = { path = "../../../.." }
+# What a program such as MHFE adds itself.
+secret-protection-core = "0.1"

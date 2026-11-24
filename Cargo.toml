@@ -25,18 +25,20 @@ alloc = ["zeroize/alloc", "dep:bytemuck"]
 protect = ["alloc", "dep:secret-protection-core"]
 
 [dependencies]
+# Compatible requirements, as a library on crates.io takes them, so that a program gets one copy of
+# each crate and their fixes; Cargo.lock holds the versions the tests ran with.
 # SHA-256 of the data: computed when a set is written and compared when it is rebuilt. RustCrypto,
 # without its default features: no allocation, no OID tables; its state is wiped when dropped.
-sha2 = { version = "=0.11.1", default-features = false, features = ["zeroize"] }
+sha2 = { version = "0.11.1", default-features = false, features = ["zeroize"] }
 # Wiping every buffer that held data or values that follow from it, and the wrapper the owned
 # results come in, which wipes itself when dropped.
-zeroize = { version = "=1.9.1", default-features = false }
-# Pages for data that may be a secret, and the isolation of the process that holds it: the release
-# 0.1.0 from crates.io, the package its signed GitHub release v0.1.0 attests.
-secret-protection-core = { version = "=0.1.0", optional = true }
+zeroize = { version = "1.9.1", default-features = false }
+# Pages for data that may be a secret, and the isolation of the process that holds it, which the
+# program enters once, with the same copy of the crate (`reed_solomon_core::protect`).
+secret-protection-core = { version = "0.1.0", optional = true }
 # The bytes of a buffer seen as the numbers of two bytes the decoders keep, so that their lists lie
 # in the same pages as the data, without unsafe code of this crate's own.
-bytemuck = { version = "=1.25.2", optional = true }
+bytemuck = { version = "1.25.2", optional = true }
 
 # The suite and the measuring program take the owned calls: without an allocator `cargo test`
 # runs the unit tests and the self-test alone.

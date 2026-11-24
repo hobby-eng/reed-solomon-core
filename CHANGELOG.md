@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The dependencies take compatible requirements instead of exact versions, so that a program that
+  also uses `secret-protection-core` builds one copy of it and isolates its process once with that
+  copy. `Cargo.lock` holds the versions the tests ran with.
+
 ## 0.1.0 — 2026-11-16
 
 The first release. Version 1 of the shard file format is fixed.
