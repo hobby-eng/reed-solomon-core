@@ -168,7 +168,10 @@ fn main() {
                 let got: Vec<u16> = held.iter().map(|s| num(s)).collect();
                 check("CyclicCode::plan(marks)+apply", &got, format!("changes {kinds:?}"));
             }
-            other => println!("  {rid} via CyclicCode::plan(marks): {other:?} -- NOT REPAIRED"),
+            other => {
+                aud006_codes_probe::fail();
+                println!("  {rid} via CyclicCode::plan(marks): {other:?} -- NOT REPAIRED");
+            }
         }
         // (c) CyclicCode::plan with the unreadable places as lost shards (placeholder 0xFFFF).
         let mut held = be(&damaged(0xFFFF));
@@ -179,7 +182,10 @@ fn main() {
                 let got: Vec<u16> = held.iter().map(|s| num(s)).collect();
                 check("CyclicCode::plan(lost)+apply", &got, format!("{} changes", changes.len()));
             }
-            other => println!("  {rid} via CyclicCode::plan(lost): {other:?} -- NOT REPAIRED"),
+            other => {
+                aud006_codes_probe::fail();
+                println!("  {rid} via CyclicCode::plan(lost): {other:?} -- NOT REPAIRED");
+            }
         }
         // (d) CyclicCode::correct in place with lost places (placeholder 0xFFFF).
         let mut held = be(&damaged(0xFFFF));

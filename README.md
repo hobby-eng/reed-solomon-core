@@ -7,18 +7,7 @@
 
 reed-solomon-core is a Rust library for recovering data when pieces of a backup go missing or arrive damaged. It works with numbered shards spread across several drives and with short records that people copy by hand. The decoder can also locate a wrong symbol when the reader has no way to tell which one was copied incorrectly.
 
-[Documentation index](docs/README.md) · [API description](docs/API.md) · [How it works](docs/TECHNICAL.md)
-
-| Section                                                               | Description                                                                       |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [Recover a missing shard](#recover-a-missing-shard)                   | Rebuild a lost drive's shard from the others, in a few lines.                     |
-| [Recovery](#recovery)                                                 | Choose a threshold for missing shards and incorrect symbols.                      |
-| [Shard files](#shard-files)                                           | Recover a backup when different parts of its files are damaged.                   |
-| [Printed records and repair words](#printed-records-and-repair-words) | Add check words to a record that someone will copy by hand.                       |
-| [Secrets in memory](#secrets-in-memory)                               | Choose the memory protections for plaintext and see which platforms support them. |
-| [Verification](#verification)                                         | Find the measured coverage and the built-in self-test.                            |
-| [License](#license)                                                   | Check the license options and dependency notices.                                 |
-| [Security reviews](#security-reviews)                                 | Read the findings and follow-up checks.                                           |
+[Documentation index](docs/README.md)
 
 ## Recover a missing shard
 
@@ -68,7 +57,7 @@ The crate requires Rust 1.99 or later. The default `protect` feature requests OS
 
 ## Verification
 
-Version 0.1.0 covered **98.23%** of measured source lines on Linux x86-64 with default features, across unit, public-interface and strict-mode tests. The crate also includes a known-answer self-test. [Test coverage and measurement](docs/COVERAGE.md).
+Version 0.1.1 covered **98.25%** (6,049 of 6,157) of measured source lines on Linux x86-64 with default features, across unit, public-interface and strict-mode tests. The crate also includes a known-answer self-test. [Test coverage and measurement](docs/COVERAGE.md).
 
 ## License
 

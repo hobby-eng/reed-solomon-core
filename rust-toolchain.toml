@@ -2,6 +2,6 @@
 channel = "1.99.1"
 profile = "minimal"
 # The browser build. The target without an operating system, thumbv7em-none-eabihf, is added where
-# its gate runs (AGENTS.md).
+# its gate runs.
 targets = ["wasm32-unknown-unknown"]
 components = ["rustfmt", "clippy"]

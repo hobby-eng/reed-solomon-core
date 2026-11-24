@@ -24,7 +24,9 @@ taskset -c 3 target/release/timing
 
 Expected at the audited snapshot: a per-round ratio near 1.00 for GF(2^11) and about 2.8 for
 GF(2^10), and exit code 1, as a median ratio outside 0.8 to 1.25 fails the run. After a fix of
-AUD-006-SEC001 both are near 1.00 and the exit code is 0.
+AUD-006-SEC001 both are near 1.00 and the exit code is 0. The standing check that follows from it
+is the crate's `examples/timing.rs`, which covers products and inverses in every kind of field and
+which the release workflow runs.
 
 ## one-copy
 
@@ -55,8 +57,11 @@ BIP-0039). Expected: 16 of 16 cards and 3 of 3 repairs agree, by every path, and
 `mark_doc` only shows behaviour: `Err(Symbol)` for a marked symbol 0xFFFF and a plan for 0x0000
 (AUD-006-DOC010). The other programs (`mds`, `decode`, `cyclic`, `edges`, `known`, `apply_cross`,
 `fields`, `mhfe_diff`) print their results and end with exit code 1 when any comparison with the
-oracle differs. `mhfe_diff` holds a copy of the GF(2^11) repair code of mhfe_core and compares the
-two on 24,000 random containers.
+oracle differs, or, for `apply_cross`, when a plan applies where its binding forbids it.
+`mhfe_diff` holds a copy of the GF(2^11) repair code of mhfe_core and compares the two on 24,000
+random containers. With `AUD006_NEGATIVE_CONTROL=1` the oracle takes one wrong power of x: every
+program that compares with it (`fields`, `decode`, `cyclic`, `mds`, `known`, `mhfe`)
+must then end with a non-zero exit code.
 
 ## files
 

@@ -298,6 +298,10 @@ fn main() {
         total.bad += t.bad;
     }
     println!("cyclic shapes run {shapes_run}, refused {refused}: {total:?}");
+    if total.bad > 0 {
+        aud006_codes_probe::fail();
+    }
+    aud006_codes_probe::finish();
 }
 
 fn gcd(a: usize, b: usize) -> usize {

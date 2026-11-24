@@ -51,7 +51,7 @@ For s marked locations build G(X) = ∏(X − xᵢ), with coefficients g₀ thro
 
 The guaranteed radius is **2e + s ≤ r at each column**. Exactly k unmarked symbols give no redundancy to check. Outside the radius the decoder may return an unresolved column or find a different valid word. A trusted digest or authentication tag is needed to establish which data was intended.
 
-Correction scans first and writes only after all columns have a solution. A preview stores changes in symbol order, then in input-shard order. Its protected or wipe-on-drop buffer has a 32-byte fingerprint followed by 24-byte records. The fingerprint binds the input to the construction and field parameters, shard indexes or positions, lengths, order and bytes. Applying a plan rechecks its fingerprint and each substitution before the first write. [Plan and result types](API.md#plan-and-apply-corrections).
+Correction scans first and writes only after all columns have a solution. A preview stores changes in symbol order, then in input-shard order. Its protected or wipe-on-drop buffer has a 32-byte fingerprint followed by 24-byte records. The fingerprint binds the input to the construction and field parameters, shard indexes or positions, lengths, order and bytes. Applying a plan rechecks its fingerprint and each substitution before the first write. Two lists compared with `==` are read whole, values and fingerprints, on the caller's stack: lists with the same changes for other shards differ there, while `get` and `strict::values` show only that the changes agree. [Plan and result types](API.md#plan-and-apply-corrections).
 
 ## The cyclic code
 
@@ -64,7 +64,7 @@ parity(x) = data(x) · xᵖ mod g(x).
 
 The positive data and parity counts must fit within the order of β, which is (2ᵐ − 1) / gcd(root_step, 2ᵐ − 1) for a primitive α. The implementation uses the binary element 2 and excludes the composite GF(65,536) representation. It supports the primitive-polynomial binary fields, including degree 16. QR uses first root 0 and step 1 in GF(256). MHFE-REPAIR-1 uses first root 1 and step 1 in GF(2,048).
 
-Place i has locator X = β^(n − 1 − i). The decoder evaluates the word at each generator root, treats specified erasures as zero and forms their locator Γ(z) = ∏(1 + Xz). Berlekamp–Massey finds the remaining error locator Λ. The combined locator Ψ = ΛΓ must have the expected number of distinct roots among the n places. For Ω = SΨ mod zᵖ, Forney’s formula gives each magnitude as X^(1 − first_root) Ω(X⁻¹) / Ψ′(X⁻¹). All resulting syndromes must vanish. The same bound 2e + s ≤ p applies to each word.
+Place i has locator X = β^(n − 1 − i). The decoder evaluates the word at each generator root, treats specified erasures as zero and forms their locator Γ(z) = ∏(1 + Xz). Berlekamp–Massey finds the remaining error locator Λ. The combined locator Ψ = ΛΓ must have the expected number of distinct roots among the n places. For Ω = SΨ mod zᵖ, Forney’s formula gives each magnitude as X^(1 − first_root) Ω(X⁻¹) / Ψ′(X⁻¹). All resulting syndromes must vanish. The same bound 2e + s ≤ p applies to each word. The code reads a symbol only once it knows that its place is not among the erasures; a compiler may still load such a symbol, but its value takes part in no result.
 
 ## The shard file
 
@@ -91,7 +91,7 @@ header | block 0, CRC | block 1, CRC | … | identical header | trailer
 | 28 + I        | 0 or 32 | Optional SHA-256 of the original data.                                    |
 | Final 4 bytes | 4       | CRC-32C over all preceding header bytes.                                  |
 
-The header length H is 33–96 bytes. Files in one set share every set fact, including lengths and digest. Only the shard index and the header CRC derived from it can differ.
+The header length H is 33–96 bytes. Files in one set share every set fact, including lengths and digest. Only the shard index and the header CRC derived from it can differ. `SetFacts::new` takes a digest as given, for facts known otherwise, such as those of a header that was read; `Header::file` and `Header::file_into` write the facts they are given beside any shard, so files written one by one can state a digest the data does not have.
 
 ### Blocks, the second header and the trailer
 
@@ -149,13 +149,13 @@ The estimate assumes every column disagrees and all possible searches and disput
 
 ## Secrets in memory
 
-The scaling kernel processes eight bytes at a time. Shard bytes select neither branches nor table entries in scaling or CRC-32C. Single field multiplication and inversion also avoid indexing tables by their operands. Decoding still branches on error-dependent results, including discrepancies, roots and the number of wrong symbols. Its running time can reveal information about errors.
+The scaling kernel processes eight bytes at a time. Shard bytes select neither branches nor table entries in scaling or CRC-32C. Single field multiplication and inversion avoid tables and branches on their operands; in the fields of `Field::binary` this rests on `black_box` keeping a mask from becoming a jump, which only the compiled code shows and the timing probe checks before a release. The comparison of buffers and of plans reads every byte; the comparison of the copies of a block stops where they first differ, which shows where copies differ, not what they hold. Decoding still branches on error-dependent results, including discrepancies, roots and the number of wrong symbols. Its running time can reveal information about errors.
 
-Owned data and derived scratch are wiped on normal drop. With `protect` the crate requests guarded pages and reports which OS protections were obtained. With `alloc` alone it uses allocator memory. Ordinary caller-provided input, mappings and output buffers remain the caller’s responsibility. Indexes, counts and public metadata may live outside protected pages.
+Owned data and derived scratch are wiped on normal drop. With `protect` the crate requests guarded pages and reports which OS protections were obtained. The system may give less than it is asked for: pages beyond its lock limit stay unlocked, and the protection crate's own constructors (`WorkArea::new`, `Secret::with_capacity`) succeed all the same, while `WorkArea::locked` and `Secret::locked` refuse. `Buffer::is_locked`, `Buffer::is_out_of_dumps` and `Buffer::is_out_of_children` say what a buffer got, and `Changes::is_locked` what a list got. Windows keeps at most 512 blocks of a process out of its error reports, so a buffer beyond them stays in, and says so. Crash dumps and other programs that read the memory of the process are shut out for the whole process only by `protect::Isolation::enter`, which reports what each system confirmed: that is the program's call, as a library does not change its host's process by itself. With `alloc` alone it uses allocator memory. Ordinary caller-provided input, mappings and output buffers remain the caller’s responsibility. Indexes, counts and public metadata may live outside protected pages.
 
 ### The strict mode
 
-Strict data calls check the protection of supplied storage before processing it. Each new internal buffer is checked on allocation before any secret is written into that buffer. A secret-bearing operation runs on a dedicated, wiped 512 KiB stack. Required pages are locked and excluded from child processes. Linux and Android also require per-mapping dump exclusion. On Apple systems the caller can require process-wide dump protection. A shortage of locked memory can cause a refusal even when ordinary RAM is plentiful.
+Strict data calls check the protection of supplied storage before processing it. Each new internal buffer is checked on allocation before any secret is written into that buffer. A secret-bearing operation runs on a dedicated, wiped 512 KiB stack. Required pages are locked and excluded from child processes. Linux and Android also require per-mapping dump exclusion. On Apple systems a program that needs secrets out of dumps confirms `protect::Isolation`'s report before it hands them over. A shortage of locked memory can cause a refusal even when ordinary RAM is plentiful.
 
 Windows and WebAssembly lack the protected stack required by these calls. Constructors using only public parameters can still succeed. No thread of the process may fork during a strict call. A child must reopen files rather than reuse the parent’s protected views. The guarantee ends at the caller’s storage, callbacks, disk writes, hibernation and the host. [Strict Rust interface](API.md#handle-protected-data).
 

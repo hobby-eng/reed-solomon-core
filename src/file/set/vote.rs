@@ -150,7 +150,9 @@ fn symbols_of(holders: &[(u16, &[u8])], width: usize) -> u128 {
 impl FileSet<'_> {
     /// An upper bound on the steps [`FileSet::vote`] can take, to set its limit by. It assumes every
     /// column disagrees and the most searches per block; reading files and asking for memory are not
-    /// counted. Fails only when there's no memory for the count.
+    /// counted, and a change in the number of holders from one block to the next makes a new
+    /// search with two buffers of its own, which with `protect` lie in pages of their own. Fails
+    /// only when there's no memory for the count.
     pub fn vote_work(&self) -> Result<u128, SetError> {
         let code = self.facts.code();
         let (threshold, width) = (code.threshold(), code.field().symbol_bytes());
@@ -349,7 +351,10 @@ impl<'s, 'a> Poll<'s, 'a> {
             self.voters.extend(indexes);
             // As many holders as before keep the search and its buffers; only their weights are
             // computed again.
-            let refitted = self.finder.as_mut().is_some_and(|finder| finder.refit(&self.voters));
+            let refitted = self
+                .finder
+                .as_mut()
+                .is_some_and(|finder| finder.refit(&self.voters));
             if !refitted {
                 // The search of the holders before goes before the next one is asked for.
                 self.finder = None;

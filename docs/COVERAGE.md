@@ -1,10 +1,10 @@
 # Test coverage
 
-On 2026-11-16 UTC the tests covered **98.23%** of the source lines that LLVM reports for the Linux x86-64 build with the default features (5,984 of 6,092). The run passed every test the build has: 47 unit tests, 157 tests of the public interface (`tests/suite`) and 9 tests of the strict mode (`tests/strict`), which runs in a test process of its own.
+On 2026-11-24 UTC the tests covered **98.25%** of the source lines that LLVM reports for the Linux x86-64 build with the default features (6,049 of 6,157). The run passed every test the build has: 48 unit tests, 157 tests of the public interface (`tests/suite`) and 9 tests of the strict mode (`tests/strict`), which runs in a test process of its own.
 
 ## Measurement
 
-Rust 1.99.1 and cargo-llvm-cov 0.9.1 measured the Linux build on kernel 7.0.0-43-generic, x86-64, with the `protect` feature, which is the default: the buffers lie in protected pages. The measured source is the working tree that follows commit `73771bfb62327c4eec540cc64c26d35c52cbf052`; the SHA-256 fingerprint of its inputs is `bc7307c5e4ff28c371cd47854245b5c694f9501a32b30b0e6ab9fbb27e8baa6a`.
+Rust 1.99.1 and cargo-llvm-cov 0.9.1 measured the Linux build on kernel 7.0.0-43-generic, x86-64, with the `protect` feature, which is the default: the buffers lie in protected pages. The measured source is version 0.1.1 as committed after commit `3a42c0b5c51ba7867443a2b1230b99a160e4bf57`; the SHA-256 fingerprint of its inputs is `a04f468741a863965d7421adc64912173f95a798ddabe83c5283c8dd3294ad38`.
 
 What the figure leaves out:
 
@@ -33,7 +33,7 @@ The figure sums the lines of the files under `src/`. For the source fingerprint,
 | `src/buffer/pages.rs`    |            30 |             30 |  100.00% |
 | `src/code.rs`            |           181 |            193 |   93.78% |
 | `src/code/owned.rs`      |            98 |             99 |   98.99% |
-| `src/correct.rs`         |           637 |            639 |   99.69% |
+| `src/correct.rs`         |           695 |            697 |   99.71% |
 | `src/correct/changes.rs` |           200 |            200 |  100.00% |
 | `src/correct/errors.rs`  |            27 |             27 |  100.00% |
 | `src/correct/plan.rs`    |           289 |            292 |   98.97% |
@@ -57,7 +57,7 @@ The figure sums the lines of the files under `src/`. For the source fingerprint,
 | `src/file/set.rs`        |           433 |            458 |   94.54% |
 | `src/file/set/shards.rs` |           392 |            398 |   98.49% |
 | `src/file/set/sink.rs`   |            58 |             58 |  100.00% |
-| `src/file/set/vote.rs`   |           330 |            333 |   99.10% |
+| `src/file/set/vote.rs`   |           337 |            340 |   99.12% |
 | `src/file/writing.rs`    |           208 |            210 |   99.05% |
 | `src/list.rs`            |            52 |             52 |  100.00% |
 | `src/recurrence.rs`      |            40 |             40 |  100.00% |

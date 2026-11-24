@@ -117,6 +117,9 @@ fn main() {
         assert_eq!(Field::binary(m, Some(0x7)), Err(FieldError::Degree), "{m}");
     }
     println!("primitivity: {accepted_total} accepted in all, {disagreements} disagreements");
+    if disagreements > 0 {
+        aud006_codes_probe::fail();
+    }
 
     // 2. Products and inverses, every pair up to 2^13 elements, sampled above.
     let mut fields: Vec<(Field, Gf)> = Vec::new();
@@ -162,6 +165,9 @@ fn main() {
                 bad_slow += 1;
             }
         }
+        if bad_products + bad_inverses + bad_slow > 0 {
+            aud006_codes_probe::fail();
+        }
         println!(
             "{field:?}: products checked for {} factors x {q}: {bad_products} wrong; inverses of all {q}: {bad_inverses} wrong; oracle self-check {bad_slow}",
             bs.len()
@@ -195,6 +201,9 @@ fn main() {
         }
     }
     println!("Gf65536: {} factors x 65536 products against the extension formula: {bad} wrong", bs.len());
+    if bad > 0 {
+        aud006_codes_probe::fail();
+    }
 
     // 4. Symbol encodings: every two-byte value in GF(2^11), every value in each binary field.
     let code = Code::new(Field::Gf2048, 2).unwrap();
@@ -208,6 +217,9 @@ fn main() {
         }
     }
     println!("Gf2048 encode over all 65536 two-byte values: {wrongly} wrongly answered (Ok iff value < 2048, else Symbol)");
+    if wrongly > 0 {
+        aud006_codes_probe::fail();
+    }
     for m in 2u8..=16 {
         let field = Field::binary(m, None).unwrap();
         let code = Code::new(field, 2).unwrap();
@@ -228,7 +240,11 @@ fn main() {
         let odd = if w == 2 { code.encode(&[&[0u8], &[0u8]], &[2]) == Err(CodeError::Length) } else { true };
         let empty = code.encode(&[&[], &[]], &[2, 3]).map(|v| v.iter().all(|b| b.is_empty()) && v.len() == 2) == Ok(true);
         println!("degree {m}: {wrongly} values wrongly answered over {top}; odd length refused {odd}; empty shards {empty}");
+        if wrongly > 0 || !odd || !empty {
+            aud006_codes_probe::fail();
+        }
     }
+    aud006_codes_probe::finish();
 }
 
 fn gcd(a: u64, b: u64) -> u64 {

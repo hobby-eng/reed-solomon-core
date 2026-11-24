@@ -205,6 +205,9 @@ fn main() {
     }
     println!("GF(4) exhaustive correct: {tc:?}");
     println!("GF(4) exhaustive plan:    {tp:?}");
+    if tc.bad + tp.bad > 0 {
+        aud006_codes_probe::fail();
+    }
     let (f8, g8) = field_of(3);
     let sets: [&[u16]; 5] = [&[0, 1, 2, 3, 4], &[7, 3, 0, 5, 1, 6], &[1, 2, 3, 4, 5, 6, 7], &[6, 0, 4], &[5, 2, 7, 1]];
     let mut tc = Tally::default();
@@ -252,6 +255,9 @@ fn main() {
     }
     println!("GF(8) correct: {tc:?}");
     println!("GF(8) plan:    {tp:?}");
+    if tc.bad + tp.bad > 0 {
+        aud006_codes_probe::fail();
+    }
     // GF(16): all sixteen points in scattered order, several thresholds.
     let (f16, g16) = field_of(4);
     let mut tc = Tally::default();
@@ -280,6 +286,10 @@ fn main() {
     }
     println!("GF(16) correct: {tc:?}");
     println!("GF(16) plan:    {tp:?}");
+    if tc.bad + tp.bad > 0 {
+        aud006_codes_probe::fail();
+    }
+    aud006_codes_probe::finish();
 }
 
 /// Every column within `t` of a code word, with the word's place.

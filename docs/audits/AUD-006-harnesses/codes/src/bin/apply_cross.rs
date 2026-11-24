@@ -25,11 +25,20 @@ fn main() {
         let got = other.apply(&mut b, &changes);
         drop(b);
         println!("cyclic plan applied by a code with {label}: {got:?}, shards unchanged {}", out == word);
+        // First root 2048 is first root 1 in GF(2^11): the same code, whose plan applies.
+        let same_code = label == "first root 1 + 2047";
+        if got.is_ok() != same_code || (!same_code && (got != Err(CodeError::Changes) || out != word)) {
+            aud006_codes_probe::fail();
+        }
     }
     // The same code, the same shards: applies.
     let mut out = word.clone();
     let mut b: Vec<&mut [u8]> = out.iter_mut().map(Vec::as_mut_slice).collect();
-    println!("cyclic plan applied by its own code: {:?}", a.apply(&mut b, &changes));
+    let own = a.apply(&mut b, &changes);
+    println!("cyclic plan applied by its own code: {own:?}");
+    if own.is_err() {
+        aud006_codes_probe::fail();
+    }
     // An evaluation code's plan applied by a cyclic code of the same shards, and the other way.
     let code = Code::new(Field::Gf2048, 3).unwrap();
     let set = code.encode(&[&[0, 1], &[0, 2], &[0, 3]], &[0, 1, 2, 3, 4]).unwrap();
@@ -39,13 +48,26 @@ fn main() {
     let Plan::Changes(point_changes) = code.plan(&given, &[]).unwrap() else { panic!("within the bound") };
     let mut out = held.clone();
     let mut b: Vec<&mut [u8]> = out.iter_mut().map(Vec::as_mut_slice).collect();
-    println!("point plan applied by a cyclic code: {:?}", a.apply(&mut b, &point_changes));
+    let crossed = a.apply(&mut b, &point_changes);
+    println!("point plan applied by a cyclic code: {crossed:?}");
+    if crossed != Err(CodeError::Changes) {
+        aud006_codes_probe::fail();
+    }
     let mut b: Vec<(u16, &mut [u8])> = (0..5).zip(out.iter_mut().map(Vec::as_mut_slice)).collect();
-    println!("cyclic plan applied by a point code: {:?}", code.apply(&mut b, &changes));
+    let crossed = code.apply(&mut b, &changes);
+    println!("cyclic plan applied by a point code: {crossed:?}");
+    if crossed != Err(CodeError::Changes) {
+        aud006_codes_probe::fail();
+    }
     let other = Code::new(Field::binary(11, Some(0xFE9)).unwrap(), 3).unwrap();
-    println!("point plan applied by a point code of another degree-11 field: {:?}", other.apply(&mut b, &point_changes));
+    let crossed = other.apply(&mut b, &point_changes);
+    println!("point plan applied by a point code of another degree-11 field: {crossed:?}");
+    if crossed != Err(CodeError::Changes) {
+        aud006_codes_probe::fail();
+    }
     let shifted = (1..6).zip(held.iter_mut().map(Vec::as_mut_slice)).collect::<Vec<(u16, &mut [u8])>>();
     let mut shifted = shifted;
     println!("point plan applied to the same bytes under other indexes: {:?}", code.apply(&mut shifted, &point_changes));
     assert!(matches!(code.apply(&mut shifted, &point_changes), Err(CodeError::Changes)));
+    aud006_codes_probe::finish();
 }

@@ -1,7 +1,8 @@
 //! Finding and correcting wrong symbols when nobody knows which shards are wrong. The symbols at
 //! one offset form a code word; its `m − k` syndromes are zero exactly when the word is valid, and
-//! otherwise Berlekamp–Massey finds the errors, up to `(m − k) / 2` per column. The arithmetic
-//! never branches on shard bytes or indexes a table by them; search buffers are wiped on drop.
+//! otherwise Berlekamp–Massey finds the errors, up to `(m − k) / 2` per column. The arithmetic is
+//! written without branches on shard bytes or tables indexed by them, which `examples/timing.rs`
+//! checks in the compiled code; search buffers are wiped on drop.
 
 mod changes;
 mod errors;
@@ -462,7 +463,9 @@ fn fill_weights(field: Field, points: &[u16], weights: &mut Vec<u16>) {
             .iter()
             .enumerate()
             .filter(|&(other, _)| other != position)
-            .fold(1, |product, (_, &other)| field.multiply(product, point ^ other));
+            .fold(1, |product, (_, &other)| {
+                field.multiply(product, point ^ other)
+            });
         // The points differ, so the product is not zero.
         field.inverse(product).unwrap_or(0)
     }));
@@ -913,6 +916,45 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A finder refitted to other shards, as many as before, finds what a new finder of those
+    /// shards finds; one asked to fit a different number of shards refuses and keeps its own.
+    #[test]
+    fn a_refitted_finder_finds_what_a_new_one_finds() {
+        let length = 8;
+        let code = Code::new(Field::Gf256, 3).unwrap();
+        let data: Vec<Vec<u8>> = (0..3_u8).map(|i| vec![i * 5 + 1; length]).collect();
+        let data: Vec<&[u8]> = data.iter().map(|bytes| bytes.as_slice()).collect();
+        let all: Vec<u16> = (0..7).collect();
+        let mut set: Vec<Vec<u8>> = code
+            .encode(&data, &all)
+            .unwrap()
+            .iter()
+            .map(|buffer| buffer.as_slice().to_vec())
+            .collect();
+        // Shard 5 is wrong at its fourth byte.
+        set[5][3] ^= 0x5A;
+        let shards = |points: &[u16]| -> Vec<(u16, &[u8])> {
+            points
+                .iter()
+                .map(|&point| (point, set[usize::from(point)].as_slice()))
+                .collect()
+        };
+        let (first, second) = ([0, 1, 2, 3, 4], [0, 1, 2, 5, 6]);
+        let mut refitted = Finder::new(Field::Gf256, &first, 2, length).unwrap();
+        assert!(refitted.look(&shards(&first)).settled);
+        assert!(refitted.found().is_empty());
+        assert!(refitted.refit(&second));
+        assert_eq!(refitted.points(), second);
+        let mut fresh = Finder::new(Field::Gf256, &second, 2, length).unwrap();
+        let look = refitted.look(&shards(&second));
+        assert_eq!(look, fresh.look(&shards(&second)));
+        assert!(look.settled);
+        assert_eq!(refitted.found(), [3]);
+        assert_eq!(refitted.found(), fresh.found());
+        assert!(!refitted.refit(&[0, 1, 2, 3]));
+        assert_eq!(refitted.points(), second);
     }
 
     /// A block longer than one stretch of syndromes: a shard that is wrong in the first and in

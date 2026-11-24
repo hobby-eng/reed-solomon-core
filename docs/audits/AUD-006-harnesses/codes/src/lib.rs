@@ -31,6 +31,12 @@ pub mod gf {
             for i in (q - 1)..(2 * q) {
                 exp[i] = exp[i - (q - 1)];
             }
+            // The negative control: with AUD006_NEGATIVE_CONTROL set the oracle takes one wrong
+            // power of x, so that every program that compares with it must end with exit code 1.
+            if std::env::var_os("AUD006_NEGATIVE_CONTROL").is_some() {
+                exp[1] ^= 1;
+                exp[q] ^= 1;
+            }
             Gf { m, poly, q, exp, log }
         }
         pub fn mul(&self, a: u16, b: u16) -> u16 {

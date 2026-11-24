@@ -1,6 +1,7 @@
 //! GF(2^m) for a degree from 2 to 16 chosen by the program, with a primitive polynomial of that
 //! degree. Products and inverses use masks and fixed chains, never tables or branches on an
-//! element, except that zero has no inverse.
+//! element, except that zero has no inverse; `examples/timing.rs` checks that the compiled code
+//! keeps them so.
 
 use core::fmt;
 
@@ -77,9 +78,10 @@ impl Binary {
     }
 }
 
-/// All ones when `bit` is 1, all zeros when it is 0. `black_box` keeps the optimiser from turning
-/// the mask into a jump on the bit: with the degree chosen at run time it did, and the time of a
-/// product then followed the bits of an element (AUD-006-SEC001).
+/// All ones when `bit` is 1, all zeros when it is 0. `black_box` asks the optimiser to keep the
+/// mask a mask: with the degree chosen at run time it had turned it into a jump on the bit, and the
+/// time of a product followed the bits of an element (AUD-006-SEC001). It is a hint, not a
+/// promise, so `examples/timing.rs` checks the compiled code before a release.
 const fn mask(bit: u32) -> u32 {
     core::hint::black_box(0_u32.wrapping_sub(bit & 1))
 }

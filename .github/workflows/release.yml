@@ -17,8 +17,22 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
+  # Products and inverses take the same time whatever their elements, in every kind of field, as
+  # the compiled code shows: a tag whose arithmetic depends on the values gets no package.
+  timing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned Rust toolchain
+        run: rustup show
+      - name: Time products and inverses on fixed and random values
+        run: cargo run --locked --release --no-default-features --features alloc --example timing
+
   package:
-    needs: ci
+    needs: [ci, timing]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

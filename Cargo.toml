@@ -63,6 +63,11 @@ required-features = ["protect"]
 name = "measure"
 required-features = ["alloc"]
 
+# Products and inverses take the same time whatever their elements; the release workflow runs it.
+[[example]]
+name = "timing"
+required-features = ["alloc"]
+
 [dev-dependencies]
 # An independent Reed–Solomon implementation: the expected bytes of the oracle tests, in both fields.
 reed-solomon-erasure = "=6.0.0"
