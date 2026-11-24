@@ -1,13 +1,25 @@
 # reed-solomon-core
 
 [![CI](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/hobby-eng/reed-solomon-core)](https://github.com/hobby-eng/reed-solomon-core/releases)
 [![RustSec audit](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml/badge.svg)](https://github.com/hobby-eng/reed-solomon-core/actions/workflows/audit.yml)
 [![Build provenance: GitHub attestations](https://img.shields.io/badge/build%20provenance-GitHub%20attestations-2ea44f)](https://github.com/hobby-eng/reed-solomon-core/attestations)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
 reed-solomon-core is a Rust library for recovering data when pieces of a backup go missing or arrive damaged. It works with numbered shards spread across several drives and with short records that people copy by hand. The decoder can also locate a wrong symbol when the reader has no way to tell which one was copied incorrectly.
 
-[Documentation index](docs/README.md)
+[Documentation index](docs/README.md) · [API description](docs/API.md)
+
+| Section                                                               | Description                                                                       |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Recover a missing shard](#recover-a-missing-shard)                   | Rebuild a lost drive's shard from the others, in a few lines.                     |
+| [Recovery](#recovery)                                                 | Choose a threshold for missing shards and incorrect symbols.                      |
+| [Shard files](#shard-files)                                           | Recover a backup when different parts of its files are damaged.                   |
+| [Printed records and repair words](#printed-records-and-repair-words) | Add check words to a record that someone will copy by hand.                       |
+| [Secrets in memory](#secrets-in-memory)                               | Choose the memory protections for plaintext and see which platforms support them. |
+| [Verification](#verification)                                         | Find the measured coverage and the built-in self-test.                            |
+| [License](#license)                                                   | Check the license options and dependency notices.                                 |
+| [Security reviews](#security-reviews)                                 | Read the findings and follow-up checks.                                           |
 
 ## Recover a missing shard
 
@@ -26,6 +38,8 @@ fn main() -> Result<(), CodeError> {
     Ok(())
 }
 ```
+
+[Every example and call](docs/API.md).
 
 ## Recovery
 
