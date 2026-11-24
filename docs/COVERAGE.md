@@ -4,7 +4,7 @@ On 2026-11-24 UTC the tests covered **98.25%** of the source lines that LLVM rep
 
 ## Measurement
 
-Rust 1.99.1 and cargo-llvm-cov 0.9.1 measured the Linux build on kernel 7.0.0-43-generic, x86-64, with the `protect` feature, which is the default: the buffers lie in protected pages. The measured source is version 0.1.1 as committed after commit `3a42c0b5c51ba7867443a2b1230b99a160e4bf57`; the SHA-256 fingerprint of its inputs is `a04f468741a863965d7421adc64912173f95a798ddabe83c5283c8dd3294ad38`.
+Rust 1.99.1 and cargo-llvm-cov 0.9.1 measured the Linux build on kernel 7.0.0-43-generic, x86-64, with the `protect` feature, which is the default: the buffers lie in protected pages. The measured source is version 0.1.1 as committed after commit `b16c64f1388ceddfcabc45186fdc60309adc83db`; the SHA-256 fingerprint of its inputs is `a04f468741a863965d7421adc64912173f95a798ddabe83c5283c8dd3294ad38`.
 
 What the figure leaves out:
 

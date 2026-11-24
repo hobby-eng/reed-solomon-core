@@ -208,7 +208,11 @@ fn main() {
         // One shard more than the field has: refused.
         let mut more = given.clone();
         more.push((0, set[0].as_slice()));
-        println!("  one more shard than indexes: {:?}", code.rebuild(&more, &[0]).err());
+        let refused = code.rebuild(&more, &[0]).err();
+        println!("  one more shard than indexes: {refused:?}");
+        if refused.is_none() {
+            aud006_codes_probe::fail();
+        }
     }
     aud006_codes_probe::finish();
 }
