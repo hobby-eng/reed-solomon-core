@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+- secret-protection-core 0.2.0, which `reed_solomon_core::protect` passes on: its `OpenChannels` has a new field and is `#[non_exhaustive]`, so code that builds or matches it whole must change, and a program that uses secret-protection-core itself takes 0.2 too, to pass the same `Secret` and `WorkArea` to the strict calls. Nothing else of this crate's interface changes. `Cargo.lock` follows once secret-protection-core 0.2.0 is on crates.io; until then a check substitutes the protection crate's checkout with a `[patch.crates-io]` table given to cargo by `--config`, and the committed lockfiles still name 0.1.1.
+
 ## 0.1.1 — 2026-11-24
 
 - A product or an inverse in a field made with `Field::binary` takes the same time whatever its elements: the optimiser had turned a mask into a jump on a bit, so that checking or correcting a word in such a field took longer for some symbols than for others. The named fields were not affected.

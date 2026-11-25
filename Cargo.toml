@@ -1,6 +1,6 @@
 [package]
 name = "reed-solomon-core"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.99"
 description = "Reed-Solomon coding for sets of shards: any k of n rebuild the data; repair, extend, check and correct a set"
@@ -38,10 +38,11 @@ sha2 = { version = "0.11.1", default-features = false, features = ["zeroize"] }
 zeroize = { version = "1.9.1", default-features = false }
 # Pages for data that may be a secret, and the isolation of the process that holds it, which the
 # program enters once, with the same copy of the crate (`reed_solomon_core::protect`). At least
-# 0.1.1, whose own dependencies take compatible requirements too. The strict mode rests on it, yet
-# it is not pinned exactly: its patch releases come from the same workspace with audits of their
-# own, and an exact pin would keep their fixes from every program that uses this crate.
-secret-protection-core = { version = "0.1.1", optional = true }
+# 0.2.0, the line whose `OpenChannels` changed; `protect` passes it on, so this crate's own version
+# moves with its lines. The strict mode rests on it, yet it is not pinned exactly: its patch
+# releases come from the same workspace with audits of their own, and an exact pin would keep their
+# fixes from every program that uses this crate.
+secret-protection-core = { version = "0.2.0", optional = true }
 # The bytes of a buffer seen as the numbers of two bytes the decoders keep, so that their lists lie
 # in the same pages as the data, without unsafe code of this crate's own.
 bytemuck = { version = "1.25.2", optional = true }
