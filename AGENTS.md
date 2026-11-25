@@ -58,3 +58,13 @@ and no `Debug` text shows data; keep that in new code (`docs/TECHNICAL.md`, Secr
 A new buffer of data comes from `Buffer::zeros`, which a strict call checks before a byte goes
 in, and the calls of `src/strict*` take a secret only through the sealed `Held` traits; a new
 call that handles data gets its strict counterpart (`docs/TECHNICAL.md`, The strict mode).
+
+## Audits
+
+An audit, a review of findings or a remediation follow-up of this repository follows the workspace's
+audit procedure in `../.github/audits/`: `FULL_AUDIT_GUIDE_V2.md` (the checks and their order;
+section 17 for Rust crates and every target they are built for), `AUDIT_STANDARD.md`,
+`AUDIT_TEMPLATE.md` and `audit-report.schema.json`. Section 17 asks for `docs/audits/TARGETS.md`
+with the targets, their runners and the fuzzing budgets; until this repository has one, the audit
+derives the targets as section 17.3 says and records the missing file. Reports, their JSON twins and
+their harnesses stay in this repository's `docs/audits/`.
