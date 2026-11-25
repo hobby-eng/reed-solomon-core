@@ -2,7 +2,7 @@
 
 ## 0.2.0 (unreleased)
 
-- secret-protection-core 0.2.0, which `reed_solomon_core::protect` passes on: its `OpenChannels` has a new field and is `#[non_exhaustive]`, so code that builds or matches it whole must change, and a program that uses secret-protection-core itself takes 0.2 too, to pass the same `Secret` and `WorkArea` to the strict calls. Nothing else of this crate's interface changes. `Cargo.lock` follows once secret-protection-core 0.2.0 is on crates.io; until then a check substitutes the protection crate's checkout with a `[patch.crates-io]` table given to cargo by `--config`, and the committed lockfiles still name 0.1.1.
+- secret-protection-core 0.2.0, which `reed_solomon_core::protect` passes on with every change of its 0.2 line, such as the new field of `OpenChannels`, the protection `FolderWrites` in `Protection::ALL`, and a Linux worker that has another thread at its start being refused: its changelog has them all. This crate's own interface does not change. The strict calls take the protection crate's `Secret` and `WorkArea`, so a program that uses secret-protection-core itself must resolve to the same copy: 0.2 from the same source, as two copies of one version, say from crates.io and from git, are different types. `Cargo.lock` follows once secret-protection-core 0.2.0 is on crates.io; until then a check substitutes the protection crate's checkout with a `[patch.crates-io]` table given to cargo by `--config`, and the committed lockfiles still name 0.1.1.
 
 ## 0.1.1 — 2026-11-24
 
