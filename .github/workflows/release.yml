@@ -124,8 +124,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          files=(release/*.crate)
-          test "${#files[@]}" -eq 1
-          gh attestation verify "${files[0]}" --repo "$GITHUB_REPOSITORY" \
+          set -- release/*.crate
+          test "$#" -eq 1
+          gh attestation verify "$1" --repo "$GITHUB_REPOSITORY" \
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
             --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA"
