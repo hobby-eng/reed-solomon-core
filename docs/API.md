@@ -19,11 +19,11 @@ The Rust examples use the default features. Each snippet can be run in a functio
 
 ## Add the dependency
 
-The crate uses Rust 2024 and requires Rust 1.99 or later. Add this dependency to your Cargo.toml. For a sibling checkout, use `{ path = "../reed-solomon-core" }` instead of the version.
+The crate uses Rust 2024 and requires Rust 1.99 or later. It is distributed on GitHub, not on crates.io: add it to your Cargo.toml by its signed release tag. For a sibling checkout, use `{ path = "../reed-solomon-core" }` instead.
 
 ```toml
 [dependencies]
-reed-solomon-core = "0.2"
+reed-solomon-core = { git = "https://github.com/hobby-eng/reed-solomon-core", tag = "v0.2.0" }
 ```
 
 The default feature, `protect`, enables `alloc` and the standard library; with it every call that works on data, and `==` on a `Buffer`, a `Changes` or an intact `Block`, overwrites 128 KiB of the calling thread's stack below it when it returns or a panic unwinds out of it, so the thread needs a little more free stack than that. WebAssembly clears nothing, a build that aborts on panic clears nothing, and the window is fixed, best effort (docs/TECHNICAL.md, Secrets in memory). A result a strict call returns is compared, like any other, where the caller compares it, with this clearing and not on a protected stack. The clearing costs about 2 µs for each outermost call on the measuring machine: a third more for a call on 512-byte stripes, a twentieth on 4 KiB, nothing measurable on 64 KiB or on the whole-set calls of `examples/measure.rs`. Select `default-features = false, features = ["alloc"]` for owned results without OS page protection. With `default-features = false` alone, callers supply the buffers. The signature tables mark calls that need an optional feature.

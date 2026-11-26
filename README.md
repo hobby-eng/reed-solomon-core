@@ -71,7 +71,7 @@ The crate requires Rust 1.99 or later. The default `protect` feature requests OS
 
 ## Verification
 
-The source measured on 2026-11-24, before 0.2.0, covered **98.25%** (6,049 of 6,157) of its measured lines on Linux x86-64 with default features, across unit, public-interface and strict-mode tests. The crate also includes a known-answer self-test. [Test coverage and measurement](docs/COVERAGE.md).
+Version 0.2.0 covered **98.29%** (6,260 of 6,369) of measured source lines on Linux x86-64 with default features, across unit, public-interface and strict-mode tests. The crate also includes a known-answer self-test. [Test coverage and measurement](docs/COVERAGE.md).
 
 ## License
 
