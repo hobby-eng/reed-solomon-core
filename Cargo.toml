@@ -20,8 +20,10 @@ default = ["protect"]
 alloc = ["zeroize/alloc", "dep:bytemuck"]
 # The owned results and the working buffers of bytes that follow from data lie in pages of their
 # own, between guard pages, which the system is asked to lock and to keep out of core dumps and
-# child processes. Without it they lie in the allocator's memory, and are wiped all the same.
-# It brings the standard library.
+# child processes, and every call that works on data overwrites a fixed window of the stack
+# below it afterwards, best effort.
+# Without it they lie in the allocator's memory, and are wiped all the same. It brings the
+# standard library.
 protect = ["alloc", "dep:secret-protection-core"]
 
 [dependencies]

@@ -53,34 +53,36 @@ impl Code {
     /// 8 MiB). Fails on too few shards, bad indexes, unequal lengths, a symbol outside the field, or
     /// with [`CodeError::Memory`] when that memory is refused.
     pub fn correct(&self, shards: &mut [(u16, &mut [u8])]) -> Result<Correction, CodeError> {
-        let indexes = shards.iter().map(|&(index, _)| index);
-        let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
-        self.check_symbols(shards.iter().map(|(_, bytes)| &**bytes))?;
-        let spare = shards.len() - self.threshold();
-        if spare == 0 {
-            return Ok(Correction::Unchecked);
-        }
-        if length == 0 {
-            return Ok(Correction::Agrees);
-        }
-        let mut points = roomy(shards.len()).map_err(CodeError::from)?;
-        points.extend(shards.iter().map(|&(index, _)| index));
-        // The memory of the search has a published bound; a refusal of it is an answer.
-        let mut decoder =
-            Decoder::new(self.field(), points, spare, length).map_err(CodeError::from)?;
-        // First find every wrong symbol without touching the shards, then correct them. Both
-        // passes work in the decoder's own buffers, so the second takes no memory of its own.
-        let unresolved = decoder.pass(shards, length, false);
-        if unresolved > 0 {
-            return Ok(Correction::Unresolved {
-                columns: unresolved,
-            });
-        }
-        if decoder.changed.iter().all(|&count| count == 0) {
-            return Ok(Correction::Agrees);
-        }
-        decoder.pass(shards, length, true);
-        Ok(Correction::Corrected(core::mem::take(&mut decoder.changed)))
+        crate::cleared(|| {
+            let indexes = shards.iter().map(|&(index, _)| index);
+            let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
+            self.check_symbols(shards.iter().map(|(_, bytes)| &**bytes))?;
+            let spare = shards.len() - self.threshold();
+            if spare == 0 {
+                return Ok(Correction::Unchecked);
+            }
+            if length == 0 {
+                return Ok(Correction::Agrees);
+            }
+            let mut points = roomy(shards.len()).map_err(CodeError::from)?;
+            points.extend(shards.iter().map(|&(index, _)| index));
+            // The memory of the search has a published bound; a refusal of it is an answer.
+            let mut decoder =
+                Decoder::new(self.field(), points, spare, length).map_err(CodeError::from)?;
+            // First find every wrong symbol without touching the shards, then correct them. Both
+            // passes work in the decoder's own buffers, so the second takes no memory of its own.
+            let unresolved = decoder.pass(shards, length, false);
+            if unresolved > 0 {
+                return Ok(Correction::Unresolved {
+                    columns: unresolved,
+                });
+            }
+            if decoder.changed.iter().all(|&count| count == 0) {
+                return Ok(Correction::Agrees);
+            }
+            decoder.pass(shards, length, true);
+            Ok(Correction::Corrected(core::mem::take(&mut decoder.changed)))
+        })
     }
 
     /// An upper bound, in bytes, of the memory [`Code::correct`] asks for with `shards` shards,

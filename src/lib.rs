@@ -24,7 +24,19 @@ mod list;
 mod recurrence;
 mod self_test;
 #[cfg(feature = "protect")]
+mod stack;
+#[cfg(feature = "protect")]
 pub mod strict;
+
+#[cfg(feature = "protect")]
+pub(crate) use stack::cleared;
+
+/// Without `protect` no call clears the stack it leaves.
+#[cfg(not(feature = "protect"))]
+#[inline(always)]
+pub(crate) fn cleared<T>(work: impl FnOnce() -> T) -> T {
+    work()
+}
 
 pub use code::{COMPARED, Code, CodeError, Sources};
 pub use field::{Binary, Field, FieldError};

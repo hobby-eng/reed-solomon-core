@@ -153,12 +153,14 @@ impl Header {
     /// file or of another place do not pass unless their checksum happens to be the same.
     #[must_use]
     pub fn block_checksum(&self, number: u32, block: &[u8]) -> u32 {
-        let own = self
-            .as_bytes()
-            .last_chunk::<CHECKSUM>()
-            .copied()
-            .unwrap_or_default();
-        checksum(&[&own, &number.to_be_bytes(), block])
+        crate::cleared(|| {
+            let own = self
+                .as_bytes()
+                .last_chunk::<CHECKSUM>()
+                .copied()
+                .unwrap_or_default();
+            checksum(&[&own, &number.to_be_bytes(), block])
+        })
     }
 
     /// Where block `number` of the shard is in the file: the place of its first byte and the
@@ -184,15 +186,17 @@ impl Header {
     /// [`FileError::Memory`] when there's no memory.
     #[cfg(feature = "alloc")]
     pub fn file(&self, shard: &[u8]) -> Result<Buffer, FileError> {
-        if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {
-            return Err(FileError::Shard);
-        }
-        let length = usize::try_from(self.set.file_len()).map_err(|_| FileError::Memory)?;
-        // The bytes given do not promise memory for a second copy of them: the memory is asked
-        // for once, and a refusal is an answer of its own.
-        let mut file = Buffer::zeros(length)?;
-        self.file_into(shard, &mut file)?;
-        Ok(file)
+        crate::cleared(|| {
+            if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {
+                return Err(FileError::Shard);
+            }
+            let length = usize::try_from(self.set.file_len()).map_err(|_| FileError::Memory)?;
+            // The bytes given do not promise memory for a second copy of them: the memory is asked
+            // for once, and a refusal is an answer of its own.
+            let mut file = Buffer::zeros(length)?;
+            self.file_into(shard, &mut file)?;
+            Ok(file)
+        })
     }
 
     /// The shard file for `shard` written into `out`, exactly [`SetFacts::file_len`] bytes long,
@@ -200,17 +204,19 @@ impl Header {
     /// Fails with [`FileError::Output`] for an output of another length, then with
     /// [`FileError::Shard`] for a shard of another length; `out` is then as it was.
     pub fn file_into(&self, shard: &[u8], out: &mut [u8]) -> Result<(), FileError> {
-        let needed = self.set.file_len();
-        if u64::try_from(out.len()) != Ok(needed) {
-            return Err(FileError::Output { needed });
-        }
-        if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {
-            return Err(FileError::Shard);
-        }
-        let mut blocks = (0..=u32::MAX).zip(shard.chunks(self.set.block_bytes()));
-        let written = self.write_frame(out).is_some()
-            && blocks.all(|(number, bytes)| self.write_block(out, number, bytes).is_some());
-        written.then_some(()).ok_or(FileError::Memory)
+        crate::cleared(|| {
+            let needed = self.set.file_len();
+            if u64::try_from(out.len()) != Ok(needed) {
+                return Err(FileError::Output { needed });
+            }
+            if u64::try_from(shard.len()) != Ok(self.set.shard_len()) {
+                return Err(FileError::Shard);
+            }
+            let mut blocks = (0..=u32::MAX).zip(shard.chunks(self.set.block_bytes()));
+            let written = self.write_frame(out).is_some()
+                && blocks.all(|(number, bytes)| self.write_block(out, number, bytes).is_some());
+            written.then_some(()).ok_or(FileError::Memory)
+        })
     }
 
     /// Writes the header at the start of `file`, its copy before the trailer, and the trailer; the

@@ -24,40 +24,43 @@ impl<'a> Pile<'a> {
     /// Reads `files` and sorts them into sets. A file that doesn't read is not an error but an entry
     /// of [`Pile::readings`]; only running out of memory fails ([`FileError::Memory`]).
     pub fn new(files: &[&'a [u8]]) -> Result<Self, FileError> {
-        let (mut readings, mut read, mut sets) = (Vec::new(), Vec::new(), Vec::new());
-        readings
-            .try_reserve_exact(files.len())
-            .map_err(|_| FileError::Memory)?;
-        readings.extend(files.iter().map(|bytes| ShardFile::read(bytes)));
-        let sound = readings.iter().filter(|reading| reading.is_ok()).count();
-        read.try_reserve_exact(sound)
-            .map_err(|_| FileError::Memory)?;
-        let placed = readings.iter().enumerate();
-        read.extend(
-            placed.filter_map(|(position, reading)| reading.ok().map(|file| (position, file))),
-        );
-        // Sorted in place, by a key that no two files share: the order of the files given plays
-        // no part in the result.
-        let key = |&(position, file): &(usize, ShardFile<'a>)| {
-            (file.header().set().key(), file.header().index(), position)
-        };
-        read.sort_unstable_by_key(key);
-        for group in read.chunk_by(|one, other| one.1.header().set() == other.1.header().set()) {
-            if let Some((_, first)) = group.first() {
-                sets.try_reserve(1).map_err(|_| FileError::Memory)?;
-                sets.push(FileSet::new(*first.header().set(), group)?);
+        crate::cleared(|| {
+            let (mut readings, mut read, mut sets) = (Vec::new(), Vec::new(), Vec::new());
+            readings
+                .try_reserve_exact(files.len())
+                .map_err(|_| FileError::Memory)?;
+            readings.extend(files.iter().map(|bytes| ShardFile::read(bytes)));
+            let sound = readings.iter().filter(|reading| reading.is_ok()).count();
+            read.try_reserve_exact(sound)
+                .map_err(|_| FileError::Memory)?;
+            let placed = readings.iter().enumerate();
+            read.extend(
+                placed.filter_map(|(position, reading)| reading.ok().map(|file| (position, file))),
+            );
+            // Sorted in place, by a key that no two files share: the order of the files given plays
+            // no part in the result.
+            let key = |&(position, file): &(usize, ShardFile<'a>)| {
+                (file.header().set().key(), file.header().index(), position)
+            };
+            read.sort_unstable_by_key(key);
+            for group in read.chunk_by(|one, other| one.1.header().set() == other.1.header().set())
+            {
+                if let Some((_, first)) = group.first() {
+                    sets.try_reserve(1).map_err(|_| FileError::Memory)?;
+                    sets.push(FileSet::new(*first.header().set(), group)?);
+                }
             }
-        }
-        // Sets of one identifier are neighbours in the order of the facts.
-        for at in 0..sets.len() {
-            let id = |at: usize| sets.get(at).map(|set: &FileSet<'a>| set.facts().id());
-            let before = at.checked_sub(1).and_then(id);
-            let shared = id(at) == before || id(at) == id(at + 1);
-            if let Some(set) = sets.get_mut(at).filter(|_| shared) {
-                set.share_id();
+            // Sets of one identifier are neighbours in the order of the facts.
+            for at in 0..sets.len() {
+                let id = |at: usize| sets.get(at).map(|set: &FileSet<'a>| set.facts().id());
+                let before = at.checked_sub(1).and_then(id);
+                let shared = id(at) == before || id(at) == id(at + 1);
+                if let Some(set) = sets.get_mut(at).filter(|_| shared) {
+                    set.share_id();
+                }
             }
-        }
-        Ok(Self { readings, sets })
+            Ok(Self { readings, sets })
+        })
     }
 
     /// What became of each file, in the order given: the file as read, or why it does not read.

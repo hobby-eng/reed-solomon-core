@@ -85,26 +85,30 @@ impl CyclicCode {
     /// number of symbols, each an element of the field. Counts and lengths are refused before
     /// symbols, as in [`crate::Code`].
     pub fn encode(&self, data: &[&[u8]]) -> Result<Vec<Buffer>, CodeError> {
-        let words = self.words();
-        let length = words.measured(data, self.data())?;
-        words.canonical(data, &[])?;
-        let mut parity = roomy(self.parity()).map_err(|_| CodeError::Memory)?;
-        for _ in 0..self.parity() {
-            parity.push(Buffer::zeros(length)?);
-        }
-        let mut remainder = roomy(self.parity()).map_err(|_| CodeError::Memory)?;
-        remainder.resize(self.parity(), 0);
-        words.encode_checked(data, &mut parity, &mut remainder);
-        Ok(parity)
+        crate::cleared(|| {
+            let words = self.words();
+            let length = words.measured(data, self.data())?;
+            words.canonical(data, &[])?;
+            let mut parity = roomy(self.parity()).map_err(|_| CodeError::Memory)?;
+            for _ in 0..self.parity() {
+                parity.push(Buffer::zeros(length)?);
+            }
+            let mut remainder = roomy(self.parity()).map_err(|_| CodeError::Memory)?;
+            remainder.resize(self.parity(), 0);
+            words.encode_checked(data, &mut parity, &mut remainder);
+            Ok(parity)
+        })
     }
 
     /// Whether every word of `shards`, all `length` of them in their order, is a word of the code:
     /// it stops at the first stripe of words that holds one that is not. Fails on another number
     /// of shards, unequal lengths, a symbol outside the field, or without memory.
     pub fn agrees(&self, shards: &[&[u8]]) -> Result<bool, CodeError> {
-        let length = self.words().measured(shards, self.length())?;
-        let (_, mut syndromes) = self.stripes(length / self.field().symbol_bytes())?;
-        self.words().agrees(shards, &mut syndromes)
+        crate::cleared(|| {
+            let length = self.words().measured(shards, self.length())?;
+            let (_, mut syndromes) = self.stripes(length / self.field().symbol_bytes())?;
+            self.words().agrees(shards, &mut syndromes)
+        })
     }
 
     /// Corrects the words of `shards`, all `length` of them in their order, in place: the shards at
@@ -117,45 +121,49 @@ impl CyclicCode {
         shards: &mut [&mut [u8]],
         lost: &[usize],
     ) -> Result<Correction, CodeError> {
-        if shards.len() != self.length() {
-            return Err(CodeError::Count);
-        }
-        // Counts of wrong symbols follow from the data: wiped unless the answer hands them over.
-        let mut changed = Zeroizing::new(roomy(shards.len()).map_err(|_| CodeError::Memory)?);
-        changed.resize(shards.len(), 0_usize);
-        let count = |_: &mut [&mut [u8]], _: usize, _: &[usize], work: &Work<'_>| {
-            for place in work.places() {
-                if let Some(count) = changed.get_mut(place) {
-                    *count += 1;
-                }
+        crate::cleared(|| {
+            if shards.len() != self.length() {
+                return Err(CodeError::Count);
             }
-            Ok(())
-        };
-        // Both passes work in the memory the first asks for.
-        let mut scratch = None;
-        let columns = self.each_word(shards, (lost, &[]), &mut scratch, count)?;
-        if columns > 0 {
-            return Ok(Correction::Unresolved { columns });
-        }
-        if changed.iter().all(|&count| count == 0) {
-            return Ok(Correction::Agrees);
-        }
-        let symbol = self.field().symbol_bytes();
-        // A word's syndromes are its own: putting it right leaves the rest of its stripe as read.
-        let make = |shards: &mut [&mut [u8]], column: usize, erased: &[usize], work: &Work<'_>| {
-            for (place, &value) in work.places().zip(work.values.as_slice()) {
-                // A lost symbol becomes the value; a wrong one has it added.
-                let was = symbol_at(shards, place, column, symbol);
-                let marked = erased.binary_search(&place).is_ok();
-                let error = if marked { was ^ value } else { value };
-                if let Some(shard) = shards.get_mut(place) {
-                    remove_error(shard, column * symbol, symbol, error);
+            // Counts of wrong symbols follow from the data: wiped unless the answer hands them over.
+            let mut changed = Zeroizing::new(roomy(shards.len()).map_err(|_| CodeError::Memory)?);
+            changed.resize(shards.len(), 0_usize);
+            let count = |_: &mut [&mut [u8]], _: usize, _: &[usize], work: &Work<'_>| {
+                for place in work.places() {
+                    if let Some(count) = changed.get_mut(place) {
+                        *count += 1;
+                    }
                 }
+                Ok(())
+            };
+            // Both passes share the syndrome and search buffers the first asks for; each finds
+            // its words' places of erasure again and may ask for their short lists anew.
+            let mut scratch = None;
+            let columns = self.each_word(shards, (lost, &[]), &mut scratch, count)?;
+            if columns > 0 {
+                return Ok(Correction::Unresolved { columns });
             }
-            Ok(())
-        };
-        self.each_word(shards, (lost, &[]), &mut scratch, make)?;
-        Ok(Correction::Corrected(core::mem::take(&mut *changed)))
+            if changed.iter().all(|&count| count == 0) {
+                return Ok(Correction::Agrees);
+            }
+            let symbol = self.field().symbol_bytes();
+            // A word's syndromes are its own: putting it right leaves the rest of its stripe as read.
+            let make =
+                |shards: &mut [&mut [u8]], column: usize, erased: &[usize], work: &Work<'_>| {
+                    for (place, &value) in work.places().zip(work.values.as_slice()) {
+                        // A lost symbol becomes the value; a wrong one has it added.
+                        let was = symbol_at(shards, place, column, symbol);
+                        let marked = erased.binary_search(&place).is_ok();
+                        let error = if marked { was ^ value } else { value };
+                        if let Some(shard) = shards.get_mut(place) {
+                            remove_error(shard, column * symbol, symbol, error);
+                        }
+                    }
+                    Ok(())
+                };
+            self.each_word(shards, (lost, &[]), &mut scratch, make)?;
+            Ok(Correction::Corrected(core::mem::take(&mut *changed)))
+        })
     }
 
     /// The changes that would put the words of `shards` right, with the shards at the places
@@ -169,24 +177,26 @@ impl CyclicCode {
         lost: &[usize],
         marks: &[Mark],
     ) -> Result<Plan, CodeError> {
-        if shards.len() != self.length() {
-            return Err(CodeError::Count);
-        }
-        let mut view = roomy(shards.len()).map_err(|_| CodeError::Memory)?;
-        view.extend_from_slice(shards);
-        let reading = (0..=u16::MAX).zip(shards.iter().copied());
-        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
-        let mut changes = Changes::bound(&print).map_err(CodeError::from)?;
-        let list = |shards: &mut [&[u8]], column: usize, erased: &[usize], work: &Work<'_>| {
-            record(shards, column, erased, work, &mut changes, self.field())
-        };
-        let columns = self.each_word(&mut view, (lost, marks), &mut None, list)?;
-        Ok(if columns > 0 {
-            Plan::Unresolved { columns }
-        } else if changes.is_empty() {
-            Plan::Agrees
-        } else {
-            Plan::Changes(changes)
+        crate::cleared(|| {
+            if shards.len() != self.length() {
+                return Err(CodeError::Count);
+            }
+            let mut view = roomy(shards.len()).map_err(|_| CodeError::Memory)?;
+            view.extend_from_slice(shards);
+            let reading = (0..=u16::MAX).zip(shards.iter().copied());
+            let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+            let mut changes = Changes::bound(&print).map_err(CodeError::from)?;
+            let list = |shards: &mut [&[u8]], column: usize, erased: &[usize], work: &Work<'_>| {
+                record(shards, column, erased, work, &mut changes, self.field())
+            };
+            let columns = self.each_word(&mut view, (lost, marks), &mut None, list)?;
+            Ok(if columns > 0 {
+                Plan::Unresolved { columns }
+            } else if changes.is_empty() {
+                Plan::Agrees
+            } else {
+                Plan::Changes(changes)
+            })
         })
     }
 
@@ -196,11 +206,13 @@ impl CyclicCode {
     /// [`CodeError::Changes`]. Fails with [`CodeError::Memory`] when the list of the shards gets
     /// no memory.
     pub fn apply(&self, shards: &mut [&mut [u8]], changes: &Changes) -> Result<(), CodeError> {
-        let reading = (0..=u16::MAX).zip(shards.iter().map(|shard| &**shard));
-        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
-        let mut places = roomy(shards.len()).map_err(|_| CodeError::Memory)?;
-        places.extend((0..=u16::MAX).zip(shards.iter_mut().map(|shard| &mut **shard)));
-        crate::correct::apply_changes(self.field(), &mut places, changes, &print)
+        crate::cleared(|| {
+            let reading = (0..=u16::MAX).zip(shards.iter().map(|shard| &**shard));
+            let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+            let mut places = roomy(shards.len()).map_err(|_| CodeError::Memory)?;
+            places.extend((0..=u16::MAX).zip(shards.iter_mut().map(|shard| &mut **shard)));
+            crate::correct::apply_changes(self.field(), &mut places, changes, &print)
+        })
     }
 
     /// What names this code in the fingerprint of a plan.

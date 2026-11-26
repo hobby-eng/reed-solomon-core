@@ -87,46 +87,48 @@ impl Code {
     /// holds the right value, so a program can show each change first. Fails as [`Code::correct`] does,
     /// or with [`CodeError::Mark`] for a mark outside the shards.
     pub fn plan(&self, shards: &[(u16, &[u8])], marks: &[Mark]) -> Result<Plan, CodeError> {
-        let indexes = shards.iter().map(|&(index, _)| index);
-        let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
-        let symbols = length / self.field().symbol_bytes();
-        let sorted = sorted_marks(marks, shards.len(), symbols)?;
-        self.check_symbols(shards.iter().map(|(_, bytes)| *bytes))?;
-        let spare = shards.len() - self.threshold();
-        if spare == 0 {
-            if sorted.is_empty() {
-                return Ok(Plan::Unchecked);
-            }
-            let mut columns = 1;
-            for pair in sorted.windows(2) {
-                if let [first, second] = pair {
-                    columns += usize::from(first.symbol != second.symbol);
+        crate::cleared(|| {
+            let indexes = shards.iter().map(|&(index, _)| index);
+            let length = self.check_set(indexes, shards.iter().map(|(_, bytes)| bytes.len()))?;
+            let symbols = length / self.field().symbol_bytes();
+            let sorted = sorted_marks(marks, shards.len(), symbols)?;
+            self.check_symbols(shards.iter().map(|(_, bytes)| *bytes))?;
+            let spare = shards.len() - self.threshold();
+            if spare == 0 {
+                if sorted.is_empty() {
+                    return Ok(Plan::Unchecked);
                 }
+                let mut columns = 1;
+                for pair in sorted.windows(2) {
+                    if let [first, second] = pair {
+                        columns += usize::from(first.symbol != second.symbol);
+                    }
+                }
+                return Ok(Plan::Unresolved { columns });
             }
-            return Ok(Plan::Unresolved { columns });
-        }
-        if length == 0 {
-            return Ok(Plan::Agrees);
-        }
-        let mut points = roomy(shards.len()).map_err(CodeError::from)?;
-        points.extend(shards.iter().map(|&(index, _)| index));
-        let mut decoder = Decoder::with_room(self.field(), points, spare, length, spare)
-            .map_err(CodeError::from)?;
-        let reading = shards.iter().map(|&(index, bytes)| (index, bytes));
-        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
-        let mut changes = Changes::bound(&print).map_err(CodeError::from)?;
-        let unresolved = decoder
-            .plan_pass(shards, length, &sorted, &mut changes)
-            .map_err(CodeError::from)?;
-        if unresolved > 0 {
-            return Ok(Plan::Unresolved {
-                columns: unresolved,
-            });
-        }
-        if changes.is_empty() {
-            return Ok(Plan::Agrees);
-        }
-        Ok(Plan::Changes(changes))
+            if length == 0 {
+                return Ok(Plan::Agrees);
+            }
+            let mut points = roomy(shards.len()).map_err(CodeError::from)?;
+            points.extend(shards.iter().map(|&(index, _)| index));
+            let mut decoder = Decoder::with_room(self.field(), points, spare, length, spare)
+                .map_err(CodeError::from)?;
+            let reading = shards.iter().map(|&(index, bytes)| (index, bytes));
+            let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+            let mut changes = Changes::bound(&print).map_err(CodeError::from)?;
+            let unresolved = decoder
+                .plan_pass(shards, length, &sorted, &mut changes)
+                .map_err(CodeError::from)?;
+            if unresolved > 0 {
+                return Ok(Plan::Unresolved {
+                    columns: unresolved,
+                });
+            }
+            if changes.is_empty() {
+                return Ok(Plan::Agrees);
+            }
+            Ok(Plan::Changes(changes))
+        })
     }
 
     /// Makes `changes`, the list [`Code::plan`] found, in these shards. Before anything is
@@ -138,9 +140,11 @@ impl Code {
         shards: &mut [(u16, &mut [u8])],
         changes: &Changes,
     ) -> Result<(), CodeError> {
-        let reading = shards.iter().map(|(index, bytes)| (*index, &**bytes));
-        let print = Zeroizing::new(fingerprint(&self.identity(), reading));
-        apply_changes(self.field(), shards, changes, &print)
+        crate::cleared(|| {
+            let reading = shards.iter().map(|(index, bytes)| (*index, &**bytes));
+            let print = Zeroizing::new(fingerprint(&self.identity(), reading));
+            apply_changes(self.field(), shards, changes, &print)
+        })
     }
 
     /// What names this code in the fingerprint of a plan.

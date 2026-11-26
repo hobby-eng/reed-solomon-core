@@ -20,14 +20,19 @@ Fast gates (CORE-43):
 - `cargo doc --no-deps`, and with `--no-default-features`, both with `RUSTDOCFLAGS="-D warnings"`
 - `cargo fmt --check --manifest-path fuzz/Cargo.toml` and `cargo clippy --manifest-path
   fuzz/Cargo.toml --all-targets -- -D warnings`: the fuzz targets
+- `cargo clippy --all-targets --target <target> -- -D warnings` for `aarch64-linux-android`,
+  `aarch64-apple-ios` and `aarch64-apple-ios-sim`, which no runner tests yet
+- the checks of `wasm/` in Node: `cargo build --release --manifest-path wasm/Cargo.toml --target
+  wasm32-unknown-unknown`, then `node wasm/run.mjs
+  wasm/target/wasm32-unknown-unknown/release/reed_solomon_core_wasm_checks.wasm`
 
-CI (`.github/workflows/ci.yml`) runs these gates on x86-64 Linux and the tests on ARM Linux, macOS
-and Windows; `audit.yml` holds `Cargo.lock` and `fuzz/Cargo.lock` against the RustSec advisories.
+CI (`.github/workflows/ci.yml`) runs these gates on x86-64 Linux, the checks of `wasm/` in Node, and
+the tests on ARM Linux, macOS and Windows; `docs/audits/TARGETS.md` says how each target is checked; `audit.yml` holds `Cargo.lock`, `fuzz/Cargo.lock` and `wasm/Cargo.lock` against the RustSec advisories.
 
 Before a release, and after a change of the decoder, the shard file or a call on sets: the fuzz
 targets under `fuzz/` (`files`, `sets`, `plans`, `cyclic`, `calls`) run under the sanitizer, `cargo +nightly
 fuzz run --fuzz-dir fuzz --target x86_64-unknown-linux-gnu <target> -- -max_total_time=60
--rss_limit_mb=3000 -max_len=4096`, after `cargo +nightly run --manifest-path fuzz/Cargo.toml
+-rss_limit_mb=3000 -max_len=4096` (the release workflow runs each for 90 seconds before it packages a tag), after `cargo +nightly run --manifest-path fuzz/Cargo.toml
 --example seeds --target x86_64-unknown-linux-gnu -- fuzz/corpus/files` gives `files` whole sets to
 start from; and the proof that each field is one checks its largest fields, `cargo test --release
 --lib field::proof -- --ignored` (minutes). A change of the field arithmetic runs `cargo run --release --no-default-features
@@ -37,7 +42,7 @@ packages a tag.
 
 Layout: `src/buffer*` the memory every result and working buffer of data lies in, protected
 pages or the allocator's; `src/strict*` the strict mode, the calls for a secret in the open;
-`src/list.rs` the short lists of a search; `src/field*` the three fields and the word-wide scaling kernel;
+`src/stack.rs` the clearing of the stack below a call that worked on data; `src/list.rs` the short lists of a search; `src/field*` the three fields and the word-wide scaling kernel;
 `src/code*` the code, its sources and the whole-shard helpers; `src/correct*` the decoder, the correction and the plan of
 changes for marked gaps; `src/cyclic*` the cyclic code in the caller's memory (`words.rs`) and in
 its own (`owned.rs`), with the search of one word (`decode.rs`); `src/recurrence.rs`
@@ -57,14 +62,14 @@ when let go, every result that holds data and every working buffer of its bytes 
 and no `Debug` text shows data; keep that in new code (`docs/TECHNICAL.md`, Secrets in memory).
 A new buffer of data comes from `Buffer::zeros`, which a strict call checks before a byte goes
 in, and the calls of `src/strict*` take a secret only through the sealed `Held` traits; a new
-call that handles data gets its strict counterpart (`docs/TECHNICAL.md`, The strict mode).
+call that handles data gets its strict counterpart (`docs/TECHNICAL.md`, The strict mode) and runs
+its body in `crate::cleared`, which clears the stack below it with `protect`.
 
 ## Audits
 
 An audit, a review of findings or a remediation follow-up of this repository follows the workspace's
 audit procedure in `../.github/audits/`: `FULL_AUDIT_GUIDE_V2.md` (the checks and their order;
 section 17 for Rust crates and every target they are built for), `AUDIT_STANDARD.md`,
-`AUDIT_TEMPLATE.md` and `audit-report.schema.json`. Section 17 asks for `docs/audits/TARGETS.md`
-with the targets, their runners and the fuzzing budgets; until this repository has one, the audit
-derives the targets as section 17.3 says and records the missing file. Reports, their JSON twins and
+`AUDIT_TEMPLATE.md` and `audit-report.schema.json`. Section 17 asks for the targets, their runners and the
+fuzzing budgets: they are in [`docs/audits/TARGETS.md`](docs/audits/TARGETS.md). Reports, their JSON twins and
 their harnesses stay in this repository's `docs/audits/`.

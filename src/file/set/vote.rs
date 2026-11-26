@@ -186,20 +186,24 @@ impl FileSet<'_> {
     /// Names the files that differ from what the other shards agree on, block by block; nothing is
     /// rebuilt, and [`FileSet::without`] gives the set without them. Worth asking after
     /// [`SetError::Inconsistent`]. A block's word is accepted when the dissenters fit within the spare
-    /// shards (`2·w + u ≤ r`); otherwise the block is undecided. Fails above `limit` or without memory.
+    /// shards (`2·w + u ≤ r`); otherwise the block is undecided, but for one case: when the holders
+    /// agree (`w = 0`) and the disputed copies alone fail the bound, the block gets neither verdict,
+    /// no file outvoted and nothing undecided. Fails above `limit` or without memory.
     pub fn vote(&self, limit: Option<u128>) -> Result<Vote, SetError> {
-        let needed = self.vote_work()?;
-        if limit.is_some_and(|limit| needed > limit) {
-            return Err(SetError::Work { needed });
-        }
-        let mut poll = Poll::new(self)?;
-        let mut sweep = Sweep::new(&self.shards)?;
-        for number in 0..reach(&self.shards).min(self.facts.blocks()) {
-            let (holders, in_dispute) = sweep.next_both();
-            let number = u32::try_from(number).unwrap_or(u32::MAX);
-            poll.block(number, holders, in_dispute)?;
-        }
-        poll.finish()
+        crate::cleared(|| {
+            let needed = self.vote_work()?;
+            if limit.is_some_and(|limit| needed > limit) {
+                return Err(SetError::Work { needed });
+            }
+            let mut poll = Poll::new(self)?;
+            let mut sweep = Sweep::new(&self.shards)?;
+            for number in 0..reach(&self.shards).min(self.facts.blocks()) {
+                let (holders, in_dispute) = sweep.next_both();
+                let number = u32::try_from(number).unwrap_or(u32::MAX);
+                poll.block(number, holders, in_dispute)?;
+            }
+            poll.finish()
+        })
     }
 }
 

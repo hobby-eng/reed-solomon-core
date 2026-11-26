@@ -108,14 +108,16 @@ impl SetFacts {
         block_len: u32,
         digest: DataDigest,
     ) -> Result<Self, FileError> {
-        let data_len = u64::try_from(data.len()).map_err(|_| FileError::Size)?;
-        // The facts are checked with a stand-in digest, so that a refusal comes before the hash.
-        let stand_in = matches!(digest, DataDigest::Sha256).then_some([0; DIGEST]);
-        let mut facts = Self::new(field, id, threshold, data_len, block_len, stand_in)?;
-        if facts.digest.is_some() {
-            facts.digest = Some(sha256(data));
-        }
-        Ok(facts)
+        crate::cleared(|| {
+            let data_len = u64::try_from(data.len()).map_err(|_| FileError::Size)?;
+            // The facts are checked with a stand-in digest, so that a refusal comes before the hash.
+            let stand_in = matches!(digest, DataDigest::Sha256).then_some([0; DIGEST]);
+            let mut facts = Self::new(field, id, threshold, data_len, block_len, stand_in)?;
+            if facts.digest.is_some() {
+                facts.digest = Some(sha256(data));
+            }
+            Ok(facts)
+        })
     }
 
     /// The code of the set: its field and its threshold.

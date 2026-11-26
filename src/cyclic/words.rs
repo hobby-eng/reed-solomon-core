@@ -85,17 +85,19 @@ impl<'g> CyclicWords<'g> {
         parity: &mut [&mut [u8]],
         remainder: &mut [u16],
     ) -> Result<(), CodeError> {
-        if data.len() != self.data() || parity.len() != self.parity() {
-            return Err(CodeError::Count);
-        }
-        let length = self.measured(data, self.data())?;
-        let outs = parity.iter().all(|out| out.len() == length);
-        if !outs || remainder.len() != self.parity() {
-            return Err(CodeError::Length);
-        }
-        self.canonical(data, &[])?;
-        self.encode_checked(data, parity, remainder);
-        Ok(())
+        crate::cleared(|| {
+            if data.len() != self.data() || parity.len() != self.parity() {
+                return Err(CodeError::Count);
+            }
+            let length = self.measured(data, self.data())?;
+            let outs = parity.iter().all(|out| out.len() == length);
+            if !outs || remainder.len() != self.parity() {
+                return Err(CodeError::Length);
+            }
+            self.canonical(data, &[])?;
+            self.encode_checked(data, parity, remainder);
+            Ok(())
+        })
     }
 
     /// The parity of `data` into `parity`, whose counts, lengths and symbols were checked.
@@ -123,28 +125,30 @@ impl<'g> CyclicWords<'g> {
     /// refused. It stops at the first stripe with a word that is not of the code. Fails as
     /// [`CyclicWords::encode`] does, and with [`CodeError::Length`] for too little room.
     pub fn agrees(&self, shards: &[&[u8]], syndromes: &mut [u8]) -> Result<bool, CodeError> {
-        let length = self.measured(shards, self.length())?;
-        let symbol = self.field().symbol_bytes();
-        let width = syndromes.len() / (self.parity() * symbol);
-        if width == 0 {
-            return Err(CodeError::Length);
-        }
-        self.canonical(shards, &[])?;
-        let columns = length / symbol;
-        let mut agrees = true;
-        for start in (0..columns).step_by(width) {
-            let span = ((start + width).min(columns) - start) * symbol;
-            let room = syndromes
-                .get_mut(..self.parity() * span)
-                .unwrap_or_default();
-            self.word.stripe(shards, &[], start * symbol, room, span);
-            if room.iter().any(|&byte| byte != 0) {
-                agrees = false;
-                break;
+        crate::cleared(|| {
+            let length = self.measured(shards, self.length())?;
+            let symbol = self.field().symbol_bytes();
+            let width = syndromes.len() / (self.parity() * symbol);
+            if width == 0 {
+                return Err(CodeError::Length);
             }
-        }
-        syndromes.zeroize();
-        Ok(agrees)
+            self.canonical(shards, &[])?;
+            let columns = length / symbol;
+            let mut agrees = true;
+            for start in (0..columns).step_by(width) {
+                let span = ((start + width).min(columns) - start) * symbol;
+                let room = syndromes
+                    .get_mut(..self.parity() * span)
+                    .unwrap_or_default();
+                self.word.stripe(shards, &[], start * symbol, room, span);
+                if room.iter().any(|&byte| byte != 0) {
+                    agrees = false;
+                    break;
+                }
+            }
+            syndromes.zeroize();
+            Ok(agrees)
+        })
     }
 
     /// Puts one word right in place: `word` holds its `length` symbols, and those at the places
@@ -158,26 +162,28 @@ impl<'g> CyclicWords<'g> {
         erased: &[usize],
         room: &mut [u16],
     ) -> Result<Option<usize>, CodeError> {
-        if word.len() != self.length() || room.len() < Self::room(self.parity()) {
-            return Err(CodeError::Length);
-        }
-        let rising = erased.windows(2).all(|pair| pair.first() < pair.last());
-        if !rising || erased.last().is_some_and(|&last| last >= self.length()) {
-            return Err(CodeError::Mark);
-        }
-        let read = word
-            .iter()
-            .enumerate()
-            .filter(|(place, _)| erased.binary_search(place).is_err());
-        let order = self.field().order();
-        if read.fold(false, |outside, (_, &symbol)| {
-            outside | (usize::from(symbol) >= order)
-        }) {
-            return Err(CodeError::Symbol);
-        }
-        let answer = self.put_right(word, erased, room);
-        room.zeroize();
-        answer
+        crate::cleared(|| {
+            if word.len() != self.length() || room.len() < Self::room(self.parity()) {
+                return Err(CodeError::Length);
+            }
+            let rising = erased.windows(2).all(|pair| pair.first() < pair.last());
+            if !rising || erased.last().is_some_and(|&last| last >= self.length()) {
+                return Err(CodeError::Mark);
+            }
+            let read = word
+                .iter()
+                .enumerate()
+                .filter(|(place, _)| erased.binary_search(place).is_err());
+            let order = self.field().order();
+            if read.fold(false, |outside, (_, &symbol)| {
+                outside | (usize::from(symbol) >= order)
+            }) {
+                return Err(CodeError::Symbol);
+            }
+            let answer = self.put_right(word, erased, room);
+            room.zeroize();
+            answer
+        })
     }
 
     /// The search of `correct_word` once its word and marks are checked.

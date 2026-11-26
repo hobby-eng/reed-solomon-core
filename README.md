@@ -65,13 +65,13 @@ The cyclic code appends check symbols to a fixed-length record. In the 2,048-ele
 
 ## Secrets in memory
 
-The original data shards contain plaintext. Encrypt confidential data before distributing its shards. The strict API uses [secret-protection-core](https://github.com/hobby-eng/secret-protection-core) to keep plaintext in protected buffers and run the decoder on a protected stack. It checks the caller’s buffers and refuses the operation if the OS cannot supply the required protection. The strict stack is available on Linux, Android, macOS and iOS. [Security policy and platform limits](SECURITY.md).
+The original data shards contain plaintext. Encrypt confidential data before distributing its shards. The strict API uses [secret-protection-core](https://github.com/hobby-eng/secret-protection-core) to keep plaintext in protected buffers and run the decoder on a protected stack. It checks the caller’s buffers and refuses the operation if the OS cannot supply the required protection. The strict stack is available on Linux and macOS, where CI runs it, and on Android and iOS, which CI checks with Clippy but no runner tests yet ([targets](docs/audits/TARGETS.md)). [Security policy and platform limits](SECURITY.md).
 
-The crate requires Rust 1.99 or later. The default `protect` feature requests OS-backed buffers on supported native platforms. On WebAssembly it uses allocator memory. With `alloc` alone, owned buffers use ordinary allocator memory and are wiped on drop. With default features disabled and no allocator, the core operations use buffers supplied by the caller.
+The crate requires Rust 1.99 or later. The default `protect` feature requests OS-backed buffers on supported native platforms, and every call that works on data then overwrites 128 KiB of the calling thread's stack below it, where the arithmetic, the checksums and the hash left their temporaries (secret-protection-core's `with_cleared_stack`), and needs a little more free stack than that; a call made inside another clears once, at the end of the outer one, and WebAssembly clears nothing. It is best effort: the window is fixed, not measured against how deep the work went; a panic clears it only as it unwinds, so a build that aborts on panic ends with nothing cleared; registers, heap copies, the caller's own frames and what a call returns stay as they are. It is neither the strict mode's protected stack nor an isolation of the process. On WebAssembly it uses allocator memory. With `alloc` alone, owned buffers use ordinary allocator memory and are wiped on drop. With default features disabled and no allocator, the core operations use buffers supplied by the caller.
 
 ## Verification
 
-Version 0.1.1 covered **98.25%** (6,049 of 6,157) of measured source lines on Linux x86-64 with default features, across unit, public-interface and strict-mode tests. The crate also includes a known-answer self-test. [Test coverage and measurement](docs/COVERAGE.md).
+The source measured on 2026-11-24, before 0.2.0, covered **98.25%** (6,049 of 6,157) of its measured lines on Linux x86-64 with default features, across unit, public-interface and strict-mode tests. The crate also includes a known-answer self-test. [Test coverage and measurement](docs/COVERAGE.md).
 
 ## License
 

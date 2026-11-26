@@ -62,10 +62,13 @@ impl Changes {
 
     /// What the symbol of the change at place `at` holds and becomes, given to `look`; `None`
     /// past the last. They can be a secret: a program looks at what it needs and keeps no copy,
-    /// or uses the strict mode's `values`, which runs `look` on a protected stack.
+    /// or uses the strict mode's `values`, which runs `look` on a protected stack. With `protect`
+    /// a fixed window of the stack below is cleared after `look` returns, best effort.
     pub fn values<R>(&self, at: usize, look: impl FnOnce(u16, u16) -> R) -> Option<R> {
-        self.record(at)
-            .map(|record| look(record.was, record.becomes))
+        crate::cleared(|| {
+            self.record(at)
+                .map(|record| look(record.was, record.becomes))
+        })
     }
 
     /// Whether the list lies in locked pages, as [`Buffer::is_locked`] says of a buffer.
@@ -205,16 +208,21 @@ fn read(slot: &[u8; RECORD]) -> Record {
 
 impl PartialEq for Changes {
     /// The fingerprints and every record are looked at, whichever differs; room not yet used
-    /// does not count. The values are read too, on the caller's stack. Lists equal in every
-    /// change but made for other shards differ, by their fingerprints, which only `==` compares;
-    /// `get` and the strict mode's `values` show that the changes are the same, not the plans.
+    /// does not count; lists of different lengths are unequal, their common part read all the
+    /// same. The values are read too, on the caller's stack; with `protect` on a native system a
+    /// fixed window of the stack below is cleared after it, best effort (docs/TECHNICAL.md,
+    /// Secrets in memory); WebAssembly clears nothing. Lists equal in every change but made for
+    /// other shards differ, by their fingerprints, which only `==` compares; `get` and the strict
+    /// mode's `values` show that the changes are the same, not the plans.
     fn eq(&self, other: &Self) -> bool {
-        let differ = self
-            .used()
-            .iter()
-            .zip(other.used())
-            .fold(0, |differ, (own, others)| differ | (own ^ others));
-        self.count == other.count && self.used().len() == other.used().len() && differ == 0
+        crate::cleared(|| {
+            let differ = self
+                .used()
+                .iter()
+                .zip(other.used())
+                .fold(0, |differ, (own, others)| differ | (own ^ others));
+            self.count == other.count && self.used().len() == other.used().len() && differ == 0
+        })
     }
 }
 

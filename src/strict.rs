@@ -17,6 +17,14 @@ use core::cell::Cell;
 
 std::thread_local! {
     /// Whether the call running on this thread is strict.
+    #[cfg_attr(
+        target_os = "android",
+        allow(
+            clippy::missing_const_for_thread_local,
+            reason = "on Android std expands this const initializer into its lazy form, which \
+                      Clippy takes for a missing const"
+        )
+    )]
     static STRICT: Cell<bool> = const { Cell::new(false) };
 }
 

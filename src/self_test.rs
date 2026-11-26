@@ -18,18 +18,28 @@ pub struct Check {
 /// The most checks a run holds.
 const MOST: usize = 17;
 
+/// The checks a run of this build makes: without an allocator six are left out.
+const EXPECTED: usize = if cfg!(feature = "alloc") {
+    MOST
+} else {
+    MOST - 6
+};
+
 /// The checks of one run.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SelfTest {
     checks: [Check; MOST],
     count: usize,
+    /// Whether a check came after the run was full, and so was not kept.
+    overflowed: bool,
 }
 
 impl SelfTest {
-    /// Whether every check passed. A program relies on the crate only then.
+    /// Whether the run made every check of this build, no more, and each passed. A program relies
+    /// on the crate only then.
     #[must_use]
     pub fn passed(&self) -> bool {
-        self.checks().iter().all(|check| check.passed)
+        !self.overflowed && self.count == EXPECTED && self.checks().iter().all(|check| check.passed)
     }
 
     /// Every check, in the order run.
@@ -39,9 +49,12 @@ impl SelfTest {
     }
 
     fn add(&mut self, name: &'static str, passed: bool) {
-        if let Some(check) = self.checks.get_mut(self.count) {
-            *check = Check { name, passed };
-            self.count += 1;
+        match self.checks.get_mut(self.count) {
+            Some(check) => {
+                *check = Check { name, passed };
+                self.count += 1;
+            }
+            None => self.overflowed = true,
         }
     }
 }
@@ -58,6 +71,7 @@ pub fn self_test() -> SelfTest {
     let mut run = SelfTest {
         checks: [empty; MOST],
         count: 0,
+        overflowed: false,
     };
     run.add(
         "GF(2^8), 0x11D: the data 01 02 03 04 gives the shards 45 5E (reed-solomon-erasure, klauspost)",
@@ -397,5 +411,38 @@ mod tests {
         assert!(run.passed());
         let count = if cfg!(feature = "alloc") { 17 } else { 11 };
         assert_eq!(run.checks().len(), count);
+    }
+
+    use super::{Check, EXPECTED, MOST, SelfTest};
+
+    /// A run of checks with these results.
+    fn run(results: &[bool]) -> SelfTest {
+        let empty = Check {
+            name: "",
+            passed: false,
+        };
+        let mut run = SelfTest {
+            checks: [empty; MOST],
+            count: 0,
+            overflowed: false,
+        };
+        for &passed in results {
+            run.add("a check", passed);
+        }
+        run
+    }
+
+    /// A run passes only when it made exactly the checks of this build and each passed: none
+    /// failed, none was missing, and none was left out for want of room.
+    #[test]
+    fn a_run_passes_only_whole_and_without_a_failure() {
+        assert!(run(&[true; EXPECTED]).passed());
+        let one_failed: Vec<bool> = (0..EXPECTED).map(|check| check != 3).collect();
+        assert!(!run(&one_failed).passed());
+        assert!(!run(&[true; EXPECTED - 1]).passed());
+        assert!(!run(&[]).passed());
+        let one_more = run(&[true; MOST + 1]);
+        assert_eq!(one_more.checks().len(), MOST);
+        assert!(!one_more.passed());
     }
 }

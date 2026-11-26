@@ -20,22 +20,24 @@ impl SetFacts {
     /// state a SHA-256, data with another digest gets no files. Fails on wrong data length or digest,
     /// an index outside the field, or no memory. [`SetFacts::files_into`] writes into outputs.
     pub fn files(&self, data: &[u8], indexes: &[u16]) -> Result<Vec<Buffer>, FileError> {
-        self.check_data(data)?;
-        self.check_indexes(indexes)?;
-        if indexes.is_empty() {
-            return Ok(Vec::new());
-        }
-        let length = usize::try_from(self.file_len()).map_err(|_| FileError::Memory)?;
-        let mut files = Vec::new();
-        room(&mut files, indexes.len())?;
-        for _ in indexes {
-            files.push(Buffer::zeros(length)?);
-        }
-        let mut outs = Vec::new();
-        room(&mut outs, files.len())?;
-        outs.extend(files.iter_mut().map(|file| file.as_mut_slice()));
-        self.write(data, indexes, &mut outs)?;
-        Ok(files)
+        crate::cleared(|| {
+            self.check_data(data)?;
+            self.check_indexes(indexes)?;
+            if indexes.is_empty() {
+                return Ok(Vec::new());
+            }
+            let length = usize::try_from(self.file_len()).map_err(|_| FileError::Memory)?;
+            let mut files = Vec::new();
+            room(&mut files, indexes.len())?;
+            for _ in indexes {
+                files.push(Buffer::zeros(length)?);
+            }
+            let mut outs = Vec::new();
+            room(&mut outs, files.len())?;
+            outs.extend(files.iter_mut().map(|file| file.as_mut_slice()));
+            self.write(data, indexes, &mut outs)?;
+            Ok(files)
+        })
     }
 
     /// The files of [`SetFacts::files`] written into `outs`, one for each index and each exactly
@@ -49,17 +51,19 @@ impl SetFacts {
         indexes: &[u16],
         outs: &mut [&mut [u8]],
     ) -> Result<(), FileError> {
-        let needed = self.file_len();
-        let fits = outs.len() == indexes.len()
-            && outs
-                .iter()
-                .all(|out| u64::try_from(out.len()) == Ok(needed));
-        if !fits {
-            return Err(FileError::Output { needed });
-        }
-        self.check_data(data)?;
-        self.check_indexes(indexes)?;
-        self.write(data, indexes, outs)
+        crate::cleared(|| {
+            let needed = self.file_len();
+            let fits = outs.len() == indexes.len()
+                && outs
+                    .iter()
+                    .all(|out| u64::try_from(out.len()) == Ok(needed));
+            if !fits {
+                return Err(FileError::Output { needed });
+            }
+            self.check_data(data)?;
+            self.check_indexes(indexes)?;
+            self.write(data, indexes, outs)
+        })
     }
 
     /// Refuses an index outside the field, before any memory is asked for.

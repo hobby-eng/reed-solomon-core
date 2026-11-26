@@ -1,7 +1,13 @@
 [toolchain]
 channel = "1.99.1"
 profile = "minimal"
-# The browser build. The target without an operating system, thumbv7em-none-eabihf, is added where
-# its gate runs.
-targets = ["wasm32-unknown-unknown"]
+# The browser build, and the mobile systems the strict mode covers, which CI checks and lints with
+# Clippy, with no runner to test them yet. The target without an operating system, thumbv7em-none-eabihf, is
+# added where its gate runs.
+targets = [
+  "wasm32-unknown-unknown",
+  "aarch64-linux-android",
+  "aarch64-apple-ios",
+  "aarch64-apple-ios-sim",
+]
 components = ["rustfmt", "clippy"]

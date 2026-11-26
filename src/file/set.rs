@@ -365,19 +365,21 @@ impl<'a> FileSet<'a> {
     /// blocks are missing, above `limit`, on disagreement, non-zero padding, a digest mismatch or
     /// without memory. [`FileSet::rebuild_into`] writes the data into the program's own output.
     pub fn rebuild(&self, limit: Option<u128>) -> Result<Rebuilt, SetError> {
-        let targets = self.data_targets(limit)?;
-        let length = usize::try_from(self.facts.data_len()).map_err(|_| SetError::Memory)?;
-        let mut data = Buffer::zeros(length)?;
-        let Written {
-            digest,
-            bare,
-            steps,
-        } = self.data_into(&mut data, &targets)?;
-        Ok(Rebuilt {
-            data,
-            digest,
-            bare,
-            steps,
+        crate::cleared(|| {
+            let targets = self.data_targets(limit)?;
+            let length = usize::try_from(self.facts.data_len()).map_err(|_| SetError::Memory)?;
+            let mut data = Buffer::zeros(length)?;
+            let Written {
+                digest,
+                bare,
+                steps,
+            } = self.data_into(&mut data, &targets)?;
+            Ok(Rebuilt {
+                data,
+                digest,
+                bare,
+                steps,
+            })
         })
     }
 
@@ -387,12 +389,14 @@ impl<'a> FileSet<'a> {
     /// the call succeeds: a refusal before the work starts, of the memory it needs too, leaves it
     /// as it was; one during the work or by the checks after it fills it with zeros.
     pub fn rebuild_into(&self, out: &mut [u8], limit: Option<u128>) -> Result<Written, SetError> {
-        let needed = self.facts.data_len();
-        if u64::try_from(out.len()) != Ok(needed) {
-            return Err(SetError::Output { needed });
-        }
-        let targets = self.data_targets(limit)?;
-        self.data_into(out, &targets)
+        crate::cleared(|| {
+            let needed = self.facts.data_len();
+            if u64::try_from(out.len()) != Ok(needed) {
+                return Err(SetError::Output { needed });
+            }
+            let targets = self.data_targets(limit)?;
+            self.data_into(out, &targets)
+        })
     }
 
     /// The data shards, once the set is known to rebuild within `limit`.
@@ -447,8 +451,10 @@ impl<'a> FileSet<'a> {
     /// Spare shards are still compared, but the data isn't assembled or its digest checked; a later
     /// rebuild checks that. Fails as [`FileSet::rebuild`], or for an index outside the field.
     pub fn repair(&self, index: u16, limit: Option<u128>) -> Result<Buffer, SetError> {
-        let mut files = self.repairs(&[index], limit)?;
-        files.pop().ok_or(SetError::Memory)
+        crate::cleared(|| {
+            let mut files = self.repairs(&[index], limit)?;
+            files.pop().ok_or(SetError::Memory)
+        })
     }
 
     /// The steps [`FileSet::repairs`] needs for `indexes`. All of them are made in one pass, so each
@@ -466,21 +472,23 @@ impl<'a> FileSet<'a> {
     /// [`FileSet::repair`]. [`FileSet::repairs_into`] writes the files into the program's own
     /// outputs instead.
     pub fn repairs(&self, indexes: &[u16], limit: Option<u128>) -> Result<Vec<Buffer>, SetError> {
-        let targets = self.repair_targets(indexes, limit)?;
-        let mut files = Vec::new();
-        room(&mut files, indexes.len())?;
-        if targets.is_empty() {
-            return Ok(files);
-        }
-        let length = usize::try_from(self.facts.file_len()).map_err(|_| SetError::Memory)?;
-        for _ in indexes {
-            files.push(Buffer::zeros(length)?);
-        }
-        let mut outs = Vec::new();
-        room(&mut outs, files.len())?;
-        outs.extend(files.iter_mut().map(|file| file.as_mut_slice()));
-        self.files_into(indexes, &targets, &mut outs)?;
-        Ok(files)
+        crate::cleared(|| {
+            let targets = self.repair_targets(indexes, limit)?;
+            let mut files = Vec::new();
+            room(&mut files, indexes.len())?;
+            if targets.is_empty() {
+                return Ok(files);
+            }
+            let length = usize::try_from(self.facts.file_len()).map_err(|_| SetError::Memory)?;
+            for _ in indexes {
+                files.push(Buffer::zeros(length)?);
+            }
+            let mut outs = Vec::new();
+            room(&mut outs, files.len())?;
+            outs.extend(files.iter_mut().map(|file| file.as_mut_slice()));
+            self.files_into(indexes, &targets, &mut outs)?;
+            Ok(files)
+        })
     }
 
     /// The files of [`FileSet::repairs`] written into `outs`, one for each index and each exactly
@@ -494,19 +502,21 @@ impl<'a> FileSet<'a> {
         outs: &mut [&mut [u8]],
         limit: Option<u128>,
     ) -> Result<u128, SetError> {
-        let needed = self.facts.file_len();
-        let fits = outs.len() == indexes.len()
-            && outs
-                .iter()
-                .all(|out| u64::try_from(out.len()) == Ok(needed));
-        if !fits {
-            return Err(SetError::Output { needed });
-        }
-        let targets = self.repair_targets(indexes, limit)?;
-        if targets.is_empty() {
-            return Ok(0);
-        }
-        self.files_into(indexes, &targets, outs)
+        crate::cleared(|| {
+            let needed = self.facts.file_len();
+            let fits = outs.len() == indexes.len()
+                && outs
+                    .iter()
+                    .all(|out| u64::try_from(out.len()) == Ok(needed));
+            if !fits {
+                return Err(SetError::Output { needed });
+            }
+            let targets = self.repair_targets(indexes, limit)?;
+            if targets.is_empty() {
+                return Ok(0);
+            }
+            self.files_into(indexes, &targets, outs)
+        })
     }
 
     /// The files of `indexes` into `outs`, whose lengths and work were checked: the frame of each,
@@ -571,23 +581,25 @@ impl<'a> FileSet<'a> {
     /// [`FileSet::vote`]. Files are dropped whole, so a file wrong in one block can't silently feed
     /// another. Fails only without memory.
     pub fn without(&self, files: &[usize]) -> Result<Self, FileError> {
-        let mut left_out = Vec::new();
-        room(&mut left_out, files.len())?;
-        left_out.extend_from_slice(files);
-        left_out.sort_unstable();
-        let Gathered {
-            shards,
-            members,
-            disputes,
-        } = keep(&self.shards, &self.members, &left_out)?;
-        let coverage = cover(&self.facts, &shards)?;
-        Ok(Self {
-            facts: self.facts,
-            id_shared: self.id_shared,
-            shards,
-            members,
-            disputes,
-            coverage,
+        crate::cleared(|| {
+            let mut left_out = Vec::new();
+            room(&mut left_out, files.len())?;
+            left_out.extend_from_slice(files);
+            left_out.sort_unstable();
+            let Gathered {
+                shards,
+                members,
+                disputes,
+            } = keep(&self.shards, &self.members, &left_out)?;
+            let coverage = cover(&self.facts, &shards)?;
+            Ok(Self {
+                facts: self.facts,
+                id_shared: self.id_shared,
+                shards,
+                members,
+                disputes,
+                coverage,
+            })
         })
     }
 

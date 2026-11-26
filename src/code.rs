@@ -228,23 +228,25 @@ impl Sources<'_> {
     /// on a bad target, a wrong stripe count, unequal lengths or a symbol outside the field; `out` is
     /// then left as it was.
     pub fn build(&self, target: u16, stripes: &[&[u8]], out: &mut [u8]) -> Result<(), CodeError> {
-        self.geometry(stripes, out.len())?;
-        let recipe = self.recipe(target)?;
-        self.symbols(stripes)?;
-        // A shard that is one of the sources is that source: no sum over all of them.
-        if let Recipe::Copy(position) = recipe
-            && let Some(stripe) = stripes.get(position)
-        {
-            out.copy_from_slice(stripe);
-            return Ok(());
-        }
-        out.fill(0);
-        let sources = self.indexes.iter().zip(self.weights).zip(stripes);
-        for (position, ((&index, &weight), stripe)) in sources.enumerate() {
-            let coefficient = self.coefficient(&recipe, position, index, weight);
-            self.field.add_scaled(out, stripe, coefficient);
-        }
-        Ok(())
+        crate::cleared(|| {
+            self.geometry(stripes, out.len())?;
+            let recipe = self.recipe(target)?;
+            self.symbols(stripes)?;
+            // A shard that is one of the sources is that source: no sum over all of them.
+            if let Recipe::Copy(position) = recipe
+                && let Some(stripe) = stripes.get(position)
+            {
+                out.copy_from_slice(stripe);
+                return Ok(());
+            }
+            out.fill(0);
+            let sources = self.indexes.iter().zip(self.weights).zip(stripes);
+            for (position, ((&index, &weight), stripe)) in sources.enumerate() {
+                let coefficient = self.coefficient(&recipe, position, index, weight);
+                self.field.add_scaled(out, stripe, coefficient);
+            }
+            Ok(())
+        })
     }
 
     /// Whether `shard` is what [`Sources::build`] would write for `target`, made [`COMPARED`]
@@ -252,14 +254,16 @@ impl Sources<'_> {
     /// [`CodeError::Memory`] when the system gives no page for those bytes;
     /// [`Sources::agrees_in`] takes them from the caller instead.
     pub fn agrees(&self, target: u16, stripes: &[&[u8]], shard: &[u8]) -> Result<bool, CodeError> {
-        let recipe = self.comparable(target, stripes, shard)?;
-        // The expected bytes follow from the data: with `protect` in pages of their own, without
-        // it on the stack; wiped when the call returns either way.
-        #[cfg(feature = "protect")]
-        let mut room = crate::buffer::Buffer::zeros(COMPARED)?;
-        #[cfg(not(feature = "protect"))]
-        let mut room = Zeroizing::new([0_u8; COMPARED]);
-        self.compare(&recipe, stripes, shard, room.as_mut_slice())
+        crate::cleared(|| {
+            let recipe = self.comparable(target, stripes, shard)?;
+            // The expected bytes follow from the data: with `protect` in pages of their own, without
+            // it on the stack; wiped when the call returns either way.
+            #[cfg(feature = "protect")]
+            let mut room = crate::buffer::Buffer::zeros(COMPARED)?;
+            #[cfg(not(feature = "protect"))]
+            let mut room = Zeroizing::new([0_u8; COMPARED]);
+            self.compare(&recipe, stripes, shard, room.as_mut_slice())
+        })
     }
 
     /// [`Sources::agrees`] with the expected bytes made in `room`, at least [`COMPARED`] bytes,
@@ -273,10 +277,12 @@ impl Sources<'_> {
         shard: &[u8],
         room: &mut [u8],
     ) -> Result<bool, CodeError> {
-        self.geometry(stripes, shard.len())?;
-        let room = room.get_mut(..COMPARED).ok_or(CodeError::Buffer)?;
-        let recipe = self.comparable(target, stripes, shard)?;
-        self.compare(&recipe, stripes, shard, room)
+        crate::cleared(|| {
+            self.geometry(stripes, shard.len())?;
+            let room = room.get_mut(..COMPARED).ok_or(CodeError::Buffer)?;
+            let recipe = self.comparable(target, stripes, shard)?;
+            self.compare(&recipe, stripes, shard, room)
+        })
     }
 
     /// What [`Sources::agrees`] refuses, before any memory is asked for: the recipe of `target`.

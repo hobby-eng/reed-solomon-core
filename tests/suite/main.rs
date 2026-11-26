@@ -29,4 +29,5 @@ mod stripes;
 mod subsets;
 mod support;
 mod vectors;
+mod vote_search;
 mod votes;

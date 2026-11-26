@@ -180,7 +180,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "reed-solomon-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "secret-protection-core",
@@ -198,9 +198,9 @@ dependencies = [
 
 [[package]]
 name = "secret-protection-core"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "696af9b937e4069782ccebccf64c7c48808f98f42577e758e321abccb2755ce8"
+checksum = "27c89c8b0707b953e159a053fbc22e240ca221010229b5759803c6d314548ef7"
 dependencies = [
  "landlock",
  "libc",

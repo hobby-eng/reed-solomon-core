@@ -2,3 +2,4 @@
 /output/
 /tmp/
 /docs/audits/*-evidence/
+/wasm/target/

@@ -43,7 +43,7 @@ pub struct Frame {
 
 /// One block of a shard, as it was found. Its `Debug` text gives the length of an intact block,
 /// not its bytes.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy)]
 pub enum Block<'a> {
     /// The bytes of the block, whose checksum holds.
     Intact(&'a [u8]),
@@ -52,6 +52,29 @@ pub enum Block<'a> {
     /// The file ends before the end of the block.
     Missing,
 }
+
+impl PartialEq for Block<'_> {
+    /// Intact blocks of one length are equal when every byte is, all of them looked at whichever
+    /// differs; of different lengths they are unequal, their common part read all the same. For
+    /// intact blocks with `protect` on a native system a fixed window of the stack below is
+    /// cleared after it, best effort (docs/TECHNICAL.md, Secrets in memory); WebAssembly clears
+    /// nothing.
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Intact(own), Self::Intact(others)) => crate::cleared(|| {
+                let differ = own
+                    .iter()
+                    .zip(others.iter())
+                    .fold(0, |differ, (own, others)| differ | (own ^ others));
+                own.len() == others.len() && differ == 0
+            }),
+            (Self::Damaged, Self::Damaged) | (Self::Missing, Self::Missing) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Block<'_> {}
 
 impl fmt::Debug for Block<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -120,14 +143,16 @@ impl<'a> ShardFile<'a> {
     /// blocks. Fails when the two copies are good and differ ([`FileError::Conflict`]), when the file is
     /// of an unsupported field, flag or version, or when it is damaged or not a shard file at all.
     pub fn read(bytes: &'a [u8]) -> Result<Self, FileError> {
-        let lead = Found::at_start(bytes);
-        let last = Found::at_end(bytes);
-        let header = believed(&lead, &last)?;
-        let frame = frame(&header, bytes, &lead)?;
-        Ok(Self {
-            header,
-            bytes,
-            frame,
+        crate::cleared(|| {
+            let lead = Found::at_start(bytes);
+            let last = Found::at_end(bytes);
+            let header = believed(&lead, &last)?;
+            let frame = frame(&header, bytes, &lead)?;
+            Ok(Self {
+                header,
+                bytes,
+                frame,
+            })
         })
     }
 
@@ -148,19 +173,21 @@ impl<'a> ShardFile<'a> {
     /// from nowhere else.
     #[must_use]
     pub fn block(&self, number: u32) -> Option<Block<'a>> {
-        let (start, length) = self.header.span(number)?;
-        let stored = usize::try_from(length)
-            .ok()
-            .and_then(|length| length.checked_add(CHECKSUM))
-            .and_then(|length| piece(self.bytes, start, length));
-        let Some((block, sum)) = stored.and_then(<[u8]>::split_last_chunk::<CHECKSUM>) else {
-            return Some(Block::Missing);
-        };
-        let holds = self.header.block_checksum(number, block) == u32::from_be_bytes(*sum);
-        Some(if holds {
-            Block::Intact(block)
-        } else {
-            Block::Damaged
+        crate::cleared(|| {
+            let (start, length) = self.header.span(number)?;
+            let stored = usize::try_from(length)
+                .ok()
+                .and_then(|length| length.checked_add(CHECKSUM))
+                .and_then(|length| piece(self.bytes, start, length));
+            let Some((block, sum)) = stored.and_then(<[u8]>::split_last_chunk::<CHECKSUM>) else {
+                return Some(Block::Missing);
+            };
+            let holds = self.header.block_checksum(number, block) == u32::from_be_bytes(*sum);
+            Some(if holds {
+                Block::Intact(block)
+            } else {
+                Block::Damaged
+            })
         })
     }
 
@@ -168,10 +195,10 @@ impl<'a> ShardFile<'a> {
     /// condition: one pass over the bytes given.
     #[must_use]
     pub fn survey(&self) -> Survey {
-        match self.walk(|_| Ok::<(), Infallible>(())) {
+        crate::cleared(|| match self.walk(|_| Ok::<(), Infallible>(())) {
             Ok(survey) => survey,
             Err(never) => match never {},
-        }
+        })
     }
 
     /// The survey of the file, with `intact` called for the number of every block whose

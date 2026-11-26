@@ -95,13 +95,15 @@ impl Code {
     /// Each shard comes in a [`Buffer`]. Fails when `data` has the wrong count or lengths, a target
     /// is outside the field, a symbol isn't an element of the field, or a shard gets no memory.
     pub fn encode(&self, data: &[&[u8]], targets: &[u16]) -> Result<Vec<Buffer>, CodeError> {
-        if data.len() != self.threshold {
-            return Err(CodeError::Count);
-        }
-        // The threshold is at most 65,536, so every data index fits.
-        let mut numbered = listed(data.len())?;
-        numbered.extend((0..=u16::MAX).zip(data.iter().copied()));
-        self.rebuild(&numbered, targets)
+        crate::cleared(|| {
+            if data.len() != self.threshold {
+                return Err(CodeError::Count);
+            }
+            // The threshold is at most 65,536, so every data index fits.
+            let mut numbered = listed(data.len())?;
+            numbered.extend((0..=u16::MAX).zip(data.iter().copied()));
+            self.rebuild(&numbered, targets)
+        })
     }
 
     /// The shards numbered `targets` from any `threshold` or more shards, given as `(index, bytes)`:
@@ -114,42 +116,46 @@ impl Code {
         shards: &[(u16, &[u8])],
         targets: &[u16],
     ) -> Result<Vec<Buffer>, CodeError> {
-        let chosen = self.chosen(shards)?;
-        // Every target is checked before the first shard is made.
-        for &target in targets {
-            self.field.point(target).ok_or(CodeError::Index)?;
-        }
-        self.check_symbols(shards.iter().map(|&(_, bytes)| bytes))?;
-        let mut weights = zeroed(self.threshold)?;
-        let sources = self.sources(&chosen.indexes, &mut weights)?;
-        let mut made = listed(targets.len())?;
-        for &target in targets {
-            let mut shard = Buffer::zeros(chosen.length)?;
-            sources.build(target, &chosen.stripes, &mut shard)?;
-            made.push(shard);
-        }
-        Ok(made)
+        crate::cleared(|| {
+            let chosen = self.chosen(shards)?;
+            // Every target is checked before the first shard is made.
+            for &target in targets {
+                self.field.point(target).ok_or(CodeError::Index)?;
+            }
+            self.check_symbols(shards.iter().map(|&(_, bytes)| bytes))?;
+            let mut weights = zeroed(self.threshold)?;
+            let sources = self.sources(&chosen.indexes, &mut weights)?;
+            let mut made = listed(targets.len())?;
+            for &target in targets {
+                let mut shard = Buffer::zeros(chosen.length)?;
+                sources.build(target, &chosen.stripes, &mut shard)?;
+                made.push(shard);
+            }
+            Ok(made)
+        })
     }
 
     /// Whether the shards beyond the first `threshold` match what those make: they belong together,
     /// which says nothing about who made them. Fails as [`Code::rebuild`] does.
     pub fn redundancy(&self, shards: &[(u16, &[u8])]) -> Result<Redundancy, CodeError> {
-        let chosen = self.chosen(shards)?;
-        self.check_symbols(shards.iter().map(|&(_, bytes)| bytes))?;
-        let spare = shards.get(self.threshold..).unwrap_or_default();
-        if spare.is_empty() {
-            return Ok(Redundancy::None);
-        }
-        let mut weights = zeroed(self.threshold)?;
-        let sources = self.sources(&chosen.indexes, &mut weights)?;
-        // One room for the expected bytes of every shard compared.
-        let mut room = Buffer::zeros(COMPARED)?;
-        for &(index, bytes) in spare {
-            if !sources.agrees_in(index, &chosen.stripes, bytes, &mut room)? {
-                return Ok(Redundancy::Differs);
+        crate::cleared(|| {
+            let chosen = self.chosen(shards)?;
+            self.check_symbols(shards.iter().map(|&(_, bytes)| bytes))?;
+            let spare = shards.get(self.threshold..).unwrap_or_default();
+            if spare.is_empty() {
+                return Ok(Redundancy::None);
             }
-        }
-        Ok(Redundancy::Agrees)
+            let mut weights = zeroed(self.threshold)?;
+            let sources = self.sources(&chosen.indexes, &mut weights)?;
+            // One room for the expected bytes of every shard compared.
+            let mut room = Buffer::zeros(COMPARED)?;
+            for &(index, bytes) in spare {
+                if !sources.agrees_in(index, &chosen.stripes, bytes, &mut room)? {
+                    return Ok(Redundancy::Differs);
+                }
+            }
+            Ok(Redundancy::Agrees)
+        })
     }
 }
 

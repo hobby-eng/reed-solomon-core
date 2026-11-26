@@ -134,13 +134,18 @@ impl fmt::Debug for Buffer {
 }
 
 impl PartialEq for Buffer {
-    /// Every byte is looked at, whichever differs.
+    /// Of two buffers of one length every byte is looked at, whichever differs; buffers of
+    /// different lengths are unequal, their common part read all the same. With `protect` on a
+    /// native system a fixed window of the stack below is cleared after it, best effort
+    /// (docs/TECHNICAL.md, Secrets in memory); WebAssembly clears nothing.
     fn eq(&self, other: &Self) -> bool {
-        let differ = self
-            .iter()
-            .zip(other.iter())
-            .fold(0, |differ, (own, others)| differ | (own ^ others));
-        self.len() == other.len() && differ == 0
+        crate::cleared(|| {
+            let differ = self
+                .iter()
+                .zip(other.iter())
+                .fold(0, |differ, (own, others)| differ | (own ^ others));
+            self.len() == other.len() && differ == 0
+        })
     }
 }
 
