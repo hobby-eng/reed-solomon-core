@@ -1,0 +1,392 @@
+{
+  "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+  "namedOperationCount": 182,
+  "operations": [
+    {
+      "type": "Code",
+      "operations": [
+        "new",
+        "field",
+        "threshold",
+        "sources",
+        "encode",
+        "rebuild",
+        "redundancy",
+        "correct",
+        "correction_memory",
+        "plan",
+        "apply"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Sources",
+      "operations": [
+        "build",
+        "agrees",
+        "agrees_in"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Field",
+      "operations": [
+        "binary",
+        "order",
+        "symbol_bytes"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Binary",
+      "operations": [
+        "degree",
+        "polynomial"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Changes",
+      "operations": [
+        "len",
+        "is_empty",
+        "get",
+        "values",
+        "is_locked",
+        "iter"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "CyclicCode",
+      "operations": [
+        "new",
+        "field",
+        "data",
+        "parity",
+        "length",
+        "generator",
+        "words",
+        "encode",
+        "agrees",
+        "correct",
+        "plan",
+        "apply"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "CyclicWords",
+      "operations": [
+        "new",
+        "field",
+        "data",
+        "parity",
+        "length",
+        "generator",
+        "encode",
+        "agrees",
+        "correct_word",
+        "room"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "SelfTest",
+      "operations": [
+        "checks",
+        "passed"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "crate",
+      "operations": [
+        "self_test"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "SetFacts",
+      "operations": [
+        "new",
+        "for_data",
+        "code",
+        "id",
+        "data_len",
+        "block_len",
+        "digest",
+        "shard_len",
+        "blocks",
+        "file_len",
+        "files",
+        "files_into"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Header",
+      "operations": [
+        "new",
+        "set",
+        "index",
+        "as_bytes",
+        "trailer",
+        "block_checksum",
+        "file",
+        "file_into"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "ShardFile",
+      "operations": [
+        "read",
+        "header",
+        "frame",
+        "block",
+        "survey"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Survey",
+      "operations": [
+        "whole"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Pile",
+      "operations": [
+        "new",
+        "readings",
+        "sets"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "FileSet",
+      "operations": [
+        "facts",
+        "id_shared",
+        "members",
+        "disputes",
+        "coverage",
+        "stretches",
+        "disputed_blocks",
+        "rebuild_work",
+        "repair_work",
+        "rebuild",
+        "rebuild_into",
+        "repair",
+        "repairs_work",
+        "repairs",
+        "repairs_into",
+        "without",
+        "vote_work",
+        "vote"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Vote",
+      "operations": [
+        "outvoted",
+        "undecided",
+        "first_undecided",
+        "steps",
+        "outvoted_blocks",
+        "undecided_blocks"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Buffer",
+      "operations": [
+        "as_slice",
+        "as_mut_slice",
+        "is_locked",
+        "is_out_of_dumps",
+        "is_out_of_children"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Held",
+      "operations": [
+        "guarded",
+        "held"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::HeldMut",
+      "operations": [
+        "held_mut"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict",
+      "operations": [
+        "values",
+        "read"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Code",
+      "operations": [
+        "new",
+        "field",
+        "threshold",
+        "sources",
+        "encode",
+        "rebuild",
+        "redundancy",
+        "correct",
+        "correction_memory",
+        "plan",
+        "apply"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::CyclicCode",
+      "operations": [
+        "new",
+        "field",
+        "data",
+        "parity",
+        "length",
+        "generator",
+        "encode",
+        "agrees",
+        "correct",
+        "plan",
+        "apply"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::SetFacts",
+      "operations": [
+        "new",
+        "for_data",
+        "code",
+        "id",
+        "data_len",
+        "block_len",
+        "digest",
+        "shard_len",
+        "blocks",
+        "file_len",
+        "files",
+        "files_into",
+        "as_portable",
+        "header"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Pile",
+      "operations": [
+        "new",
+        "readings",
+        "sets"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::FileSet",
+      "operations": [
+        "facts",
+        "id_shared",
+        "members",
+        "disputes",
+        "coverage",
+        "stretches",
+        "disputed_blocks",
+        "rebuild_work",
+        "repair_work",
+        "rebuild",
+        "rebuild_into",
+        "repair",
+        "repairs_work",
+        "repairs",
+        "repairs_into",
+        "without",
+        "vote_work",
+        "vote"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Header",
+      "operations": [
+        "set",
+        "index",
+        "as_bytes",
+        "as_portable",
+        "file",
+        "file_into"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Sources",
+      "operations": [
+        "build",
+        "agrees"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::ShardFile",
+      "operations": [
+        "header",
+        "frame",
+        "block",
+        "survey"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    }
+  ],
+  "additionalSurfaces": [
+    "Buffer deref/mutable access, default, equality, Debug and Drop",
+    "Changes equality, Debug, iterator, values and Drop",
+    "ChangesIter and Stretches Iterator behavior",
+    "Metadata Copy/Eq/Debug/field access and error Display/Error",
+    "Sealed Held/HeldMut trait contracts",
+    "Zeroize and secret-protection-core re-exports: integration reviewed, not a complete transitive dependency audit"
+  ]
+}

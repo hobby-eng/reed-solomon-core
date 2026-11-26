@@ -1,0 +1,17 @@
+[package]
+name = "aud008-expanded"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[features]
+default = []
+protect = ["reed-solomon-core/protect"]
+
+[dependencies]
+reed-solomon-core = { path = "../../..", default-features = false, features = ["alloc"] }
+
+[lints.rust]
+unsafe_code = "forbid"

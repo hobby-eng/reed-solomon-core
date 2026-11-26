@@ -1,0 +1,1280 @@
+{
+  "snapshot": {
+    "commit": "4ababf97cabe23f0ca23ab7f430ecb134d31f051",
+    "sourceFingerprint": "f4791153c044bd13f5ad3157d2e5a467c78cdb265a19f25d06fa5b31d8628583"
+  },
+  "counts": {
+    "unchanged from AUD-008": 137,
+    "changed since AUD-008": 29,
+    "newly inventoried": 15
+  },
+  "files": [
+    {
+      "path": ".github/workflows/audit.yml",
+      "sha256": "08afbc41979c84f70dbc31736918a3c303cb894987df638199c60900b63020d0",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "7974b513b70ee7aa9654ad6db96376659a10d2b2d4d661e95f3d964aeab44dac",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "sha256": "487089ee4bc44b92b9b3a06d6027b9f7f0577901a102d3075b8af0909c80cf2b",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "b824220c6110f2b8ccb25db135e6f98ae6b54ef7ed3fd32c08ed8d5dbdf7ec10",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "35d77b2d63476be619fc6f41c1caed3a01e622f46a3ecf26f9f1ed837a1ee066",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "2327b0c41f5f87ba24602b94dcc1a18536cb289eb1f45b9b5b3a2aaf82c75ca5",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "10e043c5fa77c2a44381f22e024e2788431aa73e4a698283cb8c1bcf6d5a8034",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "8ba321c4a277b94b34ded6c078c79eda0b54cb4aa5a5f0ca1f0dfbe114caa465",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "LICENSE-APACHE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "LICENSE-MIT",
+      "sha256": "9c44407fa4ecf62d982f0244a4a3afbc3d5d74afbd93d6bc4bba3d1d5c3e5044",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "README.md",
+      "sha256": "2672027e00ac4b65cf6ce531d1b2f25e40b7bb23eebe4d8ddd4eaa6837fb3464",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "SECURITY.md",
+      "sha256": "2f5d4d8148b3b13331fc182923adc24967eb20f59ef6986609a384a41586b8cd",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "457635d26aae151e929bd216148ecfb559d80f1718822170e5759b0eb95b02ae",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "clippy.toml",
+      "sha256": "330d3040793d707bb2a91d6d06f22e105ee6dfde5cd5060d42304c6e07522bea",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/API.md",
+      "sha256": "c6d452360c999708b9f33f7c3dc5698a6d0aa813c58546d0b969bd550f2dda79",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "docs/COMPARISON.md",
+      "sha256": "cbd0618bff5b8f9b926c8842335eb94387138721b9adbe531fa3fd6d33fc6eff",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/COVERAGE.md",
+      "sha256": "0c12caa255e24b4295ddc9e6afa3056202a93eea0c2321ce4dd10ac68972d9b2",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "docs/README.md",
+      "sha256": "a725756d8b8868f4c1fd75d232743c1f10dc5218f4f9dae16fad690e88671f30",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "sha256": "59bb6b77e8191cb951f43ca401cd3a039fdd93e380b38afb8aeb1522bcebfc09",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/TECHNICAL.md",
+      "sha256": "c9a8d2d469aaa7da15f6550c84e85a53d258d5611991e582e326266fba1280ce",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-2026-11-15.json",
+      "sha256": "499aa804d23025a755557fd905698ebe3201ce06137a2192637ff45bf6addb1a",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-2026-11-15.md",
+      "sha256": "a58cc76c7617af5036793393a119cf5fec847a26214b49831296326519089d34",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/README.md",
+      "sha256": "a6ddec2ab1a994ad6c87b6096a42130f3460ae5bb8f62b1efd8475bc343c56e7",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/.gitignore",
+      "sha256": "e005979318db417d742efd014c6d72a7405128832d26e586fff772c031fc3445",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/Cargo.lock",
+      "sha256": "bddaa02c139f106d0014a309ab97a464602c267acf3cc20fd90f28647e1a93b9",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/Cargo.toml",
+      "sha256": "c6d3afc4c28c048e6a9ccdbca99f249059d8da6c96b7b12037fcd7c4c2a43bd9",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/clippy.toml",
+      "sha256": "3b2e7f88a20e629e2678d6e45a35a0cbe097d1c5b8c074319344012fc00444b6",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/examples/seeds.rs",
+      "sha256": "8cf4fbf9aa2deb06e0d545a9d18b753d63c24fc22d308e86b562701a6f106c51",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/files.rs",
+      "sha256": "081bffd9eacf815bc24c625b0ccc3bb5c32dbb91ab87677569c4922dfa2d9f6c",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/plans.rs",
+      "sha256": "a7ae9624fd1c446233ea466c7ccd96dd0e5b28716020df6f29d607313118fb3d",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-001-harnesses/fuzz/fuzz_targets/sets.rs",
+      "sha256": "e8cb0785bf582dddaed4aa618c0577e7cb51028ba3347507760f11f07266804b",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-002-2026-11-15.json",
+      "sha256": "bf0983fe70323d5531453d9a8444a818f62aa1e93a29ff8fde5e277c0dc398cd",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-002-2026-11-15.md",
+      "sha256": "faf318b5329e82b973bc0d88206624b6ef20f7bdc948ce7effe54c4f70cca3c8",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-002-harnesses/README.md",
+      "sha256": "8accaa69cb108e266a5a2b5fbc44a0f38de124fb326be97d0b8fc528e921fded",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-002-harnesses/memory_contract.rs",
+      "sha256": "9c697022327fdd01bc462d21d91065f68077d01ec2c163077b82e83729f0c25e",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-002-harnesses/recovery_contract.rs",
+      "sha256": "4e81307b502754035637d70fc2f17b9dea58b8ed67ae0aea02ff262a096fd89f",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-003-2026-11-15.json",
+      "sha256": "c92f11a4305667803293c15a72d4c05ec2292c9e342a2ed46e3447e7d64d735b",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-003-2026-11-15.md",
+      "sha256": "a24011a601b491eb6efa3648988bfd9327d20e8b2312e3a1b9b003bc9ab1691f",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-003-harnesses/README.md",
+      "sha256": "189162ac9196a0cf771cdaf83d6f6d2215c40f3608ad94ec4b37112d5034fc4f",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-003-harnesses/allocation.rs",
+      "sha256": "13f32ec37411824bdb2c293777c7c5cc3861a6d81f65c038808ca3a67f8d248e",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-004-2026-11-16.json",
+      "sha256": "ab2359954ca65fb4a4a77f74cecc6e1865a30506a6398cc901c76205a5da77e9",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-004-2026-11-16.md",
+      "sha256": "5fd3e6cd71f99fccb959b786c365960c24e07cedfe13eed3ae8bc75f0b027cf6",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-004-harnesses/README.md",
+      "sha256": "6efa5031405417ba77047610f8bbf50032a4beb7ff5fe20c71de3d130f26572a",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-004-harnesses/public-api.rs",
+      "sha256": "1904a957a7381af7366e6e9a997c7adc2a11032e6135874113a90e37a1a31d4e",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-2026-11-16.json",
+      "sha256": "106f605fe35d121752f1c0114100d947ff14c4538e3eee5e9df0bc45455a0ea5",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-2026-11-16.md",
+      "sha256": "2906fae6335b13fa9e18bd2c199272529dcde38d5296ec4bd55094890e6d2e90",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-harnesses/README.md",
+      "sha256": "298af95261e2ff22a81ca99ff050b4c064bd667b181e1c4b53f2d46918b6073d",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-harnesses/chain.rs",
+      "sha256": "d74f32f5fc563457d80877743bf5478420e8f9d7595aea282d834f63db22f0b1",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-harnesses/facts.rs",
+      "sha256": "a1043a7c6d96ce728d3250969bd41107da18db1cab7484afd3da61ea6baac894",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-harnesses/output.rs",
+      "sha256": "9363d9dc308231ca5b7d44b9b92236e16eb3ecf64a74b68b3da09c7eb84b49e8",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-harnesses/payload.rs",
+      "sha256": "4ce64e87b4a825a271035b270a93996e2ddb804b699110b0a3bce8217d07b5b4",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-005-harnesses/positive.rs",
+      "sha256": "24932162116b6afa317d0a41b9466c87c1c707579af656aefeb38c7bece19890",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-2026-11-24.json",
+      "sha256": "c28a755ff487390e0e7c2fecef44de9c887c79e5514a80eac16dd7f07d69f618",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-2026-11-24.md",
+      "sha256": "d8bdaf0d0a91a1bae1a2d428fa763fad7467f8c9c058a423dc9659ddfb42f639",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/README.md",
+      "sha256": "cf9edd425244dc64a245e5ffb0063af63066ef7f9a9ad9e8c8546e2008cfd7de",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/Cargo.lock",
+      "sha256": "36a733bbe9a02d20ad14f2cc3b4446850ae164de89e6d5122e3ba73980cafe65",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/Cargo.toml",
+      "sha256": "c217f6d3bd449e693f8183105d0c6f4bc180b646ba8f86274bc81e1cd73deee4",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/bip39-crate-english.txt",
+      "sha256": "2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/data/mhfe-vectors.txt",
+      "sha256": "2360590cf0e21ab04cfc0b17b70eb53719ffd7481ff4e34f79c8ca8d0807feeb",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/apply_cross.rs",
+      "sha256": "609ed28583e0fbc8d7710406d85f7905f6d1e8db136439c807123c7c20588a46",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/cyclic.rs",
+      "sha256": "6758b32231b082de96f0d79b4820dd2bc3131347ae2002644a776fc663a73f17",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/decode.rs",
+      "sha256": "01bfb5ddc9caa397775c645a8d9d5f73535fd03d373773ff9fefb5dd4026c105",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/edges.rs",
+      "sha256": "05fb9372c2c41e3455a4967d05984893c9f20d0573df7f1a65f78834d2e29e5d",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/fields.rs",
+      "sha256": "cec5050a0bbaec61c8a961871d8a072aa8e3504367705640d0ad01434ec1044c",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/known.rs",
+      "sha256": "38f66a92e8bb501ef0e0f92af04d4c3cb6635d5fae239526f39634d98db91e42",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/mark_doc.rs",
+      "sha256": "ca14b187c20c82d42c94d9c72542f6da580740160537909f9e67fd0f0ea255ee",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/mds.rs",
+      "sha256": "fab3379dfd5910b2bd6f0e014ba982cdecfe4b2e97d6586898c7ed32d4a1e871",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/mhfe.rs",
+      "sha256": "f8d45136372a89b38667dc50d7b5d43c7f879adc0ed0550b96d648b63f5e2865",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/bin/mhfe_diff.rs",
+      "sha256": "4e702addf48a607434e0ae4f214dfc11ee791be2babe0fa3b44036e82409d7e2",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/codes/src/lib.rs",
+      "sha256": "430136b8f8dcbb7e8930a9f5543fdbfb33eea1d2923b062da50692b9211a2d9a",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/Cargo.lock",
+      "sha256": "6458778978cbc06aae9d4e02236ac3665e058cc5b0bbe891148074fbdf0daac3",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/Cargo.toml",
+      "sha256": "59b6fd12140c782767a030bb6f1630427fcba6e1edea856064e3116f1229d728",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/src/bin/holders.rs",
+      "sha256": "c0ec270b57b117c1c5e8e37bb0039ef9f8fc4180f40f11eb73276073c121c0e0",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/src/bin/random.rs",
+      "sha256": "03990431b2da0d3ecf94d43cf66b91f9b29f31b0c94f5e5b5f2ec7409123cd38",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/src/bin/reader.rs",
+      "sha256": "2c08b77b068a996452a9f21614c815eba44a6d337e664ce22dfd5add9a3eda52",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/src/bin/sizes.rs",
+      "sha256": "7dc4c43c09f951297631c5f9392041ef5bb77bff8a436dba820d5dc0c70c341a",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/src/main.rs",
+      "sha256": "49cb2be0654d89e25115c94e75b3f1d721d16b76ef58a032b1ab20364fdc4d13",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/files/src/raw.rs",
+      "sha256": "2d6ac05acffc9983c77449bf0de11df814e6b0c44f78e08a76fc318c842d0d91",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/one-copy/Cargo.lock",
+      "sha256": "9bb4136c3cea1cebd28c4de9e6425d5535bb44ca431dfde3efe0e6a5ddc11d1b",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/one-copy/Cargo.toml",
+      "sha256": "eeb0b26c1885fac1890269869e55e07476de2d4786bbd63bc25f16d0218c5e86",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/one-copy/src/main.rs",
+      "sha256": "a3f55216be432b80d1ad722b910105f6ba487841fbd750e87b6207d1aad8bddc",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/timing/Cargo.lock",
+      "sha256": "b2f934ccad0fa7efd780366c906c2d93a2fe073e679f0cc62a9284292c5fc558",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/timing/Cargo.toml",
+      "sha256": "96f719fbef504b7f2bf490398ec5fc14e33bf53dad1a9dd4a36423a1a9bc1eac",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/timing/src/bin/timing.rs",
+      "sha256": "fd859fd5d340894dfb0f3004f8c7fb98597a8ca41bd788cea785ad706f0535a5",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-006-harnesses/timing/src/main.rs",
+      "sha256": "94de729f40fd6b911a1250027f4157a12a0d5d2961ecc1e0393d1a703166d1e9",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "docs/audits/AUD-007-2026-11-24.json",
+      "sha256": "f9a62917f2c79c545233c0f1e97ba363cd42eacdc0b8e77afafc0ca40073d93f",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-007-2026-11-24.md",
+      "sha256": "e1ca6e01d791d4117123aad5336b416b695eaad62ed762ad2fa6d16bdb81f2d5",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-007-harnesses/Cargo.lock",
+      "sha256": "5e13a797de893f5c4caa6bce5670fd4869667be191e8c8cf274684d46c2266ca",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-007-harnesses/Cargo.toml",
+      "sha256": "63d1d88667cff4f7aaf6e04345b0427114acbbb86a82a963ac893f7fc75ef5e8",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-007-harnesses/README.md",
+      "sha256": "94aa1a51c845a755d26104c83cb3db8fd77f7bdc9847b8fa6cd8c658df042de2",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-007-harnesses/src/lib.rs",
+      "sha256": "c76d1123410cb021fa6a1e9830fb1a67e3499bc724e6d2d4d46e2b40a67a2ef1",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-2026-11-24.json",
+      "sha256": "c275fa7d31a950a764f0c46ce2e93e9b9e2f630342fa84af53f3d467b9c47ad2",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-2026-11-24.md",
+      "sha256": "aa300f4a9b735eba6fa596dd9a4d48fb1c6c00d015870d8b1ee2b6c9eba27db1",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-api.json",
+      "sha256": "887ae6df6a71b5af47083063f94e3e98b1999a5c455898c3b56a4bf5c5ff90d7",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-files.json",
+      "sha256": "31d45087a0d7fd84364c103cdf045e1ad261278f9840371f5577c05a7f8eac95",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-harnesses/Cargo.lock",
+      "sha256": "c79282c0597d01aaee869ed4d5ba44203c85ce2c1e1e7607f75625bb3553e0a2",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-harnesses/Cargo.toml",
+      "sha256": "88323ce58673a602c3b06863fcc25896eba45dd6e7e6709f6bcd9bf45f0bb36c",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-harnesses/README.md",
+      "sha256": "7dd92a0eb5c6349443cb3424e47e5c06707b24a13b2e9c5197896a25d77bbbbf",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/AUD-008-harnesses/src/lib.rs",
+      "sha256": "1c4c86afc7c97cc0d5c86412bb8c6466725cf2753a4f96a7df33fea8dbb1fd55",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current record, JSON or harness inventory and status reviewed; original dynamic results retain their historical scope."
+    },
+    {
+      "path": "docs/audits/README.md",
+      "sha256": "3ea403c5715b63f9de31c9fd2aac3f2d94ec5489dfd3a1c41b3694cb547424a0",
+      "group": "Prior audit record or frozen audit harness",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "dprint.json",
+      "sha256": "f02eb7f6fa10c82e56547a38b3756a3b98eedf9e9b683c05fff3b1cd9783fe77",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "examples/measure.rs",
+      "sha256": "dd9cc858c5ef899f1472de31f565544ea026ab72efbabed06a4872d93f863528",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "examples/timing.rs",
+      "sha256": "59076832f68ebf6f100e608bcdbaacbc7c3dcc7c5ee9d09e428b0638f6b055ba",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/.gitignore",
+      "sha256": "e005979318db417d742efd014c6d72a7405128832d26e586fff772c031fc3445",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/Cargo.lock",
+      "sha256": "0900b720e37da7600d53a5c6687fb67c8c5fc75b96d8d2a087bf1666f18e2626",
+      "group": "Build, supply chain and project documentation",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "fuzz/Cargo.toml",
+      "sha256": "b8e83a615a3375e8ba9dbfdf0b82cf4c230f550ed844dc491ed17ae29779dea4",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/clippy.toml",
+      "sha256": "3b2e7f88a20e629e2678d6e45a35a0cbe097d1c5b8c074319344012fc00444b6",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/examples/seeds.rs",
+      "sha256": "38752530de39733f7e3e3bc1ff890bcbc48fc0d1deeb42a05fd0f81bd74e69e8",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/fuzz_targets/calls.rs",
+      "sha256": "bb892aab0a44fe1dd085f6b04c09d27a00a242b8c012d305e32dc86eb23165fa",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/fuzz_targets/cyclic.rs",
+      "sha256": "434827a153ec078d68571886e04554e54c5bbcd024ee14c22dad26003bfbd43e",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/fuzz_targets/files.rs",
+      "sha256": "ab7750f375c7ef430690a73964ba95d7051a37181a80315303a3797b3ad8468d",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/fuzz_targets/plans.rs",
+      "sha256": "4c119c7beffa4394dbc7bb4fce72746751bc1ff4c682c0c056219bba8e5e4574",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/fuzz_targets/sets.rs",
+      "sha256": "e3c93c5425a3d4ec069d64f575aed5e37e4fd5d01b6b8e5c1ac31bda9d68ed45",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "fuzz/src/lib.rs",
+      "sha256": "161c752373b53413f6161114aad5290462284761ac2a1801d638893821b8deb9",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "353ea695dcaad71e6b994aca5e9f1c0847af35d1743e5fc9c89e2a26f08d4394",
+      "group": "Build, supply chain and project documentation",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/buffer.rs",
+      "sha256": "8126ba1bea563b95105612b025aae281370c53f91b17488ff09706c5a5bbcbf4",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/buffer/heap.rs",
+      "sha256": "c6ea79782cc19d94ee1b6b9aed57ef22446f729d2901e5007e24a182e5ef8a85",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/buffer/numbers.rs",
+      "sha256": "4a3df95b395e87fd14599b30a20a45ecbd814b9705c5e20006ccab3a525418a8",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/buffer/pages.rs",
+      "sha256": "44e8949395d0dae6984ff85287dfa46f1121f87fd04bed308f75570d82aa80ab",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/code.rs",
+      "sha256": "d864251254f70096dd22d04aabfcf8793d133c9d64b7340cb483e77146b494cd",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/code/owned.rs",
+      "sha256": "aa4adffa9a858639b0c1bfd7a54525910ed9365b532078f99716c7cfd712a643",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/correct.rs",
+      "sha256": "0306a9701e02355d7296e3aecc5b921e1b9bad8fdeec2252341926ed0214cf76",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/correct/changes.rs",
+      "sha256": "ff8dc7aa03297fcf6e52acd350817d3f94007d3485da1a76c2c2b914e08e188b",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/correct/errors.rs",
+      "sha256": "fa9d5d9ee4ddbdb07e0afd73c3700547952554a5f356948285c40b582bdae063",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/correct/plan.rs",
+      "sha256": "0023d9e7494f552e8e83cad868ad262bd7d96bbba93b0fa67dcb46276d5f625b",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/cyclic.rs",
+      "sha256": "f62decbb96a775d356ce9d6d32263e094122f25a45c3c91ef773fd10d70f99a2",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/cyclic/decode.rs",
+      "sha256": "fd27887c669c19a6711fb4687754e60ff3038d48cd1fa79fa185c9a3babc5d16",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/cyclic/owned.rs",
+      "sha256": "11cdd07261ae785d8a5708290b4f6b675467d3722a54b6667c367b3a2dc29e72",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/cyclic/words.rs",
+      "sha256": "a7c3ab3b46bc39d5f3e0ac8e357182e9f3224b6062a39d4c516111650d3f13ec",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/field.rs",
+      "sha256": "3d0ff3c133e0bd6da972f9aa805223f81fdb2577d2c46144038ee76e641299a8",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/field/binary.rs",
+      "sha256": "e1d3786e8fc440a7a65fd25319a02d4600d48b934a986e938623768aacdca578",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/field/gf2048.rs",
+      "sha256": "375e0b9e1bd37aaeae58507d0596d56b023b1fcf7d0379c009e8af161f7aae42",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/field/gf256.rs",
+      "sha256": "1ee43ff4443c4405bfbe9c121c73ca9527857b8b5b02bf9c423f894dbff2b614",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/field/gf65536.rs",
+      "sha256": "a967f3976f59d04eea7adfbde2d103a5a0cd9f200420d46327df1ae298f62fce",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/field/lanes.rs",
+      "sha256": "ad77d3f1a1a7bc89e5b2fc359612e12e6e581310c0b8727cba4b9e645ba317c3",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/field/proof.rs",
+      "sha256": "0d475a2661eae1342cca8ec26183088a8415ea1576ab499180c1dd0e9cb3179e",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/file.rs",
+      "sha256": "32247f772e17f849d26b7d3c1b8bde793154df455c6963ed8830659b1e35f5ed",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/file/crc32c.rs",
+      "sha256": "d495ac739a8c52e22e4564f2b0bee582022b807746da8245c4c1cfeb1ffb2366",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/file/facts.rs",
+      "sha256": "4547ef295a633f38f6c9fb28b9a0cdc60bf3476a5e11d98763fd670182bb52bb",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/file/header.rs",
+      "sha256": "5ae00abe1f11677ff8c162dd5457ebb226826ec6c22c05b068f83fb67ad0089c",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/file/pile.rs",
+      "sha256": "378c9cedc7fd81777d2dd3017c4f10d9cf56dbf92c383a713fe417ece079aa29",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/file/reading.rs",
+      "sha256": "75d30e22f353cbfcf3de38d7586a849c5d2000aa07cd4103d2118bf567566df7",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/file/set.rs",
+      "sha256": "ccb9aa132ec4128aff18fb1a9f5282a34824df4a250a9e9545f6c070d8b7a7ab",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/file/set/shards.rs",
+      "sha256": "f4cd315d450dec509481876a57f39199154fba2edf6a55ee1dff7c9d1b3ef520",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/file/set/sink.rs",
+      "sha256": "1e95873512e1f181edfda0d09aa61e1bb2407b1426e47eff829c4715172a511d",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/file/set/vote.rs",
+      "sha256": "072e20666f32154596c385477dc34d8837988f08be0dcea7d83d09665f6cdcea",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/file/writing.rs",
+      "sha256": "f76e3936d485908858def0833ede16acc145ba6b2dc949ba4dfa6bb2261ff0a8",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "0f6b459f508905d38255c09392da391c3599ed559e3c0fe57ff7b91e95cb1926",
+      "group": "Protection, composition and strict integration",
+      "relation": "changed since AUD-008",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/list.rs",
+      "sha256": "6c7ba72bdfaa20843cb66d3cf91d6156c650556541a06398db397f80e755f038",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/recurrence.rs",
+      "sha256": "bb7e3d62a835dd46d3a65dbf7ec5ae8e9ac91773da08611b76f2eadbe5ee23e1",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/self_test.rs",
+      "sha256": "6f50f89ad82cc57b6874804f6320d763e8f74fe8bc839564eace7c5b4505efb2",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/stack.rs",
+      "sha256": "ba05692314275151c2f411af301cd0705e4d1f068ab139e2330a7e93a769a181",
+      "group": "Protection, composition and strict integration",
+      "relation": "newly inventoried",
+      "reviewBasis": "Current file group review and variant checks."
+    },
+    {
+      "path": "src/strict.rs",
+      "sha256": "806d46d21dbd6aa8da30f32e24de72faa97a577b7c3f530e84992db3aa5a8af1",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "sha256": "4b270c25a026db121088dd1e39993fc5b9f440f34610dcb636b06200d427d3aa",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "src/strict/files.rs",
+      "sha256": "c0a5bd3f448d9663f114504c3fc1f235147a83f4b0121fe624ae0e3a5238af6a",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/strict/example.rs",
+      "sha256": "2b1a0272ef06a42657755030c525ff5d528048fa13a912a25da9a00b21cd5d91",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/strict/main.rs",
+      "sha256": "6372b63361ec2cd16c8493ad792031981409628db57f71a264390b79b7d43626",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/strict/strict.rs",
+      "sha256": "8b80aea4fd478ba09fcbd00cb8982f64e33879c65271ac83ab2d63dcb4599ca8",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/strict/strict_elsewhere.rs",
+      "sha256": "e8167ae55bc70703be263112cf5f50bfb412dae2d7e5a976c2e7aa852431a073",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/correction.rs",
+      "sha256": "b6785f27b1a729bbd9f22afbf9a94510c02e62516e305fef63c4eaeb70678f93",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/cyclic.rs",
+      "sha256": "97eeab99b3fcfad59f5910a3bff4733c8a3316c05d4c735c5e2b9a6129faf9a6",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/cyclic_words.rs",
+      "sha256": "98bb85bff701baf9aa0f52fa734d2ac03c497ae7d462d4bb57ee69e32eab2c13",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/damage.rs",
+      "sha256": "96274afe2c90ddf1a08fdab3dc131761463812734de7f4350799700e3d6f4b87",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/digests.rs",
+      "sha256": "29a5a028d21129376abfdbaea7f7b933a1196550ec4104a65c21bfc62610d4a7",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/examples.rs",
+      "sha256": "545bb897439d630e6df82f445e7059852f65dd0b2674991ea6c60138a45772ef",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/fields.rs",
+      "sha256": "7c737c3d137e59a5cf0facbbd8a8f610802c39c89edb469d5088fa78871a5510",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/files.rs",
+      "sha256": "6ec07dfeffa126954562a9f15906b2926f91fe5e66a276e953fd97239cf7a147",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/in_place.rs",
+      "sha256": "4fd533189da018acaf1af28dbf66a0353965dc36b5a5fcf7a5d82d20fa343df7",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/main.rs",
+      "sha256": "575ad928ecc570efd9a7dc39927b07be5403b53a4403739680074d5442480dc4",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/oracle.rs",
+      "sha256": "a1acd237daf3e7e342379464f39a2f0eeef8bd7783dbf6f36e3b2cee4d5d7481",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/plans.rs",
+      "sha256": "b0b625e576d08baa3d25ac30aadbe580d2697f39f33d42b2e6ccc073e16004f2",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/refusals.rs",
+      "sha256": "c0a5272eab8b6598c7c725906f9e0cf7058b4556a15fe61bf3dfc239dcb4bfe4",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/repairs.rs",
+      "sha256": "b1ecfe9af31c0e6b7a95f6303d5a28191d439c3d24fe943d95f407bca1450a0c",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/secrets.rs",
+      "sha256": "141e6010eb9ebf2602f1bd884abededd9c61fd34208a3766c199f1d6e5b55fac",
+      "group": "Protection, composition and strict integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/self_test.rs",
+      "sha256": "4d0588822dd3732f75ac3f496b0d8dd0c33546174d7c4d47c562dc1fa0666731",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/sets.rs",
+      "sha256": "1e57ce7a91ab79797571eb405f91fce509b077fa869341f37259fae74744eb7f",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/stripes.rs",
+      "sha256": "143facc677d1427cb6a7c32d68cf97e4285062ebe5e4085bc58b4c917b2d656f",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/subsets.rs",
+      "sha256": "1b5b317a5d227f7147276653f104b41005dc76c473e032f3bc30f8c9ee4d542e",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/support.rs",
+      "sha256": "9a1e78f82fa0912c3e204b915f93cbbf76ef09a45cb975d4def99905e36195ac",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/vectors.rs",
+      "sha256": "76763889c496b7a24cef70bc499b36283e72150a64ce41274e94307c3fe141d1",
+      "group": "Field, recovery code, tests, examples and defensive fuzz coverage",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    },
+    {
+      "path": "tests/suite/votes.rs",
+      "sha256": "934bcb0d775b834d0c0ec59750cb9b02fcc03473706576d44f49b05d52a76042",
+      "group": "Shard format, file operations and file-side integration",
+      "relation": "unchanged from AUD-008",
+      "reviewBasis": "Byte-identical retained detailed file review plus current contract and variant checks."
+    }
+  ]
+}

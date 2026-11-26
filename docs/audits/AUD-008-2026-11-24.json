@@ -1,0 +1,2121 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-008",
+  "auditNumber": 8,
+  "date": "2026-11-24",
+  "title": "Expanded complete-source audit and verification of AUD-007 remediation",
+  "reviewer": {
+    "name": "Codex coordinator and three independent AI reviewers",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "snapshot": {
+    "commit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+    "commitComplete": true,
+    "documentationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+    "sourceFingerprint": "7ac0715d48989b3a0e45846f1091181f88ea90b9fa5614fadda66382a637fe32",
+    "documentationTreeFingerprint": "f32ad9ea0aaa9b48a178c0b4a824f53e1751429d0e0947e0dd54193954cbe702",
+    "workingTree": "Production sources clean; pre-existing AUD-007 reports/harness and audit register were not committed. This audit adds reports, inventories and synthetic probes only. No commit, push or release."
+  },
+  "scope": {
+    "range": "b16c64f1388ceddfcabc45186fdc60309adc83db..23968f420857f66540f6e02b1b310a36c02bd14e",
+    "changedFiles": 21,
+    "trackedFiles": 166,
+    "publicOperations": 182,
+    "fileInventory": "AUD-008-files.json",
+    "apiInventory": "AUD-008-api.json",
+    "coverageLedger": [
+      {
+        "checkId": "CHECK-SEC-001",
+        "category": "SEC",
+        "logicalGroup": "Secret ownership",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "src/buffer*, correct/changes.rs, strict*, file/set/vote.rs: payload ownership, protected scratch, metadata separation and checks before access reviewed. Retained strict runtime results; fresh runs separately listed."
+      },
+      {
+        "checkId": "CHECK-SEC-002",
+        "category": "SEC",
+        "logicalGroup": "Vault and transport",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "Not applicable: no vault or transport/message channel."
+      },
+      {
+        "checkId": "CHECK-SEC-003",
+        "category": "SEC",
+        "logicalGroup": "Network egress",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "Not applicable: this library opens no network connections; process isolation belongs to its caller."
+      },
+      {
+        "checkId": "CHECK-SEC-004",
+        "category": "SEC",
+        "logicalGroup": "Randomness and authentication",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "src/file/facts.rs, set.rs and correct/plan.rs: SHA-256 integrity and plan identity; no authentication or random-key generator claimed. All field modules reviewed."
+      },
+      {
+        "checkId": "CHECK-SEC-005",
+        "category": "SEC",
+        "logicalGroup": "Lifecycle and exceptional paths",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "src/buffer*, strict*, cyclic/words.rs, file/writing.rs and set.rs: wipe/drop, error redaction, protected stack and atomic/zeroed refusal paths. No new forced allocator campaign or Miri."
+      },
+      {
+        "checkId": "CHECK-SEC-006",
+        "category": "SEC",
+        "logicalGroup": "Browser persistence and injection",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "Not applicable: no browser DOM, persistence, vault or injection surface."
+      },
+      {
+        "checkId": "CHECK-SEC-007",
+        "category": "SEC",
+        "logicalGroup": "Availability bounds",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release (ownership/strict); coordinator (file bounds); runtime (arithmetic)",
+        "evidence": "src/file/header.rs, reading.rs, set/shards.rs and set/vote.rs: huge declared sizes bounded by actual bytes, work refusal, finder reuse and memory limits reviewed. Retained 12-block transition probe; fresh reruns listed separately."
+      },
+      {
+        "checkId": "CHECK-FUN-001",
+        "category": "FUN",
+        "logicalGroup": "Mnemonic interpretation",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "Not applicable: no mnemonic parser; public BIP39 lists/cards are test data for integer-symbol repair."
+      },
+      {
+        "checkId": "CHECK-FUN-002",
+        "category": "FUN",
+        "logicalGroup": "HD derivation",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "Not applicable: no HD derivation."
+      },
+      {
+        "checkId": "CHECK-FUN-003",
+        "category": "FUN",
+        "logicalGroup": "BIP85/BIP38/messages",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "Not applicable: no BIP85, BIP38 or signed-message operations."
+      },
+      {
+        "checkId": "CHECK-FUN-004",
+        "category": "FUN",
+        "logicalGroup": "Scripts and descriptors",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "Not applicable: no blockchain scripts or descriptors."
+      },
+      {
+        "checkId": "CHECK-FUN-005",
+        "category": "FUN",
+        "logicalGroup": "Transactions",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "Not applicable: no transaction or PSBT operations."
+      },
+      {
+        "checkId": "CHECK-FUN-006",
+        "category": "FUN",
+        "logicalGroup": "Recovery and coding",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "All code/correct/cyclic/field/recurrence/self_test and file modules, all 22 suite files reviewed. Independent GF4 codebook and file-subset probe added; completed execution records separate. Retained proof/fuzz identity reconciled."
+      },
+      {
+        "checkId": "CHECK-FUN-007",
+        "category": "FUN",
+        "logicalGroup": "Providers and discovery",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; coordinator (file recovery)",
+        "evidence": "Not applicable: no providers or account-discovery operations."
+      },
+      {
+        "checkId": "CHECK-API-001",
+        "category": "API",
+        "logicalGroup": "Public and dependency contracts",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims (inventory); runtime/release/coordinator (implementation)",
+        "evidence": "AUD-008-api.json enumerates all 182 named signatures and trait/re-export surfaces; docs/API.md agrees. All portable and strict callers inspected."
+      },
+      {
+        "checkId": "CHECK-API-002",
+        "category": "API",
+        "logicalGroup": "State and limits",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims (inventory); runtime/release/coordinator (implementation)",
+        "evidence": "Finder refit, marks/plan identity, in-place rollback and output limits reviewed. Synchronous API has no asynchronous cancellation state."
+      },
+      {
+        "checkId": "CHECK-API-003",
+        "category": "API",
+        "logicalGroup": "Monetary exports",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims (inventory); runtime/release/coordinator (implementation)",
+        "evidence": "Not applicable: no monetary, CSV, JSON or spreadsheet export API."
+      },
+      {
+        "checkId": "CHECK-API-004",
+        "category": "API",
+        "logicalGroup": "Encodings",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims (inventory); runtime/release/coordinator (implementation)",
+        "evidence": "src/file/* and tests/suite/{files,damage,digests,sets,repairs,votes,in_place}.rs: both file fields, canonical headers, CRC binding, padding, digest, duplicate outputs and truncation reviewed."
+      },
+      {
+        "checkId": "CHECK-BLD-001",
+        "category": "BLD",
+        "logicalGroup": "Features",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release",
+        "evidence": "Cargo manifests/feature gates and CI reviewed; retained fix2 tests in default, alloc and no-default modes plus five clippy modes have valid hashes. Fresh checks are separately recorded."
+      },
+      {
+        "checkId": "CHECK-BLD-002",
+        "category": "BLD",
+        "logicalGroup": "Platform matrix",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release",
+        "evidence": "CI platform matrix and protection dependency contracts inspected. No remote run at either target; native non-Linux execution not performed. Retained thumb/no-OS compile checks only."
+      },
+      {
+        "checkId": "CHECK-BLD-003",
+        "category": "BLD",
+        "logicalGroup": "Dependencies and licensing",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release",
+        "evidence": "All seven tracked locks unchanged from b16c64f; all cached registry archive checksums match. Notices corrected; retained RustSec root has two dev-only allowed warnings, fuzz none."
+      },
+      {
+        "checkId": "CHECK-BLD-004",
+        "category": "BLD",
+        "logicalGroup": "Canonical WASM and Docker",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release",
+        "evidence": "Not applicable: no canonical Docker/WASM distribution artifact or reproducibility claim. Portable library target checks belong to BLD-002."
+      },
+      {
+        "checkId": "CHECK-BLD-005",
+        "category": "BLD",
+        "logicalGroup": "CI and release",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "release",
+        "evidence": "release.yml requires ci+timing before package and attestation after package. Package/tag/VCS checks inspected; no actual v0.1.1 artifact attested. AUD-008-BLD002 records non-UTC metadata."
+      },
+      {
+        "checkId": "CHECK-UI-001",
+        "category": "UI",
+        "logicalGroup": "Viewports",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims/completeness",
+        "evidence": "Not applicable: no graphical or browser user interface."
+      },
+      {
+        "checkId": "CHECK-UI-002",
+        "category": "UI",
+        "logicalGroup": "Navigation",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims/completeness",
+        "evidence": "Not applicable: no user-interface navigation."
+      },
+      {
+        "checkId": "CHECK-UI-003",
+        "category": "UI",
+        "logicalGroup": "Visibility/accessibility",
+        "outcome": "not-applicable",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims/completeness",
+        "evidence": "Not applicable: no UI visibility or accessibility surface."
+      },
+      {
+        "checkId": "CHECK-ARC-001",
+        "category": "ARC",
+        "logicalGroup": "Ownership and seams",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; claims/completeness",
+        "evidence": "Full module ownership and call boundaries reviewed: separate field,code,decoder, file, buffer and strict paths; no new state owner introduced by refit."
+      },
+      {
+        "checkId": "CHECK-ARC-002",
+        "category": "ARC",
+        "logicalGroup": "Dead code and duplication",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; claims/completeness",
+        "evidence": "Historical independent oracles intentionally duplicate mathematics; compatible Zeroize re-export documented. Shared decoding and file-sink internals checked for drift."
+      },
+      {
+        "checkId": "CHECK-ARC-003",
+        "category": "ARC",
+        "logicalGroup": "Tests and claims",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "runtime; claims/completeness",
+        "evidence": "All integration/strict/fuzz and historical harness sources reviewed. AUD-008-BLD001 confirms unchecked final MDS boundary; controls that panic distinguished fromfinish propagation."
+      },
+      {
+        "checkId": "CHECK-DOC-001",
+        "category": "DOC",
+        "logicalGroup": "Capability and safety descriptions",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims/completeness",
+        "evidence": "All guides and source safetyclaims compared; AUD-008-DOC001 qualifies inverse zero. Latest DOC-08 satisfied at 15643f2; explicit platform/protection/timing limits retained."
+      },
+      {
+        "checkId": "CHECK-DOC-002",
+        "category": "DOC",
+        "logicalGroup": "Commands/links/legal",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims/completeness",
+        "evidence": "Markdown file links resolve; package-list excludes audits/AGENTS; licenses/noticeconditions reviewed. Documentation commands compared withfeature requirements."
+      },
+      {
+        "checkId": "CHECK-DOC-003",
+        "category": "DOC",
+        "logicalGroup": "Audit evidence",
+        "outcome": "reviewed",
+        "snapshot": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "primaryOwner": "claims/completeness",
+        "evidence": "All historical reports/schema andregistry reviewed; coverage: 37 rows and 68-input fingerprint reproduced. AUD-006-DOC001 remains open at immutable targets; retained logs distinguished fromsource-bound fresh records."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "cargo-identity",
+      "command": [
+        "cargo",
+        "-V"
+      ],
+      "startUtc": "2026-11-24T21:51:04Z",
+      "endUtc": "2026-11-24T21:51:04Z",
+      "exitCode": 0,
+      "logSha256": "c35608815f43d0b8788a9b826fad2bb17384f49fb328dc4fe64da9db5f5ef4d6",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "cargo-identity.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/cargo-identity.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "clippy-default",
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-24T21:44:21Z",
+      "endUtc": "2026-11-24T21:44:29Z",
+      "exitCode": 0,
+      "logSha256": "9f239c5cc36530840cb0ca4202843867344fb1d3cdd08ce34cbaa3b80f46ef0f",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "clippy-default.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/clippy-default.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "compiler-identity",
+      "command": [
+        "rustc",
+        "-vV"
+      ],
+      "startUtc": "2026-11-24T21:51:04Z",
+      "endUtc": "2026-11-24T21:51:04Z",
+      "exitCode": 0,
+      "logSha256": "f22d5e4e9ced367e774ce5bc140d9e6b1235c1882fec80d011044851f3ae6369",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "compiler-identity.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/compiler-identity.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "exhaustive-alloc",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-008-harnesses/Cargo.toml",
+        "--",
+        "--nocapture"
+      ],
+      "startUtc": "2026-11-24T21:41:34Z",
+      "endUtc": "2026-11-24T21:42:40Z",
+      "exitCode": 0,
+      "logSha256": "70a73ec1d0a07c9a78462e29c50326b4a3b39170c3f12ad2363f146eefddecb4",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "exhaustive-alloc.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/exhaustive-alloc.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "format-current",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "startUtc": "2026-11-24T21:32:34Z",
+      "endUtc": "2026-11-24T21:32:34Z",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "format-current.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "evidence": "AUD-008-evidence/format-current.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065"
+    },
+    {
+      "name": "harness-clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-008-harnesses/Cargo.toml",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-24T21:44:29Z",
+      "endUtc": "2026-11-24T21:44:30Z",
+      "exitCode": 0,
+      "logSha256": "2b893dbc7e9e8cb08de1a912a78ebc1fd2019cb9960996ba996cd7e7b924f560",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "harness-clippy.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/harness-clippy.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "harness-format-check",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "docs/audits/AUD-008-harnesses/Cargo.toml",
+        "--",
+        "--check"
+      ],
+      "startUtc": "2026-11-24T21:40:59Z",
+      "endUtc": "2026-11-24T21:40:59Z",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "harness-format-check.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/harness-format-check.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "harness-format",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "docs/audits/AUD-008-harnesses/Cargo.toml"
+      ],
+      "startUtc": "2026-11-24T21:33:07Z",
+      "endUtc": "2026-11-24T21:33:08Z",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "harness-format.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "evidence": "AUD-008-evidence/harness-format.log (local)",
+      "outcome": "preparation completed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065"
+    },
+    {
+      "name": "harness-format2",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "docs/audits/AUD-008-harnesses/Cargo.toml"
+      ],
+      "startUtc": "2026-11-24T21:33:45Z",
+      "endUtc": "2026-11-24T21:33:45Z",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "harness-format2.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "evidence": "AUD-008-evidence/harness-format2.log (local)",
+      "outcome": "preparation completed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065"
+    },
+    {
+      "name": "harness-lock",
+      "command": [
+        "cargo",
+        "generate-lockfile",
+        "--offline",
+        "--manifest-path",
+        "docs/audits/AUD-008-harnesses/Cargo.toml"
+      ],
+      "startUtc": "2026-11-24T21:35:38Z",
+      "endUtc": "2026-11-24T21:35:38Z",
+      "exitCode": 0,
+      "logSha256": "df8fc9f1c701b0555dfb37c0fad11ab025b5f59a0568824ff2b0412bf27837f2",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "harness-lock.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "evidence": "AUD-008-evidence/harness-lock.log (local)",
+      "outcome": "preparation completed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065"
+    },
+    {
+      "name": "negative-cyclic",
+      "command": [
+        "env",
+        "AUD006_NEGATIVE_CONTROL=1",
+        "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/cyclic"
+      ],
+      "startUtc": "2026-11-24T21:46:39Z",
+      "endUtc": "2026-11-24T21:46:39Z",
+      "exitCode": 101,
+      "logSha256": "d7b96f1281ee19b240a6122741568510cc88d6454129fb016a588f2fd7c97e1d",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-cyclic.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-cyclic.log (local)",
+      "outcome": "expected nonzero control (oracle invariant panic)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-decode",
+      "command": [
+        "env",
+        "AUD006_NEGATIVE_CONTROL=1",
+        "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/decode"
+      ],
+      "startUtc": "2026-11-24T21:46:39Z",
+      "endUtc": "2026-11-24T21:46:39Z",
+      "exitCode": 101,
+      "logSha256": "d134c9627e84fc5af2cff97c09ff8e66c0e4dbec2a70be2deabd14b78596337f",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-decode.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-decode.log (local)",
+      "outcome": "expected nonzero control (oracle invariant panic)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-fields",
+      "command": [
+        "env",
+        "AUD006_NEGATIVE_CONTROL=1",
+        "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/fields"
+      ],
+      "startUtc": "2026-11-24T21:44:46Z",
+      "endUtc": "2026-11-24T21:46:39Z",
+      "exitCode": 1,
+      "logSha256": "beecae49a4c2e93a808e3b2e1930606d0a73f6b739f76b881c2bc87b79ae0a0b",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-fields.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-fields.log (local)",
+      "outcome": "expected nonzero control (explicit failure)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-known",
+      "command": [
+        "env",
+        "AUD006_NEGATIVE_CONTROL=1",
+        "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/known"
+      ],
+      "startUtc": "2026-11-24T21:46:55Z",
+      "endUtc": "2026-11-24T21:46:55Z",
+      "exitCode": 1,
+      "logSha256": "c3daa73b995e7451319cfed5149cfb043366f04ba2a84e4ab4fafed370a236f6",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-known.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-known.log (local)",
+      "outcome": "expected nonzero control (explicit failure)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-mds",
+      "command": [
+        "env",
+        "AUD006_NEGATIVE_CONTROL=1",
+        "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/mds"
+      ],
+      "startUtc": "2026-11-24T21:46:40Z",
+      "endUtc": "2026-11-24T21:46:55Z",
+      "exitCode": 101,
+      "logSha256": "7d556249233abfa6d7446e4c90e0bdaf394f9854f838b7951d9214d2b5a5c072",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-mds.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-mds.log (local)",
+      "outcome": "expected nonzero control (oracle invariant panic)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-mhfe-bounded",
+      "command": [
+        "bash",
+        "-c",
+        "ulimit -t 1; exec /usr/bin/time -f \"fixture CPU user=%U system=%S seconds; wall=%e seconds; peak=%M KiB\" env AUD006_NEGATIVE_CONTROL=1 /home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/mhfe docs/audits/AUD-006-harnesses/codes/data"
+      ],
+      "startUtc": "2026-11-24T21:57:50Z",
+      "endUtc": "2026-11-24T21:57:50Z",
+      "exitCode": 1,
+      "logSha256": "e3e183563f94661fbf893c2bb308b2554f15a07dc84879976a9daf15a2bb5a17",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-mhfe-bounded.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-mhfe-bounded.log (local)",
+      "outcome": "expected nonzero control (explicit failure)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-mhfe-small",
+      "command": [
+        "bash",
+        "-c",
+        "ulimit -t 1; exec /usr/bin/time -f \"fixture CPU user=%U system=%S seconds; wall=%e seconds; peak=%M KiB\" env AUD006_NEGATIVE_CONTROL=1 /home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/mhfe docs/audits/AUD-006-harnesses/codes/data"
+      ],
+      "startUtc": "2026-11-24T21:57:38Z",
+      "endUtc": "2026-11-24T21:57:38Z",
+      "exitCode": 75,
+      "logSha256": "38bf809bbd597d5259a1e1b7e96d9c43f0612df894bef01fbf5c030bcadfd61c",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-mhfe-small.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-mhfe-small.log (local)",
+      "outcome": "not executed: 128 MiB below helper minimum 256 MiB; bounded rerun passed expected exit 1",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "negative-mhfe",
+      "command": [
+        "env",
+        "AUD006_NEGATIVE_CONTROL=1",
+        "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks/release/mhfe",
+        "docs/audits/AUD-006-harnesses/codes/data"
+      ],
+      "startUtc": "2026-11-24T21:46:55Z",
+      "endUtc": "2026-11-24T21:56:04Z",
+      "exitCode": 1,
+      "logSha256": "55e3dc9b8233c227a60718b0bd8bcde8c78032ad9f3d74a44450734bf139286a",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "negative-mhfe.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/negative-mhfe.log (local)",
+      "outcome": "expected nonzero control (explicit failure)",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "oracle-build",
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "docs/audits/AUD-006-harnesses/codes/Cargo.toml",
+        "--bins"
+      ],
+      "startUtc": "2026-11-24T21:44:30Z",
+      "endUtc": "2026-11-24T21:44:46Z",
+      "exitCode": 0,
+      "logSha256": "a4c9c719ca595bdacd362886fde8acf96f4c3ae5ace923f68d09f71c44c25914",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "oracle-build.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/oracle-build.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "package-list",
+      "command": [
+        "cargo",
+        "package",
+        "--offline",
+        "--locked",
+        "--allow-dirty",
+        "--list"
+      ],
+      "startUtc": "2026-11-24T21:35:38Z",
+      "endUtc": "2026-11-24T21:35:38Z",
+      "exitCode": 0,
+      "logSha256": "0741a07795fea15a6d57a96c6bdcebef3b0c114d7b181bce77b65394d6f9b1ee",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "package-list.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "evidence": "AUD-008-evidence/package-list.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065"
+    },
+    {
+      "name": "tests-alloc",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "startUtc": "2026-11-24T21:43:05Z",
+      "endUtc": "2026-11-24T21:44:16Z",
+      "exitCode": 0,
+      "logSha256": "5db74930c9e904d83d4b3992c6d98561aa63b241a921fb6f3e647f3e22882721",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "tests-alloc.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/tests-alloc.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "tests-default",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked"
+      ],
+      "startUtc": "2026-11-24T21:28:27Z",
+      "endUtc": "2026-11-24T21:42:34Z",
+      "exitCode": 0,
+      "logSha256": "73b5478425a6dc54807d477575e1800026d446b2e1917e3c9ea3f5da835f9e18",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "tests-default.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "evidence": "AUD-008-evidence/tests-default.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065"
+    },
+    {
+      "name": "tests-nostd",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--no-default-features"
+      ],
+      "startUtc": "2026-11-24T21:44:16Z",
+      "endUtc": "2026-11-24T21:44:21Z",
+      "exitCode": 0,
+      "logSha256": "d87920f78b26cf43edc031cca67003e57e2519bbf80df00efc220adcf46da36a",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "tests-nostd.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/tests-nostd.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "timing-release",
+      "command": [
+        "cargo",
+        "run",
+        "--offline",
+        "--locked",
+        "--release",
+        "--no-default-features",
+        "--features",
+        "alloc",
+        "--example",
+        "timing"
+      ],
+      "startUtc": "2026-11-24T21:42:40Z",
+      "endUtc": "2026-11-24T21:42:53Z",
+      "exitCode": 0,
+      "logSha256": "c9d8f34080b67e337476075fcfecfe84c150baabf99178e43ef5ee482bf2c6bf",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "timing-release.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/timing-release.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "vote-state-alloc",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-007-harnesses/Cargo.toml",
+        "--no-default-features",
+        "--",
+        "--nocapture"
+      ],
+      "startUtc": "2026-11-24T21:43:04Z",
+      "endUtc": "2026-11-24T21:43:05Z",
+      "exitCode": 0,
+      "logSha256": "69ea99b37c5835bc0fef6fff92aa799e037c68dc87dce47b7d26d4b82b8599a4",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "vote-state-alloc.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/vote-state-alloc.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    },
+    {
+      "name": "vote-state-protect",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-007-harnesses/Cargo.toml",
+        "--",
+        "--nocapture"
+      ],
+      "startUtc": "2026-11-24T21:42:53Z",
+      "endUtc": "2026-11-24T21:43:04Z",
+      "exitCode": 0,
+      "logSha256": "f369844a54dc4f38d895fd4b85fdd52e464b20d523a4962af87079a628f78c54",
+      "sourceCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "workingTreeEvidence": "vote-state-protect.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud008-verification/target-checks",
+        "CARGO_BUILD_JOBS": 4,
+        "RUST_TEST_THREADS": 2
+      },
+      "evidence": "AUD-008-evidence/vote-state-protect.log (local)",
+      "outcome": "passed",
+      "sourceManifestBeforeSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestBeforeSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632",
+      "sourceManifestAfterSha256": "f8527978bafff5d378a831680f97c582b5b450adeb8ca5b1d130fc5be8872065",
+      "harnessManifestAfterSha256": "4c15aa0ed0ed468afcd90ca49b69defb7352faef5e2950c83ad1bdd6fa0a3632"
+    }
+  ],
+  "findings": [
+    {
+      "id": "AUD-008-BLD001",
+      "category": "BLD",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "The final MDS boundary probe does not assert its refusal",
+      "affectedFiles": [
+        "docs/audits/AUD-006-harnesses/codes/src/bin/mds.rs:208-213"
+      ],
+      "reproduction": "Inspect the q+1-shard case: more appends shard index 0 to all q indexes; code.rebuild(&more, &[0]).err() is only interpolated into println!. Follow finish() and the fail() counter in src/lib.rs.",
+      "expected": "The probe fails when this invalid repeated-index set succeeds or returns an unexpected error.",
+      "observed": "Unexpected Ok becomes None and is printed; no fail/assert is reached for this case. Ordinary oracle mismatch branches now correctly call fail(). Retained actual runs print Some(Repeated), consistent with current production checks.",
+      "impact": "This retained regression probe cannot detect a boundary regression at its final check. No production acceptance bug was demonstrated; separate suite assertions cover repeated inputs.",
+      "evidence": "Static control-flow review independently challenged by the runtime and release reviewers; mds.rs:209-213 and Code input validation. This branch was unchanged by 23968f4.",
+      "recommendedFix": "Assert the expected CodeError::Repeated result at this boundary, using the harness failure mechanism or an assertion.",
+      "requiredVerification": "Run the normal probe, then a focused negative control of this exact final result; the normal run must pass and unexpected success/wrong error must fail."
+    },
+    {
+      "id": "AUD-008-BLD002",
+      "category": "BLD",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "Audited commits retain non-UTC author and committer timestamps",
+      "affectedFiles": [
+        "Git commit metadata: 23968f4 and 15643f2",
+        "AGENTS.md:3"
+      ],
+      "reproduction": "Read the author and committer headers of each audited commit with git cat-file. Compare only whether their timezone suffix is +0000; do not publish the actual suffix or identity.",
+      "expected": "Both timestamps use UTC under the workspace privacy rule incorporated by repository AGENTS.md.",
+      "observed": "Both author and committer timestamps of both audited commits are non-UTC. The predecessor b16c64f has the same issue. SSH signature headers are present.",
+      "impact": "Publishing these objects also publishes local timezone information and violates the explicit workspace commit policy. This is not a runtime or cryptographic defect.",
+      "evidence": "Independent release review of both immutable commit objects; repository AGENTS.md incorporates workspace AGENTS.md lines 64-65. Actual offsets are intentionally omitted.",
+      "recommendedFix": "Set UTC for future signed commits. Decide the treatment of already signed, unpushed objects before publication; do not silently rewrite the snapshots this audit names.",
+      "requiredVerification": "Check author and committer UTC booleans and signature presence for every object proposed for publication. Any replacement snapshot needs its own identity and verification."
+    },
+    {
+      "id": "AUD-008-DOC001",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "The timing description omits the zero-inverse exception",
+      "affectedFiles": [
+        "docs/TECHNICAL.md:152",
+        "src/field/gf65536.rs:28",
+        "src/field/binary.rs:2-4"
+      ],
+      "reproduction": "Compare the unconditional single-operation branchlessness sentence with inverse(0) paths and the field-module comments. GF65536 skips its final multiplications when its norm has no inverse.",
+      "expected": "The guide qualifies inversion claims to nonzero operands and states that zero is distinguished as having no inverse, within the inspected compiler/platform scope.",
+      "observed": "The restored guide says single multiplication and inversion avoid operand branches without that exception; source comments explicitly exempt zero.",
+      "impact": "Readers receive a broader timing guarantee than the implementation and retained assembly review establish. These inverse helpers are private and decoder error-dependent timing is already disclosed; no new exploitable leak was established.",
+      "evidence": "Static source/document comparison, independently challenged by release reviewer. This paragraph was restored by 23968f4.",
+      "recommendedFix": "State the zero-inverse exception and retain the compiler-hint and measured-build limitations.",
+      "requiredVerification": "Compare the revised guide with all four inverse implementations and the actual scope of timing/assembly evidence."
+    }
+  ],
+  "observations": [
+    {
+      "id": "AUD-008-ARC001",
+      "category": "ARC",
+      "kind": "observation",
+      "severity": "info",
+      "status": "accepted",
+      "releaseBlocking": false,
+      "title": "Three oracle negative controls terminate before final failure-counter propagation",
+      "reproduction": "Inspect retained negative-control logs for decode, cyclic and mds and their oracle assertions.",
+      "expected": "A comprehensive failure-path test separately exercises fail()/finish() after a reported mismatch.",
+      "observed": "The deliberately corrupted oracle triggers invariant panics in these three programs (reported exit 101); fields, known and mhfe exercise the final failure mechanism. Source review confirms mismatch paths now call fail().",
+      "impact": "The controls prove detectable failure but do not independently test every new failure-counter path. This does not refute the AUD-007 fix.",
+      "evidence": "AUD-006-evidence/fix2-probe-*-negative.log and the corresponding source paths; exact fresh results, if available, are in checks.",
+      "recommendedFix": "Optionally add a targeted failure-counter control that avoids corrupting the oracle algebra.",
+      "requiredVerification": "Demonstrate nonzero termination specifically from a recorded mismatch reaching finish()."
+    }
+  ],
+  "remediation": [
+    {
+      "id": "AUD-006-SEC001",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Arithmetic unchanged from the fixed b16c64f implementation; retained AUD-007 release/LTO assembly and timing apply within Rust 1.99.1 x86-64 scope, excluding the documented zero-inverse distinction. The new release gate is mandatory and all seven fresh ratios are 1.00. AUD-008-DOC001 qualifies the guide."
+    },
+    {
+      "id": "AUD-006-BLD001",
+      "status": "fixed",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. Version, manifest, lockfiles and install guidance use 0.1.1. No v0.1.1 tag, attested package or publication was created or verified; the original artifact acceptance checks remain pending."
+    },
+    {
+      "id": "AUD-006-BLD002",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. Static verification: local workflow_call uses the tagged commit, package needs ci, and attest needs package. No unconditional override bypasses the dependency."
+    },
+    {
+      "id": "AUD-006-BLD003",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. Compatible requirements and their rationale are recorded, secret-protection-core has minimum 0.1.1, lockfiles use zeroize 1.9.2 and landlock 0.4.8, and retained strict tests pass."
+    },
+    {
+      "id": "AUD-006-DOC001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Both immutable target commits still lack the corrected register. The existing working-tree correction records historical fix commits, but remains uncommitted; no nonexistent audit-record commit is claimed."
+    },
+    {
+      "id": "AUD-006-DOC002",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. The missing cfg-if notice and the general libc dependency outside protect are corrected. The narrower LoongArch64 error introduced in that text is tracked separately as AUD-007-DOC001."
+    },
+    {
+      "id": "AUD-006-DOC003",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. SECURITY.md names public GitHub issues and requests synthetic data. A retained read-only repository response confirms has_issues=true."
+    },
+    {
+      "id": "AUD-006-DOC004",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. All four audit links are absolute GitHub URLs. Package membership and source-based link review found no missing package-relative target among the 31 reviewed relative links."
+    },
+    {
+      "id": "AUD-006-DOC005",
+      "status": "verified",
+      "fixCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "The latest explicit DOC-08 policy supersedes the earlier short-README exception. 15643f2 restores index and primary-guide links, contents table and release badge; the existing provenance badge is retained. AUD-007 remains an historical record of the earlier instruction."
+    },
+    {
+      "id": "AUD-006-DOC006",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. The 0.1.0 changelog now names docs/API.md for the construction guidance."
+    },
+    {
+      "id": "AUD-006-DOC007",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. The development-machine sentence is removed and cargo package --list excludes AGENTS.md."
+    },
+    {
+      "id": "AUD-006-DOC008",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. Retained alternating-holder timing is within a small factor of stable holders; 12-block stateful probes in both file fields pass with protected and allocator memory, including literal outcomes, fresh-search equivalence and step accounting. The 945-step known-answer test remains in the passing suite."
+    },
+    {
+      "id": "AUD-006-DOC009",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. FileError::Field and SetFacts::new now distinguish named file fields from unsupported Binary variants; source validation and the existing feature suites agree."
+    },
+    {
+      "id": "AUD-006-DOC010",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. Mark rustdoc requires a valid field element, matching both plan validation paths and the existing marked-out-of-field regression."
+    },
+    {
+      "id": "AUD-006-ARC001",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Current static review supports this disposition; the following execution/link evidence originates in retained AUD-007, not fresh AUD-008 runs. The Zeroize re-export has a caller-buffer wiping purpose documented without removing the compatible API."
+    },
+    {
+      "id": "AUD-007-BLD001",
+      "status": "verified",
+      "fixCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Fresh cargo fmt --check passes on the exact production sources; 23968f4 and HEAD have identical Rust sources."
+    },
+    {
+      "id": "AUD-007-BLD002",
+      "status": "verified",
+      "fixCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "Release timing is mandatory before package; no permissive needs override. The new example covers all four field kinds (representative Binary degree 10). Retained timing logs have provenance limits; fresh results are listed separately."
+    },
+    {
+      "id": "AUD-007-BLD003",
+      "status": "verified",
+      "fixCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "All originally reported mismatch paths now assert or call fail()/finish(). The additional unchecked MDS boundary is separately AUD-008-BLD001. Negative oracle panics are distinguished from exit 1."
+    },
+    {
+      "id": "AUD-007-DOC001",
+      "status": "verified",
+      "fixCommit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+      "verificationCommit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+      "evidence": "The incorrect LoongArch64 libc-through-cpufeatures attribution is removed; target dependency conditions and notices agree."
+    }
+  ],
+  "limitations": [
+    "Full static coverage means all 166 tracked files and 182 named public operations were assigned and reviewed, not that every possible defect was found. The active working-tree AUD-007 reports/harness and audit register were additionally reviewed.",
+    "Protection integration, dependency requirements and archive integrity were reviewed; this is not a complete fresh audit of secret-protection-core or every transitive dependency.",
+    "Native execution is limited to Linux x86-64. No fresh ARM, macOS, Windows or WebAssembly runtime, Miri, sanitizer campaign, forced allocator-failure campaign, or all-compiler/optimization sweep was performed.",
+    "The timing gate is a coarse median-ratio regression detector, not a constant-time proof. Binary degree 10 represents the generic family; only inspected assembly establishes the observed instruction paths. black_box remains a best-effort hint; inverse zero rejection and error-dependent decoding remain outside the nonzero arithmetic claim.",
+    "Retained coverage has an exactly reproduced documented input fingerprint, matching per-file JSON and valid log/command hashes, but its historical runner did not capture contemporaneous before/after source manifests. Do not describe it as fresh or as cryptographic per-command source capture.",
+    "The retained new timing positive log was produced before removal of a redundant mut in the example. Its negative log lacks a mutation diff, source manifest and command record. Reported ratios 2.65/1.74 are consistent with the supplied explanation but not independently source-bound negative-control evidence.",
+    "Large-field proof and existing fuzz campaigns were reused because runtime algorithms, dependency locks, fuzz targets and proof checker are unchanged; no unnecessary full-cost replay was run. Fuzz uses alloc and small dimensions, not every strict/protection failure.",
+    "The recent retained RustSec scans have valid logs but no recorded advisory-database commit. Root had two allowed development-only warnings (instant and lru); it was not a warning-free scan.",
+    "No Actions run exists for either unpushed target at inspection time. No v0.1.1 package was published or matched to an attestation. SSH signatures are present, but local verification lacks an allowed-signers trust configuration; this is not an invalid-signature finding.",
+    "Several apply_cross refusal cases check the error without separately asserting unchanged output; equivalent production-suite refusal tests exist. Cyclic fuzz prose is broader than its actual nearest-codeword assertions. Neither established a new runtime defect."
+  ],
+  "procedureHashes": {
+    "multi-chain-wallet-tools/docs/FULL_AUDIT_GUIDE.md": "572cef6f58c34d00f7f60928e72afe4b5fed8a85c8380035bf251ab2211879b8",
+    "multi-chain-wallet-tools/docs/audits/AUDIT_STANDARD.md": "c43e25bbcbdd6d22d52a38f571a759f5b688af062b980c3adecd5326efc082ec",
+    "multi-chain-wallet-tools/docs/audits/AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+    "multi-chain-wallet-tools/docs/audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+  },
+  "retainedEvidence": {
+    "fix2Commands": [
+      {
+        "name": "fix2-clippy-alloc",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "alloc",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T21:08:40Z",
+        "endUtc": "2026-11-24T21:08:41Z",
+        "exitCode": 0,
+        "logSha256": "fd570af132edc0891e0b72796b9b6f09a94c797fa3bda6e142e2be39bf5e9bbe"
+      },
+      {
+        "name": "fix2-clippy-default",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T21:08:40Z",
+        "endUtc": "2026-11-24T21:08:40Z",
+        "exitCode": 0,
+        "logSha256": "9bf8dcc0de839fcf3bdb34eda2ab71d90fa451364b8397c9610e98f4d49f48f0"
+      },
+      {
+        "name": "fix2-clippy-nostd",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T21:08:41Z",
+        "endUtc": "2026-11-24T21:08:42Z",
+        "exitCode": 0,
+        "logSha256": "b4213d99f7e7809ce9e717b6bfff9ebfe4109a6af2e95fb97fc9ed9f4a16f5d7"
+      },
+      {
+        "name": "fix2-clippy-thumb-alloc",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "alloc",
+          "--target",
+          "thumbv7em-none-eabihf",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T21:08:42Z",
+        "endUtc": "2026-11-24T21:08:43Z",
+        "exitCode": 0,
+        "logSha256": "1f90f5013aa7aced8e4aaf798c974437ce9e74c580cf7ea29fe553ce380b93ec"
+      },
+      {
+        "name": "fix2-clippy-thumb",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--target",
+          "thumbv7em-none-eabihf",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T21:08:42Z",
+        "endUtc": "2026-11-24T21:08:42Z",
+        "exitCode": 0,
+        "logSha256": "a58b3d7e17d1f52d661ee0ff87787d781d675518b98fc3f6324ea1dacb5c158c"
+      },
+      {
+        "name": "fix2-coverage",
+        "command": [
+          "env",
+          "CARGO_TARGET_DIR=/home/user/Documents/bip_tools/tmp/aud006-rs/coverage-target",
+          "cargo",
+          "llvm-cov",
+          "--locked",
+          "--json",
+          "--summary-only",
+          "--output-path",
+          "docs/audits/AUD-006-evidence/fix2-coverage.json",
+          "--",
+          "--test-threads=4"
+        ],
+        "startUtc": "2026-11-24T21:09:57Z",
+        "endUtc": "2026-11-24T21:20:19Z",
+        "exitCode": 0,
+        "logSha256": "e451f92f9fea83943e0622fc778e37cbcd936923b7b6d9201b4d5cebcf3bfd00"
+      },
+      {
+        "name": "fix2-doc-default",
+        "command": [
+          "env",
+          "RUSTDOCFLAGS=-D warnings",
+          "cargo",
+          "doc",
+          "--locked",
+          "--no-deps"
+        ],
+        "startUtc": "2026-11-24T21:09:32Z",
+        "endUtc": "2026-11-24T21:09:33Z",
+        "exitCode": 0,
+        "logSha256": "2b91d1f3a2debd406b10e3c3cc98fdaaacd5cc1ac2e3336d7a7edef712396894"
+      },
+      {
+        "name": "fix2-doc-nostd",
+        "command": [
+          "env",
+          "RUSTDOCFLAGS=-D warnings",
+          "cargo",
+          "doc",
+          "--locked",
+          "--no-deps",
+          "--no-default-features"
+        ],
+        "startUtc": "2026-11-24T21:09:33Z",
+        "endUtc": "2026-11-24T21:09:34Z",
+        "exitCode": 0,
+        "logSha256": "12779fae6dfeb231658cd6f855dde1aeb50d677a9e3ce609bbe77bc16fbdd3a6"
+      },
+      {
+        "name": "fix2-examples",
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--release",
+          "--no-default-features",
+          "--features",
+          "alloc",
+          "--examples"
+        ],
+        "startUtc": "2026-11-24T21:09:37Z",
+        "endUtc": "2026-11-24T21:09:41Z",
+        "exitCode": 0,
+        "logSha256": "cd316dd397781ae83724c05cf7308470dc92e7b5d336734af65fe3c298e2cdf9"
+      },
+      {
+        "name": "fix2-fmt",
+        "command": [
+          "cargo",
+          "fmt",
+          "--check"
+        ],
+        "startUtc": "2026-11-24T21:08:39Z",
+        "endUtc": "2026-11-24T21:08:39Z",
+        "exitCode": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "fix2-fuzz-clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--manifest-path",
+          "fuzz/Cargo.toml",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T21:09:34Z",
+        "endUtc": "2026-11-24T21:09:35Z",
+        "exitCode": 0,
+        "logSha256": "455f75d4529c6c7263999cbe9a34442746582e42b18fd4d928e242e45bc96914"
+      },
+      {
+        "name": "fix2-fuzz-fmt",
+        "command": [
+          "cargo",
+          "fmt",
+          "--check",
+          "--manifest-path",
+          "fuzz/Cargo.toml"
+        ],
+        "startUtc": "2026-11-24T21:09:34Z",
+        "endUtc": "2026-11-24T21:09:34Z",
+        "exitCode": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "fix2-package-list",
+        "command": [
+          "cargo",
+          "package",
+          "--locked",
+          "--allow-dirty",
+          "--list"
+        ],
+        "startUtc": "2026-11-24T21:09:35Z",
+        "endUtc": "2026-11-24T21:09:35Z",
+        "exitCode": 0,
+        "logSha256": "0741a07795fea15a6d57a96c6bdcebef3b0c114d7b181bce77b65394d6f9b1ee"
+      },
+      {
+        "name": "fix2-publish-dry-run",
+        "command": [
+          "cargo",
+          "publish",
+          "--locked",
+          "--allow-dirty",
+          "--dry-run"
+        ],
+        "startUtc": "2026-11-24T21:09:35Z",
+        "endUtc": "2026-11-24T21:09:37Z",
+        "exitCode": 0,
+        "logSha256": "4522e598bc6f227057f1b978e2b331c201043431429854e8fcec47cd05e60b92"
+      },
+      {
+        "name": "fix2-test-alloc",
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "alloc"
+        ],
+        "startUtc": "2026-11-24T21:09:11Z",
+        "endUtc": "2026-11-24T21:09:30Z",
+        "exitCode": 0,
+        "logSha256": "b774807ed9c95cb36f77c8b9e08fa379806be8c78d3b3c1a401191bab29e899b"
+      },
+      {
+        "name": "fix2-test-default",
+        "command": [
+          "cargo",
+          "test",
+          "--locked"
+        ],
+        "startUtc": "2026-11-24T21:08:43Z",
+        "endUtc": "2026-11-24T21:09:11Z",
+        "exitCode": 0,
+        "logSha256": "4f55e0597edd21382a02b2dee7fe9f58001b965f2aed6d655c9e6b9f02b0c64b"
+      },
+      {
+        "name": "fix2-test-nostd",
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--no-default-features"
+        ],
+        "startUtc": "2026-11-24T21:09:31Z",
+        "endUtc": "2026-11-24T21:09:32Z",
+        "exitCode": 0,
+        "logSha256": "1b92beac9c64becd530d3c55cacb1f239d14eefe03303767155b6361628e9ee7"
+      },
+      {
+        "name": "fix2-tree-duplicates",
+        "command": [
+          "cargo",
+          "tree",
+          "--locked",
+          "-d",
+          "-e",
+          "normal"
+        ],
+        "startUtc": "2026-11-24T21:09:35Z",
+        "endUtc": "2026-11-24T21:09:35Z",
+        "exitCode": 0,
+        "logSha256": "75492018321e95a5df02ca69850e3e7b51d789ad5e96d4f61f860772fb22f07d"
+      }
+    ],
+    "coverage": {
+      "linesCovered": 6049,
+      "linesTotal": 6157,
+      "percent": 98.2458989767744,
+      "sourceFiles": 37,
+      "inputFiles": 68,
+      "inputFingerprint": "a04f468741a863965d7421adc64912173f95a798ddabe83c5283c8dd3294ad38",
+      "jsonSha256": "21b7bb0e8eae2dba4e09cbae51e95f360aee418101f3dd6fe407c97710fc77e4",
+      "classification": "retained; internally validated and documented source fingerprint reproduced at both audited commits"
+    },
+    "proofAndFuzz": {
+      "historicalBase": "b0971436e41854b4986c14976c1e9af641233914",
+      "historicalTarget": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "reuseBasis": "Historical 165-file snapshot is b16c64f; production algorithms, proof checker, fuzz sources and dependency locks are unchanged at 23968f4/15643f2. Historical base/target words below refer only to these named historical commits.",
+      "evidence": {
+        "sourceDiffSha256": "d06a2e6fce520958cd0befe4d3698bd7b163f111752cee7d77c9b795746322af",
+        "sourceBinding": "git diff between base and target restricted to base-tracked paths; exact match to retained pre-run fix-tree.diff fingerprint. Existing retained 165-file snapshot also matches target. No new project copy created.",
+        "fullManifestSha256": "aa2ce8df7265714321b180c78d5d33932db1d0164bb54bd817ad8fae86beffd3",
+        "commands": [
+          {
+            "name": "fix-clippy-alloc",
+            "command": [
+              "cargo",
+              "clippy",
+              "--locked",
+              "--no-default-features",
+              "--features",
+              "alloc",
+              "--all-targets",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "startUtc": "2026-11-24T20:22:27Z",
+            "endUtc": "2026-11-24T20:22:29Z",
+            "exitCode": 0,
+            "logSha256": "1ad43e0eea9f447147989df73d3460873e20aa27f18e0782e3da50fa8269849b"
+          },
+          {
+            "name": "fix-clippy-default",
+            "command": [
+              "cargo",
+              "clippy",
+              "--locked",
+              "--all-targets",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "startUtc": "2026-11-24T20:22:23Z",
+            "endUtc": "2026-11-24T20:22:27Z",
+            "exitCode": 0,
+            "logSha256": "ab1ad4c44d496808e3fc116703640b0c3eed4c1f61ad7ec2187427b7b5215520"
+          },
+          {
+            "name": "fix-clippy-nostd",
+            "command": [
+              "cargo",
+              "clippy",
+              "--locked",
+              "--no-default-features",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "startUtc": "2026-11-24T20:22:29Z",
+            "endUtc": "2026-11-24T20:22:30Z",
+            "exitCode": 0,
+            "logSha256": "9205ee36cb45b9c89b39bcc63ac3323fc0ec5dc25619e5c24075919620994823"
+          },
+          {
+            "name": "fix-clippy-thumb-alloc",
+            "command": [
+              "cargo",
+              "clippy",
+              "--locked",
+              "--no-default-features",
+              "--features",
+              "alloc",
+              "--target",
+              "thumbv7em-none-eabihf",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "startUtc": "2026-11-24T20:22:31Z",
+            "endUtc": "2026-11-24T20:22:32Z",
+            "exitCode": 0,
+            "logSha256": "de570fd906826249c87de8a8f75462df34ae50e1b23242ce005ff4e384cf4a96"
+          },
+          {
+            "name": "fix-clippy-thumb",
+            "command": [
+              "cargo",
+              "clippy",
+              "--locked",
+              "--no-default-features",
+              "--target",
+              "thumbv7em-none-eabihf",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "startUtc": "2026-11-24T20:22:30Z",
+            "endUtc": "2026-11-24T20:22:31Z",
+            "exitCode": 0,
+            "logSha256": "ea1a413052020f1696f013dcc249b86a4d060dcf857a2ad6bf76972edd6bd45f"
+          },
+          {
+            "name": "fix-doc-default",
+            "command": [
+              "env",
+              "RUSTDOCFLAGS=-D warnings",
+              "cargo",
+              "doc",
+              "--locked",
+              "--no-deps"
+            ],
+            "startUtc": "2026-11-24T20:23:33Z",
+            "endUtc": "2026-11-24T20:23:34Z",
+            "exitCode": 0,
+            "logSha256": "0d88177c43c205be941f21d9027711140375fb1013b40f94fe7992b495b258ac"
+          },
+          {
+            "name": "fix-doc-nostd",
+            "command": [
+              "env",
+              "RUSTDOCFLAGS=-D warnings",
+              "cargo",
+              "doc",
+              "--locked",
+              "--no-deps",
+              "--no-default-features"
+            ],
+            "startUtc": "2026-11-24T20:23:34Z",
+            "endUtc": "2026-11-24T20:23:34Z",
+            "exitCode": 0,
+            "logSha256": "5c93d7e5f0a9e3ebd5c052ba901beee068bb86bf6849be9d1b3a78d6f72bfd82"
+          },
+          {
+            "name": "fix-field-proof",
+            "command": [
+              "cargo",
+              "test",
+              "--locked",
+              "--release",
+              "--lib",
+              "field::proof",
+              "--",
+              "--ignored"
+            ],
+            "startUtc": "2026-11-24T20:23:49Z",
+            "endUtc": "2026-11-24T20:27:42Z",
+            "exitCode": 0,
+            "logSha256": "3dbc2f6244e12dc3d07b349ab5f6b10e779baff39bfe8ecdd8b8189b2fa73aa8"
+          },
+          {
+            "name": "fix-fmt",
+            "command": [
+              "cargo",
+              "fmt",
+              "--check"
+            ],
+            "startUtc": "2026-11-24T20:22:23Z",
+            "endUtc": "2026-11-24T20:22:23Z",
+            "exitCode": 1,
+            "logSha256": "8c5e0a364688fd79c6cf3309ec39a9c3f27b38b053df28cff935bb9fe304c8d0"
+          },
+          {
+            "name": "fix-fuzz-calls",
+            "command": [
+              "cargo",
+              "+nightly",
+              "fuzz",
+              "run",
+              "--fuzz-dir",
+              "fuzz",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "calls",
+              "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/calls",
+              "--",
+              "-max_total_time=60",
+              "-rss_limit_mb=3000",
+              "-max_len=4096",
+              "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/calls-"
+            ],
+            "startUtc": "2026-11-24T20:32:48Z",
+            "endUtc": "2026-11-24T20:33:50Z",
+            "exitCode": 0,
+            "logSha256": "a715746a3e0b6322bca684aca92c98b05598e9039885e37a538edabb6e48fe5f"
+          },
+          {
+            "name": "fix-fuzz-clippy",
+            "command": [
+              "cargo",
+              "clippy",
+              "--locked",
+              "--manifest-path",
+              "fuzz/Cargo.toml",
+              "--all-targets",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "startUtc": "2026-11-24T20:23:34Z",
+            "endUtc": "2026-11-24T20:23:40Z",
+            "exitCode": 0,
+            "logSha256": "cebaec89a275c00be9586160482c3747793ec113069068110bd00b4076121611"
+          },
+          {
+            "name": "fix-fuzz-cyclic",
+            "command": [
+              "cargo",
+              "+nightly",
+              "fuzz",
+              "run",
+              "--fuzz-dir",
+              "fuzz",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "cyclic",
+              "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/cyclic",
+              "--",
+              "-max_total_time=60",
+              "-rss_limit_mb=3000",
+              "-max_len=4096",
+              "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/cyclic-"
+            ],
+            "startUtc": "2026-11-24T20:31:24Z",
+            "endUtc": "2026-11-24T20:32:48Z",
+            "exitCode": 0,
+            "logSha256": "082dc1179ff4c3db8f50dc3e6e87468c84b696c1e5324cce0cd0cf960802d829"
+          },
+          {
+            "name": "fix-fuzz-files",
+            "command": [
+              "cargo",
+              "+nightly",
+              "fuzz",
+              "run",
+              "--fuzz-dir",
+              "fuzz",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "files",
+              "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/files",
+              "--",
+              "-max_total_time=60",
+              "-rss_limit_mb=3000",
+              "-max_len=4096",
+              "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/files-"
+            ],
+            "startUtc": "2026-11-24T20:27:51Z",
+            "endUtc": "2026-11-24T20:29:19Z",
+            "exitCode": 0,
+            "logSha256": "48e4b4e49df5e2ad849f47b8fe12a7fd147e1bbf49490c4dd80124bdabc2376a"
+          },
+          {
+            "name": "fix-fuzz-fmt",
+            "command": [
+              "cargo",
+              "fmt",
+              "--check",
+              "--manifest-path",
+              "fuzz/Cargo.toml"
+            ],
+            "startUtc": "2026-11-24T20:23:34Z",
+            "endUtc": "2026-11-24T20:23:34Z",
+            "exitCode": 0,
+            "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "name": "fix-fuzz-plans",
+            "command": [
+              "cargo",
+              "+nightly",
+              "fuzz",
+              "run",
+              "--fuzz-dir",
+              "fuzz",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "plans",
+              "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/plans",
+              "--",
+              "-max_total_time=60",
+              "-rss_limit_mb=3000",
+              "-max_len=4096",
+              "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/plans-"
+            ],
+            "startUtc": "2026-11-24T20:30:21Z",
+            "endUtc": "2026-11-24T20:31:24Z",
+            "exitCode": 0,
+            "logSha256": "616e5300b239ee57623de198dfa88de5f4cdd958493aa3ffa18a0cf1ebfcc869"
+          },
+          {
+            "name": "fix-fuzz-seeds",
+            "command": [
+              "cargo",
+              "+nightly",
+              "run",
+              "--manifest-path",
+              "fuzz/Cargo.toml",
+              "--example",
+              "seeds",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "--",
+              "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/files"
+            ],
+            "startUtc": "2026-11-24T20:27:43Z",
+            "endUtc": "2026-11-24T20:27:51Z",
+            "exitCode": 0,
+            "logSha256": "6dea6d059ab0157a513cd00279631ca76dc8adbf01169865330e5a9a77b03838"
+          },
+          {
+            "name": "fix-fuzz-sets",
+            "command": [
+              "cargo",
+              "+nightly",
+              "fuzz",
+              "run",
+              "--fuzz-dir",
+              "fuzz",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "sets",
+              "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/sets",
+              "--",
+              "-max_total_time=60",
+              "-rss_limit_mb=3000",
+              "-max_len=4096",
+              "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/sets-"
+            ],
+            "startUtc": "2026-11-24T20:29:19Z",
+            "endUtc": "2026-11-24T20:30:21Z",
+            "exitCode": 0,
+            "logSha256": "0a73f24e877b610583e0d5a67e3fd428876ff15899c090e622ff9b8c3fa08135"
+          },
+          {
+            "name": "fix-package-list",
+            "command": [
+              "cargo",
+              "package",
+              "--locked",
+              "--allow-dirty",
+              "--list"
+            ],
+            "startUtc": "2026-11-24T20:23:40Z",
+            "endUtc": "2026-11-24T20:23:40Z",
+            "exitCode": 0,
+            "logSha256": "a49def693f4fdc4691e25e2974555a4b00e0e19caf5fa19bb5d758e158cde14f"
+          },
+          {
+            "name": "fix-publish-dry-run",
+            "command": [
+              "cargo",
+              "publish",
+              "--locked",
+              "--allow-dirty",
+              "--dry-run"
+            ],
+            "startUtc": "2026-11-24T20:23:40Z",
+            "endUtc": "2026-11-24T20:23:45Z",
+            "exitCode": 0,
+            "logSha256": "fc81c88df29f062cd8c905b491e8400660d10e33621e2778ba85846a7732ad08"
+          },
+          {
+            "name": "fix-rustsec-fuzz",
+            "command": [
+              "cargo",
+              "audit",
+              "--file",
+              "fuzz/Cargo.lock"
+            ],
+            "startUtc": "2026-11-24T20:23:47Z",
+            "endUtc": "2026-11-24T20:23:49Z",
+            "exitCode": 0,
+            "logSha256": "b48ce17f02eccdeafe03f1e0e9a6d0abe3b0bbb3b7977f5bff04754b705bac36"
+          },
+          {
+            "name": "fix-rustsec",
+            "command": [
+              "cargo",
+              "audit"
+            ],
+            "startUtc": "2026-11-24T20:23:45Z",
+            "endUtc": "2026-11-24T20:23:47Z",
+            "exitCode": 0,
+            "logSha256": "5aec8b2f4ae28f7320bc4e82874658f7d8e04b82644fb9f5326e03cb41acc366"
+          },
+          {
+            "name": "fix-test-alloc",
+            "command": [
+              "cargo",
+              "test",
+              "--locked",
+              "--no-default-features",
+              "--features",
+              "alloc"
+            ],
+            "startUtc": "2026-11-24T20:23:03Z",
+            "endUtc": "2026-11-24T20:23:24Z",
+            "exitCode": 0,
+            "logSha256": "d81ac84431f8a44d041d175ce1637474ebb315d8e492ff1fda607e8df9d3a886"
+          },
+          {
+            "name": "fix-test-default",
+            "command": [
+              "cargo",
+              "test",
+              "--locked"
+            ],
+            "startUtc": "2026-11-24T20:22:32Z",
+            "endUtc": "2026-11-24T20:23:03Z",
+            "exitCode": 0,
+            "logSha256": "39df55032ce8278a1105a2c4349fb72eb20dfaf2e2f54f31c9a0107d96bc340d"
+          },
+          {
+            "name": "fix-test-nostd",
+            "command": [
+              "cargo",
+              "test",
+              "--locked",
+              "--no-default-features"
+            ],
+            "startUtc": "2026-11-24T20:23:24Z",
+            "endUtc": "2026-11-24T20:23:33Z",
+            "exitCode": 0,
+            "logSha256": "265304e8d2de394bb1f4fe046450735f857a8d89367ec1f151d3c42cb4a8a1d5"
+          },
+          {
+            "name": "fix-tree-duplicates",
+            "command": [
+              "cargo",
+              "tree",
+              "--locked",
+              "-d",
+              "-e",
+              "normal"
+            ],
+            "startUtc": "2026-11-24T20:23:40Z",
+            "endUtc": "2026-11-24T20:23:40Z",
+            "exitCode": 0,
+            "logSha256": "75492018321e95a5df02ca69850e3e7b51d789ad5e96d4f61f860772fb22f07d"
+          }
+        ],
+        "fieldProofSeconds": 228.18,
+        "fuzzRuns": {
+          "files": 341211,
+          "sets": 36643,
+          "plans": 143535,
+          "cyclic": 62985,
+          "calls": 270542
+        }
+      }
+    },
+    "assemblyArtifacts": {
+      "fieldAssemblySha256": "067f4f382c939f87d80ccc556324c8f8605581ecc5b533e0bb51b0986d03a1e5",
+      "ltoAssemblySha256": "40ab51e779672ebe6514dac79c9409aa8601cab47a374e48bd822bb249011925",
+      "timingBinarySha256": "68ef9af695f0c603aca1603c4aace499fa067a0d17ac3b27d41d9683356a33ac",
+      "holdersBinarySha256": "9552373c71c2bbe66c73caefa2a1950c69114eace065032e2cffd2b1127f23e4"
+    }
+  },
+  "reviewerPhases": [
+    {
+      "scope": "Coordinator: all file framing/grouping/rebuild/vote/write sources, public exports, examples and execution",
+      "model": null,
+      "reasoningEffort": null
+    },
+    {
+      "scope": "Runtime: every algorithm source and every integration-suite test; independent probe and MDS challenge",
+      "model": null,
+      "reasoningEffort": null
+    },
+    {
+      "scope": "Release: protected buffers, strict API/tests, locks, release and metadata; independent MDS/documentation challenge",
+      "model": null,
+      "reasoningEffort": null
+    },
+    {
+      "scope": "Claims: guides, all historical reports/harnesses, current fuzz, coverage and independent completeness challenge",
+      "model": null,
+      "reasoningEffort": null
+    }
+  ],
+  "environment": {
+    "os": "Linux 7.0.0-43-generic",
+    "architecture": "x86_64-unknown-linux-gnu",
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
+    "rustcCommit": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+    "llvm": "23.1.1",
+    "cargo": "1.99.1 (5f94df478 2026-08-27)"
+  },
+  "artifacts": {
+    "timing.bin": "d66592159698fe650f821a93af5e26d29b988d1c97484b1a951acb1920f57bb9",
+    "exhaustive.bin": "bf8c40a6b304d01158223c8b443c4e7e67782662622560c910130b0b4847c0c1",
+    "fields.bin": "a73e58393c1f1de8121e42da5b442236b8823ec3c19e83e92b9c78f10e6131da",
+    "decode.bin": "7bc9e616570440d2d15a0607b137ecc92c9cfcdbf06de5580c672ae45d6f3711",
+    "cyclic.bin": "4f584431ac4d4da15214f3a8343d6023f8bb5abe0bc60de35fa14e948cf13508",
+    "mds.bin": "49bc7fa472f3a29f70c153102dd0aca2941fcab170bd1e3ea2d17cea49b922ce",
+    "known.bin": "6987d8ff4b3aa519721cd1db8a44a8425dfaa24edd2edb452ff50fc8f39d668a",
+    "mhfe.bin": "966cba975ccf043ca64d659ee0120aa9e263a66d3b59efc33b906fa7185fd858"
+  },
+  "resourceSummary": {
+    "totalPhysicalKiB": 15448244,
+    "minimumAvailableKiB": 6035956,
+    "minimumAvailablePercent": 39.07211719338457,
+    "maximumObservedThermalC": 98.0,
+    "recordedGuardPauses": 29,
+    "policy": "Heavy commands: run-capped, 3 GiB limit, no job swap, thermal pause90C/resume85C. Two distinct Cargo target directories. Follow-up test threads2/buildjobs4. Global sampling every5s. Small fixed-fixture retry: helper light mode, 256 MiB reservation and one CPU-second hard limit, measured below0.01CPU seconds and7648KiB; original guarded control also completed. No cryptographic parameter reduction or memory padding."
+  },
+  "commitMetadata": {
+    "commits": [
+      {
+        "commit": "23968f420857f66540f6e02b1b310a36c02bd14e",
+        "authorUtc": false,
+        "committerUtc": false,
+        "signatureHeaderPresent": true
+      },
+      {
+        "commit": "15643f2a90d1b831c8d786c31ec5dad8fa87654d",
+        "authorUtc": false,
+        "committerUtc": false,
+        "signatureHeaderPresent": true
+      }
+    ],
+    "allowedSignersConfigured": false,
+    "verificationLimitation": "No local allowed-signers configuration; signature presence is not cryptographic/trust verification. Actual non-UTC offsets and identities are intentionally omitted."
+  },
+  "executionStartedUtc": "2026-11-24T21:28:27Z",
+  "completedUtc": "2026-11-24T21:59:20.850878+00:00",
+  "independentFinalReview": {
+    "outcome": "No material issue remains after adopted corrections",
+    "scope": "Independent full report/inventory/registry/provenance review, oracle review, finding challenge; coordinator automated final schema/hash/source/link/privacy validation covers all completed commands",
+    "model": null,
+    "reasoningEffort": null
+  }
+}

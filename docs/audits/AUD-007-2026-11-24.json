@@ -1,0 +1,1496 @@
+{
+  "schemaVersion": 1,
+  "auditId": "AUD-007",
+  "auditNumber": 7,
+  "date": "2026-11-24",
+  "title": "Complete change audit and verification of AUD-006 remediation",
+  "reviewer": {
+    "name": "Codex coordinator and three independent AI reviewers",
+    "model": null,
+    "reasoningEffort": null
+  },
+  "snapshot": {
+    "commit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+    "commitComplete": true,
+    "workingTree": "Pre-existing docs/TECHNICAL.md and docs/audits/README.md changes; source formatting changes appeared during review. Production implementation unchanged by this audit. Fresh builds used exact Rustfmt-normalized committed source for the two affected Rust files.",
+    "sourceFingerprint": "34a9a266c8b08aba9151d43d6fde72095149c0bbaa98dfc23a7908f9ed926eda",
+    "base": "b0971436e41854b4986c14976c1e9af641233914"
+  },
+  "scope": {
+    "range": "b0971436e41854b4986c14976c1e9af641233914..b16c64f1388ceddfcabc45186fdc60309adc83db",
+    "changedFiles": 55,
+    "coverageLedger": [
+      {
+        "checkId": "CHECK-SEC-001",
+        "category": "SEC",
+        "logicalGroup": "Secret ownership",
+        "outcome": "passed",
+        "evidence": "Reviewed decoder ownership, protected buffers, strict callers and dependency changes; fresh strict and stateful probes pass.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-SEC-002",
+        "category": "SEC",
+        "logicalGroup": "Vault and transport",
+        "outcome": "not-applicable",
+        "evidence": "Library has no browser vault or message channel.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-SEC-003",
+        "category": "SEC",
+        "logicalGroup": "Network egress",
+        "outcome": "not-applicable",
+        "evidence": "No network path is introduced; process isolation remains the caller responsibility.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-SEC-004",
+        "category": "SEC",
+        "logicalGroup": "Randomness and authentication",
+        "outcome": "passed",
+        "evidence": "No new RNG or encryption. SHA-256 remains integrity checking, not authentication; arithmetic is checked separately.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-SEC-005",
+        "category": "SEC",
+        "logicalGroup": "Lifecycle and exceptional paths",
+        "outcome": "passed",
+        "evidence": "Refit preserves ownership; scratch is initialized before reads and retained until normal wipe/drop. No forced allocator-failure or Miri run.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-SEC-006",
+        "category": "SEC",
+        "logicalGroup": "Browser persistence and injection",
+        "outcome": "not-applicable",
+        "evidence": "No browser UI, storage or DOM in the changed surface.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-SEC-007",
+        "category": "SEC",
+        "logicalGroup": "Availability bounds",
+        "outcome": "passed",
+        "evidence": "Holder transitions, reduced holder counts, final short blocks, work refusal and step accounting checked. Alternating-holder timing measured.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-001",
+        "category": "FUN",
+        "logicalGroup": "Mnemonic interpretation",
+        "outcome": "not-applicable",
+        "evidence": "The library consumes symbols, not mnemonic phrases. The supplied BIP39 list is fixture data only.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-002",
+        "category": "FUN",
+        "logicalGroup": "HD derivation",
+        "outcome": "not-applicable",
+        "evidence": "No key derivation.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-003",
+        "category": "FUN",
+        "logicalGroup": "BIP85/BIP38/messages",
+        "outcome": "not-applicable",
+        "evidence": "No such operations.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-004",
+        "category": "FUN",
+        "logicalGroup": "Scripts and descriptors",
+        "outcome": "not-applicable",
+        "evidence": "No such operations.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-005",
+        "category": "FUN",
+        "logicalGroup": "Transactions",
+        "outcome": "not-applicable",
+        "evidence": "No transactions or PSBT.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-006",
+        "category": "FUN",
+        "logicalGroup": "Recovery and coding",
+        "outcome": "passed",
+        "evidence": "Fresh default/alloc/no-alloc suites and stateful vote probe; hash-validated retained proof/fuzz. Oracle probe automation has AUD-007-BLD003.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-FUN-007",
+        "category": "FUN",
+        "logicalGroup": "Providers and discovery",
+        "outcome": "not-applicable",
+        "evidence": "No providers or discovery.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-API-001",
+        "category": "API",
+        "logicalGroup": "Public and dependency contracts",
+        "outcome": "passed",
+        "evidence": "Private refit callers and public plan/file documentation checked; compatible export remains; strict tests pass.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-API-002",
+        "category": "API",
+        "logicalGroup": "State and limits",
+        "outcome": "passed",
+        "evidence": "Synchronous API; no cancellation state. Reused finder transitions and bound refusal tested.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-API-003",
+        "category": "API",
+        "logicalGroup": "Monetary exports",
+        "outcome": "not-applicable",
+        "evidence": "No monetary, CSV, JSON or spreadsheet export.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-API-004",
+        "category": "API",
+        "logicalGroup": "Encodings",
+        "outcome": "passed",
+        "evidence": "Both supported file fields and truncated final block tested; source/raw fixture consistency reviewed; no format change.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-BLD-001",
+        "category": "BLD",
+        "logicalGroup": "Features",
+        "outcome": "passed",
+        "evidence": "Fresh tests in all three feature sets; retained clippy/no-OS target matrix verified against the reconstructed snapshot.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-BLD-002",
+        "category": "BLD",
+        "logicalGroup": "Platform matrix",
+        "outcome": "not-run",
+        "evidence": "No fresh native ARM/macOS/Windows run. Retained local compile matrix only; GitHub returned no Actions runs for the exact commit at inspection time.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-BLD-003",
+        "category": "BLD",
+        "logicalGroup": "Dependencies and licensing",
+        "outcome": "failed",
+        "evidence": "All cached registry archive checksums match six lockfiles. Narrow new notice error AUD-007-DOC001.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-BLD-004",
+        "category": "BLD",
+        "logicalGroup": "Canonical WASM and Docker",
+        "outcome": "not-applicable",
+        "evidence": "This library change has no canonical Docker/WASM artifact; no reproducibility claim is made.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-BLD-005",
+        "category": "BLD",
+        "logicalGroup": "CI and release",
+        "outcome": "failed",
+        "evidence": "AUD-007-BLD001 and BLD002; no v0.1.1 release artifact exists for attestation verification.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-UI-001",
+        "category": "UI",
+        "logicalGroup": "Viewports",
+        "outcome": "not-applicable",
+        "evidence": "No user interface.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-UI-002",
+        "category": "UI",
+        "logicalGroup": "Navigation",
+        "outcome": "not-applicable",
+        "evidence": "No user interface.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-UI-003",
+        "category": "UI",
+        "logicalGroup": "Visibility/accessibility",
+        "outcome": "not-applicable",
+        "evidence": "No user interface.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-ARC-001",
+        "category": "ARC",
+        "logicalGroup": "Ownership and seams",
+        "outcome": "passed",
+        "evidence": "Private refit keeps decoder shape invariants; no duplicated secret buffer owner introduced.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-ARC-002",
+        "category": "ARC",
+        "logicalGroup": "Dead code and duplication",
+        "outcome": "passed",
+        "evidence": "Zeroize public compatibility and intended purpose retained; all new probe files assigned a reviewer.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-ARC-003",
+        "category": "ARC",
+        "logicalGroup": "Tests and claims",
+        "outcome": "failed",
+        "evidence": "AUD-007-BLD003: mismatch paths do not enforce nonzero exit. Production test assertions and new stateful probe reviewed.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-DOC-001",
+        "category": "DOC",
+        "logicalGroup": "Capability and safety descriptions",
+        "outcome": "passed",
+        "evidence": "Behavioral fixes match documentation. README layout disagreement is separately reassessed; timing claims limited to compiled configurations.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-DOC-002",
+        "category": "DOC",
+        "logicalGroup": "Commands/links/legal",
+        "outcome": "failed",
+        "evidence": "AUD-007-DOC001; package exclusion/link fixes otherwise supported.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      },
+      {
+        "checkId": "CHECK-DOC-003",
+        "category": "DOC",
+        "logicalGroup": "Audit evidence",
+        "outcome": "failed",
+        "evidence": "Original AUD-006-DOC001 remains open at the exact commit. Prior report/schema/fixtures/procedure hashes otherwise validated.",
+        "snapshot": "b16c64f1388ceddfcabc45186fdc60309adc83db"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "committed-fmt",
+      "command": [
+        "bash",
+        "-c",
+        "set -euo pipefail; git show b16c64f:src/correct.rs | rustfmt --check --edition 2024"
+      ],
+      "startUtc": "2026-11-24T20:34:13Z",
+      "endUtc": "2026-11-24T20:34:13Z",
+      "exitCode": 0,
+      "logSha256": "12a636bd40d3a84757a033c07d59ffcccf8245de9ba6b3261be4933586bbb612",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "committed-fmt.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "diagnostic: rustfmt on stdin prints a diff but returns 0; not counted as a pass",
+      "evidence": "AUD-007-evidence/committed-fmt.log (local)"
+    },
+    {
+      "name": "committed-format-diff",
+      "command": [
+        "bash",
+        "-c",
+        "set -euo pipefail; diff -u <(git show b16c64f:src/correct.rs) <(git show b16c64f:src/correct.rs | rustfmt --edition 2024 --emit stdout)"
+      ],
+      "startUtc": "2026-11-24T20:34:37Z",
+      "endUtc": "2026-11-24T20:34:37Z",
+      "exitCode": 1,
+      "logSha256": "fc21a82f402f738cf2a5403bfb3de58b54f92e924320e0a394bf9f07dc617fb2",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "committed-format-diff.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "failed",
+      "evidence": "AUD-007-evidence/committed-format-diff.log (local)"
+    },
+    {
+      "name": "current-format",
+      "command": [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "startUtc": "2026-11-24T20:39:15Z",
+      "endUtc": "2026-11-24T20:39:15Z",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "current-format.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/current-format.log (local)"
+    },
+    {
+      "name": "field-assembly",
+      "command": [
+        "env",
+        "CARGO_TARGET_DIR=/home/user/Documents/bip_tools/tmp/aud007-remediation/asm-target",
+        "CARGO_BUILD_JOBS=1",
+        "cargo",
+        "rustc",
+        "--offline",
+        "--locked",
+        "--release",
+        "--lib",
+        "--no-default-features",
+        "--",
+        "--emit=asm",
+        "-C",
+        "codegen-units=1"
+      ],
+      "startUtc": "2026-11-24T20:37:13Z",
+      "endUtc": "2026-11-24T20:37:28Z",
+      "exitCode": 0,
+      "logSha256": "2dde4b3eace0daa8e4308840083345916dfa54c5ca9035900c1d022d325adc00",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "field-assembly.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/field-assembly.log (local)"
+    },
+    {
+      "name": "harness-clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-007-harnesses/Cargo.toml",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startUtc": "2026-11-24T20:38:15Z",
+      "endUtc": "2026-11-24T20:38:20Z",
+      "exitCode": 0,
+      "logSha256": "6fdf82cc3a58e0d4d77161d74e2227437b7b55899b527e54ffd13d64a508c7bd",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "harness-clippy.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/harness-clippy.log (local)"
+    },
+    {
+      "name": "harness-format",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "docs/audits/AUD-007-harnesses/Cargo.toml"
+      ],
+      "startUtc": "2026-11-24T20:35:10Z",
+      "endUtc": "2026-11-24T20:35:11Z",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "harness-format.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/harness-format.log (local)"
+    },
+    {
+      "name": "holders-build",
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-006-harnesses/files/Cargo.toml",
+        "--release",
+        "--bin",
+        "holders"
+      ],
+      "startUtc": "2026-11-24T20:39:37Z",
+      "endUtc": "2026-11-24T20:39:50Z",
+      "exitCode": 0,
+      "logSha256": "c5e8d46f219ba23e23915a8e0c46052b9136fc6933a077d8053fd8ecb539ac37",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "holders-build.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/holders-build.log (local)"
+    },
+    {
+      "name": "holders-run",
+      "command": [
+        "/home/user/Documents/bip_tools/tmp/aud007-remediation/target/release/holders",
+        "100000"
+      ],
+      "startUtc": "2026-11-24T20:39:50Z",
+      "endUtc": "2026-11-24T20:39:51Z",
+      "exitCode": 0,
+      "logSha256": "cdc4042b6c8e44468e5951da78503b12a73b1e11c0b8b97959b5aa88acd6702a",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "holders-run.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/holders-run.log (local)"
+    },
+    {
+      "name": "loongarch-dependencies",
+      "command": [
+        "cargo",
+        "tree",
+        "--offline",
+        "--locked",
+        "--no-default-features",
+        "--target",
+        "loongarch64-unknown-linux-gnu",
+        "-e",
+        "normal"
+      ],
+      "startUtc": "2026-11-24T20:34:40Z",
+      "endUtc": "2026-11-24T20:34:40Z",
+      "exitCode": 0,
+      "logSha256": "2a79df81bfb740a328c553d042c404cc6c91894a5b8481f8e9962cef24fb37c6",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "loongarch-dependencies.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/loongarch-dependencies.log (local)"
+    },
+    {
+      "name": "lto-assembly",
+      "command": [
+        "env",
+        "CARGO_TARGET_DIR=/home/user/Documents/bip_tools/tmp/aud007-remediation/lto-target",
+        "CARGO_BUILD_JOBS=1",
+        "cargo",
+        "rustc",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-006-harnesses/timing/Cargo.toml",
+        "--release",
+        "--bin",
+        "probe-lto",
+        "--",
+        "--emit=asm"
+      ],
+      "startUtc": "2026-11-24T20:38:47Z",
+      "endUtc": "2026-11-24T20:39:28Z",
+      "exitCode": 0,
+      "logSha256": "38450788a2bb79fb7c8da45ceedceaddc47f2f7f3e6fa3a2656922db6465709a",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "lto-assembly.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/lto-assembly.log (local)"
+    },
+    {
+      "name": "package-list",
+      "command": [
+        "cargo",
+        "package",
+        "--offline",
+        "--locked",
+        "--allow-dirty",
+        "--list"
+      ],
+      "startUtc": "2026-11-24T20:39:15Z",
+      "endUtc": "2026-11-24T20:39:15Z",
+      "exitCode": 0,
+      "logSha256": "a49def693f4fdc4691e25e2974555a4b00e0e19caf5fa19bb5d758e158cde14f",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "package-list.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/package-list.log (local)"
+    },
+    {
+      "name": "runner-negative-control",
+      "command": [
+        "false"
+      ],
+      "startUtc": "2026-11-24T20:34:29Z",
+      "endUtc": "2026-11-24T20:34:29Z",
+      "exitCode": 1,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "runner-negative-control.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed: expected exit 1",
+      "evidence": "AUD-007-evidence/runner-negative-control.log (local)"
+    },
+    {
+      "name": "test-alloc",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--no-default-features",
+        "--features",
+        "alloc"
+      ],
+      "startUtc": "2026-11-24T20:38:20Z",
+      "endUtc": "2026-11-24T20:39:07Z",
+      "exitCode": 0,
+      "logSha256": "801bb77e9c80626581bbec9406fafdd51e0f248ebbc42b53bc9732b060c886c4",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "test-alloc.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/test-alloc.log (local)"
+    },
+    {
+      "name": "test-default",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked"
+      ],
+      "startUtc": "2026-11-24T20:32:39Z",
+      "endUtc": "2026-11-24T20:37:22Z",
+      "exitCode": 0,
+      "logSha256": "c9ea4fd9cf5adeeea7a16c870c6fe59372683c63400a66564e52c48abba6613f",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "test-default.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/test-default.log (local)"
+    },
+    {
+      "name": "test-nostd",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--no-default-features"
+      ],
+      "startUtc": "2026-11-24T20:39:07Z",
+      "endUtc": "2026-11-24T20:39:15Z",
+      "exitCode": 0,
+      "logSha256": "ba718a2edccc32a856643956f1e0f7bc4d9474da1cec15f1a2d1fe310813d354",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "test-nostd.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/test-nostd.log (local)"
+    },
+    {
+      "name": "timing-build",
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-006-harnesses/timing/Cargo.toml",
+        "--release",
+        "--bin",
+        "timing"
+      ],
+      "startUtc": "2026-11-24T20:39:15Z",
+      "endUtc": "2026-11-24T20:39:35Z",
+      "exitCode": 0,
+      "logSha256": "6b34aafa3e408e37c49a4479668b575c10e74a06cfdfad93fb80a4ddf7831754",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "timing-build.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/timing-build.log (local)"
+    },
+    {
+      "name": "timing-run",
+      "command": [
+        "taskset",
+        "-c",
+        "3",
+        "/home/user/Documents/bip_tools/tmp/aud007-remediation/target/release/timing"
+      ],
+      "startUtc": "2026-11-24T20:39:35Z",
+      "endUtc": "2026-11-24T20:39:37Z",
+      "exitCode": 0,
+      "logSha256": "ad7d554d8268c0966aeb9dcdd39f8d07caebde3fa6b526373f28bcb5f9fb345f",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "timing-run.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/timing-run.log (local)"
+    },
+    {
+      "name": "vote-state-alloc",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "docs/audits/AUD-007-harnesses/Cargo.toml",
+        "--no-default-features",
+        "--",
+        "--nocapture"
+      ],
+      "startUtc": "2026-11-24T20:38:12Z",
+      "endUtc": "2026-11-24T20:38:15Z",
+      "exitCode": 0,
+      "logSha256": "8b5bd5bb6a10ec5592e7cf7364ecd1895fbee76a24704c95764c215c4af815cf",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "vote-state-alloc.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/vote-state-alloc.log (local)"
+    },
+    {
+      "name": "vote-state-protect",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--manifest-path",
+        "docs/audits/AUD-007-harnesses/Cargo.toml",
+        "--",
+        "--nocapture"
+      ],
+      "startUtc": "2026-11-24T20:37:39Z",
+      "endUtc": "2026-11-24T20:37:46Z",
+      "exitCode": 0,
+      "logSha256": "7dd0f6d9cbf944496256882939a2ef85b51f5ba3858d2e7a20b100f513244033",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "vote-state-protect.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/vote-state-protect.log (local)"
+    },
+    {
+      "name": "environment",
+      "command": [
+        "bash",
+        "-c",
+        "set -euo pipefail; uname -srm; rustc -Vv; cargo -V; command -v rustc; command -v cargo; git rev-parse HEAD; git status --short"
+      ],
+      "startUtc": "2026-11-24T20:44:21Z",
+      "endUtc": "2026-11-24T20:44:21Z",
+      "exitCode": 0,
+      "logSha256": "e74de5d44317efba477664a0b767ea85a95e037eeee9ad6e4017af0b74b4542a",
+      "sourceCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "workingTreeEvidence": "environment.before.diff",
+      "environment": {
+        "CARGO_HOME": "/home/user/Documents/bip_tools/workingspace/cargo",
+        "RUSTUP_HOME": "/home/user/Documents/bip_tools/workingspace/rustup",
+        "CARGO_TARGET_DIR": "/home/user/Documents/bip_tools/tmp/aud007-remediation/target",
+        "CARGO_BUILD_JOBS": 4
+      },
+      "outcome": "passed",
+      "evidence": "AUD-007-evidence/environment.log (local)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "AUD-007-BLD001",
+      "category": "BLD",
+      "kind": "finding",
+      "severity": "medium",
+      "status": "open",
+      "releaseBlocking": true,
+      "title": "The reviewed commit fails the formatting gate required by tagged releases",
+      "affectedFiles": [
+        "src/correct.rs:465",
+        "src/file/set/vote.rs:352",
+        ".github/workflows/ci.yml:32-33"
+      ],
+      "reproduction": "At b16c64f, run cargo fmt --check. The retained fix-fmt run returned 1. Without checking out another tree, compare git show b16c64f:src/correct.rs with the same stream formatted by Rust 1.99.1 rustfmt --edition 2024 --emit stdout; diff -u returns 1.",
+      "expected": "The committed source passes the mandatory formatting gate before CI permits packaging and attestation.",
+      "observed": "The fold closure and the is_some_and expression need Rustfmt changes. The committed source lacks them. The current working tree contains precisely those formatting corrections and passes cargo fmt --check, but those bytes are not part of b16c64f.",
+      "impact": "A tag at this commit fails CI and cannot reach the ordinary package job. This is a build failure, not a demonstrated runtime or memory-safety defect.",
+      "evidence": "AUD-006-evidence/fix-fmt.command.json and fix-fmt.log (local, exit 1); AUD-007-evidence/committed-format-diff.log (local, exit 1, SHA-256 fc21a82f402f738cf2a5403bfb3de58b54f92e924320e0a394bf9f07dc617fb2); current-format.log (local, exit 0).",
+      "recommendedFix": "Include the existing formatting corrections in a successor commit. Preserve the reviewed commit in history.",
+      "requiredVerification": "cargo fmt --check must pass on the exact successor commit and the tagged CI workflow must consume that commit."
+    },
+    {
+      "id": "AUD-007-BLD002",
+      "category": "BLD",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "The tagged release pipeline does not enforce the required timing probe",
+      "affectedFiles": [
+        ".github/workflows/release.yml:17-21",
+        ".github/workflows/ci.yml:26-80",
+        "AGENTS.md:33-35"
+      ],
+      "reproduction": "Read every run step reachable from release.yml jobs.ci and jobs.package. None builds or runs docs/audits/AUD-006-harnesses/timing, and no step inspects field arithmetic assembly.",
+      "expected": "A release pipeline described as including the new timing check actually runs that check and stops packaging on failure.",
+      "observed": "workflow_call and needs: ci correctly enforce existing CI checks. The timing requirement was added only to the manual instructions in AGENTS.md; the callable CI contains formatting, clippy, normal tests and rustdoc.",
+      "impact": "The automatic release path can attest a future timing regression that passes functional tests. A manual timing preflight can still detect it; this finding does not claim that the current arithmetic fix fails or that no manual check occurs.",
+      "evidence": "Static review of both complete workflows at the target commit; separate reviewer challenge. The fresh timing run passes, which does not supply an automated future gate.",
+      "recommendedFix": "Add a required release job that builds the timing harness with --locked --release, runs its timing binary, and gates package on its success. State the fields and compiler configurations covered.",
+      "requiredVerification": "Review the job dependency graph; demonstrate that a deliberately failing timing check prevents package/attest. Cover multiplication and inversion separately where the guarantee requires them."
+    },
+    {
+      "id": "AUD-007-BLD003",
+      "category": "BLD",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "Several new oracle probes report mismatches without failing the command",
+      "affectedFiles": [
+        "docs/audits/AUD-006-harnesses/codes/src/bin/fields.rs:119-236",
+        "docs/audits/AUD-006-harnesses/codes/src/bin/decode.rs:206-282",
+        "docs/audits/AUD-006-harnesses/codes/src/bin/cyclic.rs:298-301",
+        "docs/audits/AUD-006-harnesses/codes/src/bin/apply_cross.rs:25-50",
+        "docs/audits/AUD-006-harnesses/codes/src/bin/mhfe.rs:171-182",
+        "docs/audits/AUD-006-harnesses/README.md:56-58"
+      ],
+      "reproduction": "Trace the mismatch counters to each main function exit. fields prints disagreements/bad_products/bad_inverses/bad_slow and boundary errors without checking them; decode prints and then shadows its tallies; cyclic prints total.bad and returns. Most apply_cross observations are only printed. The two unexpected non-Changes repair-plan branches in mhfe print NOT REPAIRED without calling fail().",
+      "expected": "As the harness README promises, any oracle disagreement makes the relevant command exit nonzero.",
+      "observed": "These mismatch paths reach a successful return unless a separate assertion happens to fail. Other mhfe mismatch paths already call fail()/finish(); this finding is limited to the unchecked paths.",
+      "impact": "An automated rerun that checks only exit status can accept incorrect arithmetic, decoding or plan binding. Reviewing printed counters remains possible. No actual production oracle disagreement was demonstrated in this audit.",
+      "evidence": "Complete source review of the new probes and an independent challenge. This is source-level control-flow evidence; no modified production implementation was executed to simulate a mismatch.",
+      "recommendedFix": "Accumulate all mismatch counters and fail once at the end, or assert each required result and unchanged-output condition. Treat equivalent-code positive controls separately from negative cases.",
+      "requiredVerification": "Give each probe a deterministic negative control that produces a mismatch and must exit nonzero, then rerun the unchanged positive oracle cases."
+    },
+    {
+      "id": "AUD-007-DOC001",
+      "category": "DOC",
+      "kind": "finding",
+      "severity": "low",
+      "status": "open",
+      "releaseBlocking": false,
+      "title": "The dependency notice incorrectly attributes LoongArch64 libc to cpufeatures",
+      "affectedFiles": [
+        "THIRD_PARTY_NOTICES.md:3"
+      ],
+      "reproduction": "cargo tree --offline --locked --no-default-features --target loongarch64-unknown-linux-gnu -e normal",
+      "expected": "The notice describes dependencies reachable through the pinned sha2 version for each named target.",
+      "observed": "The notice adds LoongArch64 Linux to libc through cpufeatures. sha2 0.11.1 selects cpufeatures only on AArch64, x86 and x86-64. The LoongArch64 tree without protect contains neither cpufeatures nor libc. With protect, libc comes through secret-protection-core.",
+      "impact": "The platform dependency description is inaccurate. No missing license or runtime failure is established.",
+      "evidence": "AUD-007-evidence/loongarch-dependencies.log (local, SHA-256 2a79df81bfb740a328c553d042c404cc6c91894a5b8481f8e9962cef24fb37c6); pinned registry manifests.",
+      "recommendedFix": "Remove LoongArch64 Linux from the cpufeatures clause while retaining the separate Unix protection dependency.",
+      "requiredVerification": "Compare the notice with cargo tree for LoongArch64 and AArch64, with and without protect."
+    }
+  ],
+  "observations": [],
+  "remediation": [
+    {
+      "id": "AUD-006-SEC001",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "Fresh LTO timing ratios are 1.00 in named GF(2^11) and Binary GF(2^10). Release and LTO assembly has no conditional jump on nonzero operand bits in any Field multiply/inverse arm; the documented zero-inverse distinction remains. Scoped to x86-64, Rust 1.99.1. Automation gap is AUD-007-BLD002."
+    },
+    {
+      "id": "AUD-006-BLD001",
+      "status": "fixed",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "Version, manifest, lockfiles and install guidance use 0.1.1. No v0.1.1 tag, attested package or publication was created or verified; the original artifact acceptance checks remain pending."
+    },
+    {
+      "id": "AUD-006-BLD002",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "Static verification: local workflow_call uses the tagged commit, package needs ci, and attest needs package. No unconditional override bypasses the dependency."
+    },
+    {
+      "id": "AUD-006-BLD003",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "Compatible requirements and their rationale are recorded, secret-protection-core has minimum 0.1.1, lockfiles use zeroize 1.9.2 and landlock 0.4.8, and fresh strict tests pass."
+    },
+    {
+      "id": "AUD-006-DOC001",
+      "status": "open",
+      "fixCommit": null,
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "The exact target commit still has 39 not yet committed entries. Pre-existing working-tree edits fill those entries, but they are not part of this commit. The original finding ID is retained."
+    },
+    {
+      "id": "AUD-006-DOC002",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "The missing cfg-if notice and the general libc dependency outside protect are corrected. The narrower LoongArch64 error introduced in that text is tracked separately as AUD-007-DOC001."
+    },
+    {
+      "id": "AUD-006-DOC003",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "SECURITY.md names public GitHub issues and requests synthetic data. A fresh read-only repository response confirms has_issues=true."
+    },
+    {
+      "id": "AUD-006-DOC004",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "All four audit links are absolute GitHub URLs. Package membership and source-based link review found no missing package-relative target among the 31 reviewed relative links."
+    },
+    {
+      "id": "AUD-006-DOC005",
+      "status": "withdrawn",
+      "fixCommit": null,
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "The requirement to restore multiple introduction links and a contents table conflicts with the current library README convention: one documentation-index link and no contents table in a short README. This is a documentation-policy reassessment, not a security fix."
+    },
+    {
+      "id": "AUD-006-DOC006",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "The 0.1.0 changelog now names docs/API.md for the construction guidance."
+    },
+    {
+      "id": "AUD-006-DOC007",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "The development-machine sentence is removed and cargo package --list excludes AGENTS.md."
+    },
+    {
+      "id": "AUD-006-DOC008",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "Fresh alternating-holder timing is within a small factor of stable holders; 12-block stateful probes in both file fields pass with protected and allocator memory, including literal outcomes, fresh-search equivalence and step accounting. The 945-step known-answer test remains in the passing suite."
+    },
+    {
+      "id": "AUD-006-DOC009",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "FileError::Field and SetFacts::new now distinguish named file fields from unsupported Binary variants; source validation and the existing feature suites agree."
+    },
+    {
+      "id": "AUD-006-DOC010",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "Mark rustdoc requires a valid field element, matching both plan validation paths and the existing marked-out-of-field regression."
+    },
+    {
+      "id": "AUD-006-ARC001",
+      "status": "verified",
+      "fixCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "verificationCommit": "b16c64f1388ceddfcabc45186fdc60309adc83db",
+      "evidence": "The Zeroize re-export has a caller-buffer wiping purpose documented without removing the compatible API."
+    }
+  ],
+  "limitations": [
+    "Full review of the requested change range, not a new all-files baseline audit of unchanged repository code or every transitive dependency. Every one of the 55 changed files was assigned and reviewed; affected callers were followed beyond the diff.",
+    "Fresh execution is Linux x86-64 with Rust 1.99.1. No ARM/macOS/Windows runtime or assembly, Miri, forced allocation failure, statistical dudect campaign, or other compiler/optimization-level sweep was performed.",
+    "black_box is a best-effort compiler hint, not a language-level constant-time guarantee. The evidence establishes the inspected compiled configurations and the coarse regression probe; decoder error-dependent timing remains documented.",
+    "Retained proof/fuzz/fast-gate logs were hash-validated and their source diff reconstructed; they were not rerun. The historical runner lacks a separate post-command source fingerprint for every run.",
+    "The concurrent fix-coverage run had no completed JSON and command record when the report was prepared. No new line-coverage percentage is claimed; the existing 98.23% is explicitly historical.",
+    "No release was made, signed or published. v0.1.1 artifact bytes, attestation and crates.io checksum remain unverified. Only read-only remote queries were performed.",
+    "The original vulnerable whole checkout was not rebuilt. Existing baseline evidence was retained; no second working tree or project copy was created for this audit.",
+    "Independent reviewers were AI reviewers with separate scopes and a separate combined finding challenge; this is not an independent human security audit or proof of absence of defects."
+  ],
+  "informationalNotes": [
+    "The current working tree contains pre-existing TECHNICAL.md/index edits and formatting corrections. They are not silently included in the committed verdict. Runtime builds used the two Rustfmt-normalized source files; exact normalized hashes are retained in snapshot.json.",
+    "The fresh holders measurement at 100,000 blocks gives 3.4 ns/step for two alternating holders versus 1.1 for stable holders; three alternating holders give 2.1 versus 0.9. These are diagnostic measurements, not a fixed performance guarantee. Fresh stateful assertions separately check correctness.",
+    "Timing: GF(2^11) median zero/random 2615/2609 ns, ratio 1.00; Binary GF(2^10) 3178/3176 ns, ratio 1.00. 41 interleaved rounds over 2048 words; acceptance uses median ratio 0.8 through 1.25. The observed Binary per-round maximum 1.28 is retained, not suppressed.",
+    "Assembly review covers Field::multiply and Field::inverse in both release library and LTO executable, including the gf256 inverse helper. Conditional branches select public field variants/degree or fixed loop bounds; the GF65536 inverse failure is the documented zero case. No operand-indexed memory table was found in those functions.",
+    "The supplied AUD-006 records have matching 15 finding IDs, all 32 procedure IDs and matching procedure hashes. All 23 extracted MHFE fixture lines match the pinned source vector; wordlist SHA-256 2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda.",
+    "The library README convention calls for one documentation-index link and no contents table for a short README. AUD-006-DOC005 is withdrawn as an inconsistent requirement; the restored table and extra introduction links can be simplified in a later documentation change."
+  ],
+  "procedureHashes": {
+    "multi-chain-wallet-tools/docs/FULL_AUDIT_GUIDE.md": "572cef6f58c34d00f7f60928e72afe4b5fed8a85c8380035bf251ab2211879b8",
+    "multi-chain-wallet-tools/docs/audits/AUDIT_STANDARD.md": "c43e25bbcbdd6d22d52a38f571a759f5b688af062b980c3adecd5326efc082ec",
+    "multi-chain-wallet-tools/docs/audits/AUDIT_TEMPLATE.md": "8122777f8093b04119633459b9b2cc50bc6ca9258bfc6184b52136d3b8172210",
+    "multi-chain-wallet-tools/docs/audit-report.schema.json": "989bf3de974d581579c1d1c1e143d5ab9fa232dc70cc8c6f84ad00531ae698fb"
+  },
+  "retainedEvidence": {
+    "sourceDiffSha256": "d06a2e6fce520958cd0befe4d3698bd7b163f111752cee7d77c9b795746322af",
+    "sourceBinding": "git diff between base and target restricted to base-tracked paths; exact match to retained pre-run fix-tree.diff fingerprint. Existing retained 165-file snapshot also matches target. No new project copy created.",
+    "fullManifestSha256": "aa2ce8df7265714321b180c78d5d33932db1d0164bb54bd817ad8fae86beffd3",
+    "commands": [
+      {
+        "name": "fix-clippy-alloc",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "alloc",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T20:22:27Z",
+        "endUtc": "2026-11-24T20:22:29Z",
+        "exitCode": 0,
+        "logSha256": "1ad43e0eea9f447147989df73d3460873e20aa27f18e0782e3da50fa8269849b"
+      },
+      {
+        "name": "fix-clippy-default",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T20:22:23Z",
+        "endUtc": "2026-11-24T20:22:27Z",
+        "exitCode": 0,
+        "logSha256": "ab1ad4c44d496808e3fc116703640b0c3eed4c1f61ad7ec2187427b7b5215520"
+      },
+      {
+        "name": "fix-clippy-nostd",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T20:22:29Z",
+        "endUtc": "2026-11-24T20:22:30Z",
+        "exitCode": 0,
+        "logSha256": "9205ee36cb45b9c89b39bcc63ac3323fc0ec5dc25619e5c24075919620994823"
+      },
+      {
+        "name": "fix-clippy-thumb-alloc",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "alloc",
+          "--target",
+          "thumbv7em-none-eabihf",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T20:22:31Z",
+        "endUtc": "2026-11-24T20:22:32Z",
+        "exitCode": 0,
+        "logSha256": "de570fd906826249c87de8a8f75462df34ae50e1b23242ce005ff4e384cf4a96"
+      },
+      {
+        "name": "fix-clippy-thumb",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--target",
+          "thumbv7em-none-eabihf",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T20:22:30Z",
+        "endUtc": "2026-11-24T20:22:31Z",
+        "exitCode": 0,
+        "logSha256": "ea1a413052020f1696f013dcc249b86a4d060dcf857a2ad6bf76972edd6bd45f"
+      },
+      {
+        "name": "fix-doc-default",
+        "command": [
+          "env",
+          "RUSTDOCFLAGS=-D warnings",
+          "cargo",
+          "doc",
+          "--locked",
+          "--no-deps"
+        ],
+        "startUtc": "2026-11-24T20:23:33Z",
+        "endUtc": "2026-11-24T20:23:34Z",
+        "exitCode": 0,
+        "logSha256": "0d88177c43c205be941f21d9027711140375fb1013b40f94fe7992b495b258ac"
+      },
+      {
+        "name": "fix-doc-nostd",
+        "command": [
+          "env",
+          "RUSTDOCFLAGS=-D warnings",
+          "cargo",
+          "doc",
+          "--locked",
+          "--no-deps",
+          "--no-default-features"
+        ],
+        "startUtc": "2026-11-24T20:23:34Z",
+        "endUtc": "2026-11-24T20:23:34Z",
+        "exitCode": 0,
+        "logSha256": "5c93d7e5f0a9e3ebd5c052ba901beee068bb86bf6849be9d1b3a78d6f72bfd82"
+      },
+      {
+        "name": "fix-field-proof",
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--release",
+          "--lib",
+          "field::proof",
+          "--",
+          "--ignored"
+        ],
+        "startUtc": "2026-11-24T20:23:49Z",
+        "endUtc": "2026-11-24T20:27:42Z",
+        "exitCode": 0,
+        "logSha256": "3dbc2f6244e12dc3d07b349ab5f6b10e779baff39bfe8ecdd8b8189b2fa73aa8"
+      },
+      {
+        "name": "fix-fmt",
+        "command": [
+          "cargo",
+          "fmt",
+          "--check"
+        ],
+        "startUtc": "2026-11-24T20:22:23Z",
+        "endUtc": "2026-11-24T20:22:23Z",
+        "exitCode": 1,
+        "logSha256": "8c5e0a364688fd79c6cf3309ec39a9c3f27b38b053df28cff935bb9fe304c8d0"
+      },
+      {
+        "name": "fix-fuzz-calls",
+        "command": [
+          "cargo",
+          "+nightly",
+          "fuzz",
+          "run",
+          "--fuzz-dir",
+          "fuzz",
+          "--target",
+          "x86_64-unknown-linux-gnu",
+          "calls",
+          "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/calls",
+          "--",
+          "-max_total_time=60",
+          "-rss_limit_mb=3000",
+          "-max_len=4096",
+          "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/calls-"
+        ],
+        "startUtc": "2026-11-24T20:32:48Z",
+        "endUtc": "2026-11-24T20:33:50Z",
+        "exitCode": 0,
+        "logSha256": "a715746a3e0b6322bca684aca92c98b05598e9039885e37a538edabb6e48fe5f"
+      },
+      {
+        "name": "fix-fuzz-clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--manifest-path",
+          "fuzz/Cargo.toml",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "startUtc": "2026-11-24T20:23:34Z",
+        "endUtc": "2026-11-24T20:23:40Z",
+        "exitCode": 0,
+        "logSha256": "cebaec89a275c00be9586160482c3747793ec113069068110bd00b4076121611"
+      },
+      {
+        "name": "fix-fuzz-cyclic",
+        "command": [
+          "cargo",
+          "+nightly",
+          "fuzz",
+          "run",
+          "--fuzz-dir",
+          "fuzz",
+          "--target",
+          "x86_64-unknown-linux-gnu",
+          "cyclic",
+          "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/cyclic",
+          "--",
+          "-max_total_time=60",
+          "-rss_limit_mb=3000",
+          "-max_len=4096",
+          "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/cyclic-"
+        ],
+        "startUtc": "2026-11-24T20:31:24Z",
+        "endUtc": "2026-11-24T20:32:48Z",
+        "exitCode": 0,
+        "logSha256": "082dc1179ff4c3db8f50dc3e6e87468c84b696c1e5324cce0cd0cf960802d829"
+      },
+      {
+        "name": "fix-fuzz-files",
+        "command": [
+          "cargo",
+          "+nightly",
+          "fuzz",
+          "run",
+          "--fuzz-dir",
+          "fuzz",
+          "--target",
+          "x86_64-unknown-linux-gnu",
+          "files",
+          "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/files",
+          "--",
+          "-max_total_time=60",
+          "-rss_limit_mb=3000",
+          "-max_len=4096",
+          "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/files-"
+        ],
+        "startUtc": "2026-11-24T20:27:51Z",
+        "endUtc": "2026-11-24T20:29:19Z",
+        "exitCode": 0,
+        "logSha256": "48e4b4e49df5e2ad849f47b8fe12a7fd147e1bbf49490c4dd80124bdabc2376a"
+      },
+      {
+        "name": "fix-fuzz-fmt",
+        "command": [
+          "cargo",
+          "fmt",
+          "--check",
+          "--manifest-path",
+          "fuzz/Cargo.toml"
+        ],
+        "startUtc": "2026-11-24T20:23:34Z",
+        "endUtc": "2026-11-24T20:23:34Z",
+        "exitCode": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "fix-fuzz-plans",
+        "command": [
+          "cargo",
+          "+nightly",
+          "fuzz",
+          "run",
+          "--fuzz-dir",
+          "fuzz",
+          "--target",
+          "x86_64-unknown-linux-gnu",
+          "plans",
+          "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/plans",
+          "--",
+          "-max_total_time=60",
+          "-rss_limit_mb=3000",
+          "-max_len=4096",
+          "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/plans-"
+        ],
+        "startUtc": "2026-11-24T20:30:21Z",
+        "endUtc": "2026-11-24T20:31:24Z",
+        "exitCode": 0,
+        "logSha256": "616e5300b239ee57623de198dfa88de5f4cdd958493aa3ffa18a0cf1ebfcc869"
+      },
+      {
+        "name": "fix-fuzz-seeds",
+        "command": [
+          "cargo",
+          "+nightly",
+          "run",
+          "--manifest-path",
+          "fuzz/Cargo.toml",
+          "--example",
+          "seeds",
+          "--target",
+          "x86_64-unknown-linux-gnu",
+          "--",
+          "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/files"
+        ],
+        "startUtc": "2026-11-24T20:27:43Z",
+        "endUtc": "2026-11-24T20:27:51Z",
+        "exitCode": 0,
+        "logSha256": "6dea6d059ab0157a513cd00279631ca76dc8adbf01169865330e5a9a77b03838"
+      },
+      {
+        "name": "fix-fuzz-sets",
+        "command": [
+          "cargo",
+          "+nightly",
+          "fuzz",
+          "run",
+          "--fuzz-dir",
+          "fuzz",
+          "--target",
+          "x86_64-unknown-linux-gnu",
+          "sets",
+          "/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fuzz-corpus/sets",
+          "--",
+          "-max_total_time=60",
+          "-rss_limit_mb=3000",
+          "-max_len=4096",
+          "-artifact_prefix=/home/user/Documents/bip_tools/reed-solomon-core/docs/audits/AUD-006-evidence/fix-fuzz-artifacts/sets-"
+        ],
+        "startUtc": "2026-11-24T20:29:19Z",
+        "endUtc": "2026-11-24T20:30:21Z",
+        "exitCode": 0,
+        "logSha256": "0a73f24e877b610583e0d5a67e3fd428876ff15899c090e622ff9b8c3fa08135"
+      },
+      {
+        "name": "fix-package-list",
+        "command": [
+          "cargo",
+          "package",
+          "--locked",
+          "--allow-dirty",
+          "--list"
+        ],
+        "startUtc": "2026-11-24T20:23:40Z",
+        "endUtc": "2026-11-24T20:23:40Z",
+        "exitCode": 0,
+        "logSha256": "a49def693f4fdc4691e25e2974555a4b00e0e19caf5fa19bb5d758e158cde14f"
+      },
+      {
+        "name": "fix-publish-dry-run",
+        "command": [
+          "cargo",
+          "publish",
+          "--locked",
+          "--allow-dirty",
+          "--dry-run"
+        ],
+        "startUtc": "2026-11-24T20:23:40Z",
+        "endUtc": "2026-11-24T20:23:45Z",
+        "exitCode": 0,
+        "logSha256": "fc81c88df29f062cd8c905b491e8400660d10e33621e2778ba85846a7732ad08"
+      },
+      {
+        "name": "fix-rustsec-fuzz",
+        "command": [
+          "cargo",
+          "audit",
+          "--file",
+          "fuzz/Cargo.lock"
+        ],
+        "startUtc": "2026-11-24T20:23:47Z",
+        "endUtc": "2026-11-24T20:23:49Z",
+        "exitCode": 0,
+        "logSha256": "b48ce17f02eccdeafe03f1e0e9a6d0abe3b0bbb3b7977f5bff04754b705bac36"
+      },
+      {
+        "name": "fix-rustsec",
+        "command": [
+          "cargo",
+          "audit"
+        ],
+        "startUtc": "2026-11-24T20:23:45Z",
+        "endUtc": "2026-11-24T20:23:47Z",
+        "exitCode": 0,
+        "logSha256": "5aec8b2f4ae28f7320bc4e82874658f7d8e04b82644fb9f5326e03cb41acc366"
+      },
+      {
+        "name": "fix-test-alloc",
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "alloc"
+        ],
+        "startUtc": "2026-11-24T20:23:03Z",
+        "endUtc": "2026-11-24T20:23:24Z",
+        "exitCode": 0,
+        "logSha256": "d81ac84431f8a44d041d175ce1637474ebb315d8e492ff1fda607e8df9d3a886"
+      },
+      {
+        "name": "fix-test-default",
+        "command": [
+          "cargo",
+          "test",
+          "--locked"
+        ],
+        "startUtc": "2026-11-24T20:22:32Z",
+        "endUtc": "2026-11-24T20:23:03Z",
+        "exitCode": 0,
+        "logSha256": "39df55032ce8278a1105a2c4349fb72eb20dfaf2e2f54f31c9a0107d96bc340d"
+      },
+      {
+        "name": "fix-test-nostd",
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--no-default-features"
+        ],
+        "startUtc": "2026-11-24T20:23:24Z",
+        "endUtc": "2026-11-24T20:23:33Z",
+        "exitCode": 0,
+        "logSha256": "265304e8d2de394bb1f4fe046450735f857a8d89367ec1f151d3c42cb4a8a1d5"
+      },
+      {
+        "name": "fix-tree-duplicates",
+        "command": [
+          "cargo",
+          "tree",
+          "--locked",
+          "-d",
+          "-e",
+          "normal"
+        ],
+        "startUtc": "2026-11-24T20:23:40Z",
+        "endUtc": "2026-11-24T20:23:40Z",
+        "exitCode": 0,
+        "logSha256": "75492018321e95a5df02ca69850e3e7b51d789ad5e96d4f61f860772fb22f07d"
+      }
+    ],
+    "fieldProofSeconds": 228.18,
+    "fuzzRuns": {
+      "files": 341211,
+      "sets": 36643,
+      "plans": 143535,
+      "cyclic": 62985,
+      "calls": 270542
+    }
+  },
+  "artifacts": {
+    "fieldAssemblySha256": "067f4f382c939f87d80ccc556324c8f8605581ecc5b533e0bb51b0986d03a1e5",
+    "ltoAssemblySha256": "40ab51e779672ebe6514dac79c9409aa8601cab47a374e48bd822bb249011925",
+    "timingBinarySha256": "68ef9af695f0c603aca1603c4aace499fa067a0d17ac3b27d41d9683356a33ac",
+    "holdersBinarySha256": "9552373c71c2bbe66c73caefa2a1950c69114eace065032e2cffd2b1127f23e4"
+  },
+  "reviewerPhases": [
+    {
+      "scope": "Coordinator: field arithmetic, compiled timing, execution, report and finding validation",
+      "model": null,
+      "reasoningEffort": null
+    },
+    {
+      "scope": "Independent runtime: decoder refit, vote state, memory and API; subsequent combined finding challenge and probe review",
+      "model": null,
+      "reasoningEffort": null
+    },
+    {
+      "scope": "Independent release: workflows, six lockfiles, dependency deltas, packaging and remote read-only evidence",
+      "model": null,
+      "reasoningEffort": null
+    },
+    {
+      "scope": "Independent claims: all new nontiming probes, all changed documents and fixtures, evidence integrity and completeness",
+      "model": null,
+      "reasoningEffort": null
+    }
+  ],
+  "environment": {
+    "os": "Linux 7.0.0-43-generic",
+    "architecture": "x86_64-unknown-linux-gnu",
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
+    "rustcCommit": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+    "llvm": "23.1.1",
+    "cargo": "1.99.1 (5f94df478 2026-08-27)"
+  },
+  "executionStartedUtc": "2026-11-24T20:32:39Z",
+  "completedUtc": "2026-11-24T20:45:55+00:00",
+  "independentFinalReview": {
+    "outcome": "No mandatory report correction identified",
+    "scope": "Report pair, registry, new probe documentation, evidence hashes and snapshot distinctions",
+    "earlierRegisterRowsPreserved": 54,
+    "model": null,
+    "reasoningEffort": null
+  }
+}

@@ -1,0 +1,792 @@
+{
+  "snapshot": {
+    "commit": "4ababf97cabe23f0ca23ab7f430ecb134d31f051",
+    "sourceFingerprint": "f4791153c044bd13f5ad3157d2e5a467c78cdb265a19f25d06fa5b31d8628583"
+  },
+  "namedOperationCount": 182,
+  "operations": [
+    {
+      "type": "Code",
+      "operations": [
+        "new",
+        "field",
+        "threshold",
+        "sources",
+        "encode",
+        "rebuild",
+        "redundancy",
+        "correct",
+        "correction_memory",
+        "plan",
+        "apply"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Sources",
+      "operations": [
+        "build",
+        "agrees",
+        "agrees_in"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Field",
+      "operations": [
+        "binary",
+        "order",
+        "symbol_bytes"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Binary",
+      "operations": [
+        "degree",
+        "polynomial"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Changes",
+      "operations": [
+        "len",
+        "is_empty",
+        "get",
+        "values",
+        "is_locked",
+        "iter"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "CyclicCode",
+      "operations": [
+        "new",
+        "field",
+        "data",
+        "parity",
+        "length",
+        "generator",
+        "words",
+        "encode",
+        "agrees",
+        "correct",
+        "plan",
+        "apply"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "CyclicWords",
+      "operations": [
+        "new",
+        "field",
+        "data",
+        "parity",
+        "length",
+        "generator",
+        "encode",
+        "agrees",
+        "correct_word",
+        "room"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "SelfTest",
+      "operations": [
+        "checks",
+        "passed"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "crate",
+      "operations": [
+        "self_test"
+      ],
+      "owner": "runtime",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "SetFacts",
+      "operations": [
+        "new",
+        "for_data",
+        "code",
+        "id",
+        "data_len",
+        "block_len",
+        "digest",
+        "shard_len",
+        "blocks",
+        "file_len",
+        "files",
+        "files_into"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Header",
+      "operations": [
+        "new",
+        "set",
+        "index",
+        "as_bytes",
+        "trailer",
+        "block_checksum",
+        "file",
+        "file_into"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "ShardFile",
+      "operations": [
+        "read",
+        "header",
+        "frame",
+        "block",
+        "survey"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Survey",
+      "operations": [
+        "whole"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Pile",
+      "operations": [
+        "new",
+        "readings",
+        "sets"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "FileSet",
+      "operations": [
+        "facts",
+        "id_shared",
+        "members",
+        "disputes",
+        "coverage",
+        "stretches",
+        "disputed_blocks",
+        "rebuild_work",
+        "repair_work",
+        "rebuild",
+        "rebuild_into",
+        "repair",
+        "repairs_work",
+        "repairs",
+        "repairs_into",
+        "without",
+        "vote_work",
+        "vote"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Vote",
+      "operations": [
+        "outvoted",
+        "undecided",
+        "first_undecided",
+        "steps",
+        "outvoted_blocks",
+        "undecided_blocks"
+      ],
+      "owner": "coordinator",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "Buffer",
+      "operations": [
+        "as_slice",
+        "as_mut_slice",
+        "is_locked",
+        "is_out_of_dumps",
+        "is_out_of_children"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Held",
+      "operations": [
+        "guarded",
+        "held"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::HeldMut",
+      "operations": [
+        "held_mut"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict",
+      "operations": [
+        "values",
+        "read"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Code",
+      "operations": [
+        "new",
+        "field",
+        "threshold",
+        "sources",
+        "encode",
+        "rebuild",
+        "redundancy",
+        "correct",
+        "correction_memory",
+        "plan",
+        "apply"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::CyclicCode",
+      "operations": [
+        "new",
+        "field",
+        "data",
+        "parity",
+        "length",
+        "generator",
+        "encode",
+        "agrees",
+        "correct",
+        "plan",
+        "apply"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::SetFacts",
+      "operations": [
+        "new",
+        "for_data",
+        "code",
+        "id",
+        "data_len",
+        "block_len",
+        "digest",
+        "shard_len",
+        "blocks",
+        "file_len",
+        "files",
+        "files_into",
+        "as_portable",
+        "header"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Pile",
+      "operations": [
+        "new",
+        "readings",
+        "sets"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::FileSet",
+      "operations": [
+        "facts",
+        "id_shared",
+        "members",
+        "disputes",
+        "coverage",
+        "stretches",
+        "disputed_blocks",
+        "rebuild_work",
+        "repair_work",
+        "rebuild",
+        "rebuild_into",
+        "repair",
+        "repairs_work",
+        "repairs",
+        "repairs_into",
+        "without",
+        "vote_work",
+        "vote"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Header",
+      "operations": [
+        "set",
+        "index",
+        "as_bytes",
+        "as_portable",
+        "file",
+        "file_into"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::Sources",
+      "operations": [
+        "build",
+        "agrees"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    },
+    {
+      "type": "strict::ShardFile",
+      "operations": [
+        "header",
+        "frame",
+        "block",
+        "survey"
+      ],
+      "owner": "release",
+      "disposition": "reviewed"
+    }
+  ],
+  "additionalSurfaces": [
+    "Buffer deref/mutable access, default, equality, Debug and Drop",
+    "Changes equality, Debug, iterator, values and Drop",
+    "ChangesIter and Stretches Iterator behavior",
+    "Metadata Copy/Eq/Debug/field access and error Display/Error",
+    "Sealed Held/HeldMut trait contracts",
+    "Zeroize and secret-protection-core re-exports: integration reviewed, not a complete transitive dependency audit",
+    "Block::Intact, Buffer, Changes, Plan and Rebuilt equality boundary"
+  ],
+  "method": "AUD-008 named rows reconciled against the current public source signatures; current wrapper, trait and protection paths independently reviewed.",
+  "strictStackAdmissions": [
+    {
+      "path": "src/strict/codes.rs",
+      "function": "encode",
+      "publicLine": 42,
+      "admissionLine": 44
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "rebuild",
+      "publicLine": 48,
+      "admissionLine": 54
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "redundancy",
+      "publicLine": 58,
+      "admissionLine": 60
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "correct",
+      "publicLine": 64,
+      "admissionLine": 66
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "plan",
+      "publicLine": 70,
+      "admissionLine": 72
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "apply",
+      "publicLine": 77,
+      "admissionLine": 84
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "build",
+      "publicLine": 103,
+      "admissionLine": 111
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "agrees",
+      "publicLine": 115,
+      "admissionLine": 123
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "encode",
+      "publicLine": 175,
+      "admissionLine": 177
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "agrees",
+      "publicLine": 181,
+      "admissionLine": 183
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "correct",
+      "publicLine": 187,
+      "admissionLine": 193
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "plan",
+      "publicLine": 197,
+      "admissionLine": 204
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "apply",
+      "publicLine": 209,
+      "admissionLine": 216
+    },
+    {
+      "path": "src/strict/codes.rs",
+      "function": "values",
+      "publicLine": 223,
+      "admissionLine": 229
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "for_data",
+      "publicLine": 33,
+      "admissionLine": 43
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "files",
+      "publicLine": 102,
+      "admissionLine": 104
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "files_into",
+      "publicLine": 108,
+      "admissionLine": 116
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "file",
+      "publicLine": 156,
+      "admissionLine": 158
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "file_into",
+      "publicLine": 162,
+      "admissionLine": 165
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "read",
+      "publicLine": 170,
+      "admissionLine": 172
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "block",
+      "publicLine": 194,
+      "admissionLine": 195
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "survey",
+      "publicLine": 199,
+      "admissionLine": 200
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "new",
+      "publicLine": 214,
+      "admissionLine": 216
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "rebuild",
+      "publicLine": 309,
+      "admissionLine": 310
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "rebuild_into",
+      "publicLine": 314,
+      "admissionLine": 320
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "repair",
+      "publicLine": 324,
+      "admissionLine": 325
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "repairs",
+      "publicLine": 329,
+      "admissionLine": 330
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "repairs_into",
+      "publicLine": 334,
+      "admissionLine": 341
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "vote",
+      "publicLine": 345,
+      "admissionLine": 346
+    },
+    {
+      "path": "src/strict/files.rs",
+      "function": "without",
+      "publicLine": 351,
+      "admissionLine": 352
+    }
+  ],
+  "ordinaryStackWrapperCount": 35,
+  "ordinaryStackWrappers": [
+    {
+      "path": "src/code/owned.rs",
+      "function": "encode",
+      "publicLine": 97,
+      "wrapperLine": 98
+    },
+    {
+      "path": "src/code/owned.rs",
+      "function": "rebuild",
+      "publicLine": 114,
+      "wrapperLine": 119
+    },
+    {
+      "path": "src/code/owned.rs",
+      "function": "redundancy",
+      "publicLine": 140,
+      "wrapperLine": 141
+    },
+    {
+      "path": "src/code.rs",
+      "function": "build",
+      "publicLine": 230,
+      "wrapperLine": 231
+    },
+    {
+      "path": "src/code.rs",
+      "function": "agrees",
+      "publicLine": 256,
+      "wrapperLine": 257
+    },
+    {
+      "path": "src/code.rs",
+      "function": "agrees_in",
+      "publicLine": 273,
+      "wrapperLine": 280
+    },
+    {
+      "path": "src/correct/changes.rs",
+      "function": "values",
+      "publicLine": 66,
+      "wrapperLine": 67
+    },
+    {
+      "path": "src/correct/plan.rs",
+      "function": "plan",
+      "publicLine": 89,
+      "wrapperLine": 90
+    },
+    {
+      "path": "src/correct/plan.rs",
+      "function": "apply",
+      "publicLine": 138,
+      "wrapperLine": 143
+    },
+    {
+      "path": "src/correct.rs",
+      "function": "correct",
+      "publicLine": 55,
+      "wrapperLine": 56
+    },
+    {
+      "path": "src/cyclic/owned.rs",
+      "function": "encode",
+      "publicLine": 87,
+      "wrapperLine": 88
+    },
+    {
+      "path": "src/cyclic/owned.rs",
+      "function": "agrees",
+      "publicLine": 106,
+      "wrapperLine": 107
+    },
+    {
+      "path": "src/cyclic/owned.rs",
+      "function": "correct",
+      "publicLine": 119,
+      "wrapperLine": 124
+    },
+    {
+      "path": "src/cyclic/owned.rs",
+      "function": "plan",
+      "publicLine": 173,
+      "wrapperLine": 179
+    },
+    {
+      "path": "src/cyclic/owned.rs",
+      "function": "apply",
+      "publicLine": 207,
+      "wrapperLine": 208
+    },
+    {
+      "path": "src/cyclic/words.rs",
+      "function": "encode",
+      "publicLine": 82,
+      "wrapperLine": 88
+    },
+    {
+      "path": "src/cyclic/words.rs",
+      "function": "agrees",
+      "publicLine": 127,
+      "wrapperLine": 128
+    },
+    {
+      "path": "src/cyclic/words.rs",
+      "function": "correct_word",
+      "publicLine": 159,
+      "wrapperLine": 165
+    },
+    {
+      "path": "src/file/facts.rs",
+      "function": "for_data",
+      "publicLine": 103,
+      "wrapperLine": 111
+    },
+    {
+      "path": "src/file/header.rs",
+      "function": "block_checksum",
+      "publicLine": 155,
+      "wrapperLine": 156
+    },
+    {
+      "path": "src/file/header.rs",
+      "function": "file",
+      "publicLine": 188,
+      "wrapperLine": 189
+    },
+    {
+      "path": "src/file/header.rs",
+      "function": "file_into",
+      "publicLine": 206,
+      "wrapperLine": 207
+    },
+    {
+      "path": "src/file/pile.rs",
+      "function": "new",
+      "publicLine": 26,
+      "wrapperLine": 27
+    },
+    {
+      "path": "src/file/reading.rs",
+      "function": "read",
+      "publicLine": 122,
+      "wrapperLine": 123
+    },
+    {
+      "path": "src/file/reading.rs",
+      "function": "block",
+      "publicLine": 152,
+      "wrapperLine": 153
+    },
+    {
+      "path": "src/file/reading.rs",
+      "function": "survey",
+      "publicLine": 174,
+      "wrapperLine": 175
+    },
+    {
+      "path": "src/file/set/vote.rs",
+      "function": "vote",
+      "publicLine": 190,
+      "wrapperLine": 191
+    },
+    {
+      "path": "src/file/set.rs",
+      "function": "rebuild",
+      "publicLine": 367,
+      "wrapperLine": 368
+    },
+    {
+      "path": "src/file/set.rs",
+      "function": "rebuild_into",
+      "publicLine": 391,
+      "wrapperLine": 392
+    },
+    {
+      "path": "src/file/set.rs",
+      "function": "repair",
+      "publicLine": 453,
+      "wrapperLine": 454
+    },
+    {
+      "path": "src/file/set.rs",
+      "function": "repairs",
+      "publicLine": 474,
+      "wrapperLine": 475
+    },
+    {
+      "path": "src/file/set.rs",
+      "function": "repairs_into",
+      "publicLine": 499,
+      "wrapperLine": 505
+    },
+    {
+      "path": "src/file/set.rs",
+      "function": "without",
+      "publicLine": 583,
+      "wrapperLine": 584
+    },
+    {
+      "path": "src/file/writing.rs",
+      "function": "files",
+      "publicLine": 22,
+      "wrapperLine": 23
+    },
+    {
+      "path": "src/file/writing.rs",
+      "function": "files_into",
+      "publicLine": 48,
+      "wrapperLine": 54
+    }
+  ]
+}
